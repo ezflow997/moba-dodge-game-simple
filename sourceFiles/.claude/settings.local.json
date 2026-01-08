@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /b \"C:\\\\Users\\\\edwen\\\\OneDrive\\\\Desktop\\\\MOBA_Dodge_Game_Project\\\\MOBA_Dodge_Game_Simple\\\\sourceFiles\")",
+      "Bash(dir /s /b \"C:\\\\Users\\\\edwen\\\\OneDrive\\\\Desktop\\\\MOBA_Dodge_Game_Project\\\\*.txt\" \"C:\\\\Users\\\\edwen\\\\OneDrive\\\\Desktop\\\\MOBA_Dodge_Game_Project\\\\*.md\")",
+      "Bash(dir /s /b \"C:\\\\Users\\\\edwen\\\\OneDrive\\\\Desktop\\\\MOBA_Dodge_Game_Project\")",
+      "Bash(findstr:*)"
+    ]
+  }
+}

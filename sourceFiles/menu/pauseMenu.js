@@ -1,0 +1,600 @@
+import { Button, superFunctions } from "./supers.js";
+
+export class PauseMenu {
+    constructor() {
+        this.super = new superFunctions();
+        this.isPaused = false;
+        this.clicked = false;
+        this.capturedKey = null;
+
+        this.keybindWaitStart = 0; // Timestamp when keybind wait started
+        this.keybindWaitDelay = 300; // Delay in ms before accepting input
+
+        // Main pause menu buttons
+        this.resumeButton = new Button(880, 290, 800, 90, "Resume (ESC)", 55, 200, 65, false, true, 'white', 'white');
+        this.keybindsButton = new Button(880, 400, 800, 90, "Keybinds", 55, 260, 65, false, true, 'white', 'white');
+        this.volumeButton = new Button(880, 510, 800, 90, "Volume", 55, 280, 65, false, true, 'white', 'white');
+        this.controlSchemeButton = new Button(880, 620, 800, 90, "Controls: Mouse", 55, 140, 65, false, true, 'white', 'white');
+        this.quitButton = new Button(880, 730, 800, 90, "Quit to Menu", 55, 180, 65, false, true, 'white', 'white');
+
+        // Submenu states
+        this.showKeybinds = false;
+        this.showVolume = false;
+
+        // Keybinds submenu
+        this.keybindQButton = new Button(700, 300, 600, 80, "Shoot: Q", 50, 140, 60, false, true, 'white', 'white');
+        this.keybindEButton = new Button(700, 400, 600, 80, "Dash: E", 50, 150, 60, false, true, 'white', 'white');
+        this.keybindFButton = new Button(700, 500, 600, 80, "Ultimate: F", 50, 100, 60, false, true, 'white', 'white');
+        this.keybindBackButton = new Button(880, 620, 400, 80, "Back", 50, 140, 60, false, true, 'white', 'white');
+        this.waitingForKey = null; // 'q', 'e', or 'f'
+        this.customKeys = { q: 'q', e: 'e', f: 'f' };
+
+        // Control scheme: 'mouse' or 'wasd'
+        this.controlScheme = 'mouse';
+
+        // WASD mode keybinds (shoot=right-click, dash=e, ult=q)
+        this.wasdKeys = {
+            shoot: 0,  // Right click (mouse button 2)
+            dash: 'e',
+            ult: 'q'
+        };
+
+        // Volume submenu
+        this.musicVolumeSlider = new Slider(700, 350, 800, 30, 0, 1);
+        this.sfxVolumeSlider = new Slider(700, 500, 800, 30, 0, 1);
+        this.volumeBackButton = new Button(880, 600, 400, 80, "Back", 50, 140, 60, false, true, 'white', 'white');
+
+        // keyboard key down listener
+        this.keydownHandler = (ev) => {
+            if (this.waitingForKey) {
+                ev.preventDefault();
+                this.capturedKey = ev.key;
+            }
+        };
+        window.addEventListener('keydown', this.keydownHandler);
+
+        // mouse button listener
+        this.mouseButtonHandler = (ev) => {
+            if (this.waitingForKey) {
+                ev.preventDefault();
+                this.capturedKey = ev.button;
+            }
+        };
+        window.addEventListener('mousedown', this.mouseButtonHandler);
+    }
+
+    toggle(inMainMenu = false) {
+        this.isPaused = !this.isPaused;
+        if (this.isPaused) {
+            // Only pause music when in gameplay, not in main menu
+            if (window.gameSound && !inMainMenu) {
+                window.gameSound.pauseMusic();
+            }
+        } else {
+            // Only resume music when in gameplay, not in main menu
+            if (window.gameSound && !inMainMenu) {
+                window.gameSound.resumeMusic();
+            }
+            // Close all submenus when unpausing
+            this.showKeybinds = false;
+            this.showVolume = false;
+            this.waitingForKey = null;
+        }
+    }
+
+    update(game) {
+        if (!this.isPaused) return;
+
+        const input = game.input;
+        const inX = input.mouseX;
+        const inY = input.mouseY;
+
+        // Handle click state
+        if (this.clicked && input.buttons.indexOf(0) == -1) {
+            this.clicked = false;
+        }
+
+        // Handle keybind waiting state
+        if (this.waitingForKey && this.capturedKey !== null) {
+            // Check if enough time has passed since starting to wait
+            const timeSinceStart = performance.now() - this.keybindWaitStart;
+            if (timeSinceStart < this.keybindWaitDelay) {
+                // Too soon, ignore this input
+                this.capturedKey = null;
+                return;
+            }
+            
+            const pressedKey = this.capturedKey;
+            this.capturedKey = null;
+            
+            // Cancel if ESC is pressed
+            if (pressedKey === 'Escape') {
+                this.waitingForKey = null;
+                this.updateKeybindButtons();
+                return;
+            }
+            
+            // In mouse mode, ONLY allow keyboard keys (not mouse buttons)
+            if (this.controlScheme === 'mouse' && typeof pressedKey === 'number') {
+                // Reject mouse buttons in mouse mode
+                if (window.gameSound) window.gameSound.playMenuClick();
+                const currentSlot = this.waitingForKey;
+                
+                if (currentSlot === 'q') {
+                    this.keybindQButton.text = "Shoot: Keyboard only!";
+                } else if (currentSlot === 'e') {
+                    this.keybindEButton.text = "Dash: Keyboard only!";
+                } else if (currentSlot === 'f') {
+                    this.keybindFButton.text = "Ultimate: Keyboard only!";
+                }
+                
+                setTimeout(() => {
+                    if (this.waitingForKey === currentSlot) {
+                        if (currentSlot === 'q') {
+                            this.keybindQButton.text = "Shoot: Press any key...";
+                        } else if (currentSlot === 'e') {
+                            this.keybindEButton.text = "Dash: Press any key...";
+                        } else if (currentSlot === 'f') {
+                            this.keybindFButton.text = "Ultimate: Press any key...";
+                        }
+                    }
+                }, 500);
+                return;
+            }
+            
+            // Check if key is already assigned to another slot
+            let isAlreadyUsed = false;
+            const currentKeys = this.controlScheme === 'mouse' ? this.customKeys : this.wasdKeys;
+            const slots = this.controlScheme === 'mouse' ? ['q', 'e', 'f'] : ['shoot', 'dash', 'ult'];
+            const currentSlotName = this.controlScheme === 'mouse' ? this.waitingForKey : 
+                (this.waitingForKey === 'q' ? 'shoot' : this.waitingForKey === 'e' ? 'dash' : 'ult');
+            
+            for (let slot of slots) {
+                if (slot !== currentSlotName && currentKeys[slot] === pressedKey) {
+                    isAlreadyUsed = true;
+                    break;
+                }
+            }
+            
+            if (!isAlreadyUsed) {
+                // Valid key, assign it
+                if (this.controlScheme === 'mouse') {
+                    this.customKeys[this.waitingForKey] = pressedKey;
+                } else {
+                    const wasdSlot = this.waitingForKey === 'q' ? 'shoot' : 
+                                this.waitingForKey === 'e' ? 'dash' : 'ult';
+                    this.wasdKeys[wasdSlot] = pressedKey;
+                }
+                this.waitingForKey = null;
+                this.updateKeybindButtons();
+                if (window.gameSound) window.gameSound.playMenuClick();
+            } else {
+                // Key already in use, show error
+                if (window.gameSound) window.gameSound.playMenuClick();
+                const currentSlot = this.waitingForKey;
+                
+                if (currentSlot === 'q') {
+                    this.keybindQButton.text = "Shoot: Already in use!";
+                } else if (currentSlot === 'e') {
+                    this.keybindEButton.text = "Dash: Already in use!";
+                } else if (currentSlot === 'f') {
+                    this.keybindFButton.text = "Ultimate: Already in use!";
+                }
+                
+                setTimeout(() => {
+                    if (this.waitingForKey === currentSlot) {
+                        if (currentSlot === 'q') {
+                            this.keybindQButton.text = "Shoot: Press any key...";
+                        } else if (currentSlot === 'e') {
+                            this.keybindEButton.text = "Dash: Press any key...";
+                        } else if (currentSlot === 'f') {
+                            this.keybindFButton.text = "Ultimate: Press any key...";
+                        }
+                    }
+                }, 500);
+            }
+        }
+
+        // Capture mouse button clicks for rebinding (ONLY in WASD mode)
+        if (this.waitingForKey && this.controlScheme === 'wasd' && input.buttons.length > 0) {
+            // Check if enough time has passed
+            const timeSinceStart = performance.now() - this.keybindWaitStart;
+            if (timeSinceStart >= this.keybindWaitDelay) {
+                for (let i = 0; i < input.buttons.length; i++) {
+                    const button = input.buttons[i];
+                    // Check if it's a mouse button (number)
+                    if (typeof button === 'number') {
+                        this.capturedKey = button;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // ADD: Also capture mouse button clicks for rebinding
+        if (this.waitingForKey && input.buttons.length > 0) {
+            for (let i = 0; i < input.buttons.length; i++) {
+                const button = input.buttons[i];
+                // Check if it's a mouse button (number)
+                if (typeof button === 'number') {
+                    this.capturedKey = button;
+                    break;
+                }
+            }
+        }
+
+        // Main pause menu
+        if (!this.showKeybinds && !this.showVolume) {
+            this.resumeButton.update(inX, inY);
+            if (this.resumeButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.toggle();
+            }
+
+            this.keybindsButton.update(inX, inY);
+            if (this.keybindsButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.showKeybinds = true;
+            }
+
+            this.volumeButton.update(inX, inY);
+            if (this.volumeButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.showVolume = true;
+                // Initialize sliders with current volumes
+                if (window.gameSound) {
+                    this.musicVolumeSlider.setValue(window.gameSound.bgMusicVolume);
+                    this.sfxVolumeSlider.setValue(window.gameSound.sfxVolume);
+                }
+            }
+
+            this.quitButton.update(inX, inY);
+            if (this.quitButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                // Quit to main menu
+                game.gameOver = true;
+                game.score = 0;
+                game.player.reset(game);
+                game.projectiles.reset();
+                game.display.reset();
+                game.bullets.reset();
+                game.voidBolts.reset();
+                game.enemies.reset();
+                game.effects.reset();
+                game.world.reset();
+                this.isPaused = false;
+                this.showKeybinds = false;
+                this.showVolume = false;
+            }
+
+            this.controlSchemeButton.update(inX, inY);
+            if (this.controlSchemeButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                
+                // Toggle control scheme
+                this.controlScheme = this.controlScheme === 'mouse' ? 'wasd' : 'mouse';
+                this.controlSchemeButton.text = `Controls: ${this.controlScheme === 'mouse' ? 'Mouse' : 'WASD'}`;
+                
+                // Reset keybinds to defaults when switching
+                if (this.controlScheme === 'mouse') {
+                    // Reset to mouse mode defaults
+                    this.customKeys = { q: 'q', e: 'e', f: 'f' };
+                } else {
+                    // Reset to WASD mode defaults
+                    this.wasdKeys = {
+                        shoot: 0,  // Left click
+                        dash: 'e',
+                        ult: 'q'
+                    };
+                }
+                
+                this.updateKeybindButtons();
+            }
+        }
+        // Keybinds submenu
+        else if (this.showKeybinds) {
+            this.keybindQButton.update(inX, inY);
+            if (this.keybindQButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked && !this.waitingForKey) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.waitingForKey = 'q';
+                this.keybindWaitStart = performance.now();
+                this.keybindQButton.text = "Shoot: Press any key...";
+            }
+
+            this.keybindEButton.update(inX, inY);
+            if (this.keybindEButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked && !this.waitingForKey) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.waitingForKey = 'e';
+                this.keybindWaitStart = performance.now();
+                this.keybindEButton.text = "Dash: Press any key...";
+            }
+
+            this.keybindFButton.update(inX, inY);
+            if (this.keybindFButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked && !this.waitingForKey) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.waitingForKey = 'f';
+                this.keybindWaitStart = performance.now();
+                this.keybindFButton.text = "Ult: Press any key...";
+            }
+
+            this.keybindBackButton.update(inX, inY);
+            if (this.keybindBackButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked && !this.waitingForKey) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.showKeybinds = false;
+                this.waitingForKey = null;
+            }
+        }
+        // Volume submenu
+        else if (this.showVolume) {
+            // Update sliders
+            this.musicVolumeSlider.update(inX, inY, input.buttons.indexOf(0) > -1);
+            this.sfxVolumeSlider.update(inX, inY, input.buttons.indexOf(0) > -1);
+
+            // Apply volume changes in real-time
+            if (window.gameSound) {
+                window.gameSound.setBgMusicVolume(this.musicVolumeSlider.value);
+                window.gameSound.setSfxVolume(this.sfxVolumeSlider.value);
+            }
+
+            this.volumeBackButton.update(inX, inY);
+            if (this.volumeBackButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.showVolume = false;
+            }
+        }
+    }
+
+    updateKeybindButtons() {
+        const formatKey = (key) => {
+            if (typeof key === 'number') {
+                // Mouse buttons
+                if (key === 0) return 'Left Click';
+                if (key === 1) return 'Middle Click';
+                if (key === 2) return 'Right Click';
+                if (key === 3) return 'Mouse 4';
+                if (key === 4) return 'Mouse 5';
+                return `Mouse ${key}`;
+            }
+            if (typeof key === 'string') {
+                if (key.length === 1) return key.toUpperCase();
+                return key.charAt(0).toUpperCase() + key.slice(1);
+            }
+            return String(key);
+        };
+        
+        if (this.controlScheme === 'mouse') {
+            // Mouse mode: Q/E/F abilities
+            const qKey = typeof this.customKeys.q === 'string' ? this.customKeys.q : 'q';
+            const eKey = typeof this.customKeys.e === 'string' ? this.customKeys.e : 'e';
+            const fKey = typeof this.customKeys.f === 'string' ? this.customKeys.f : 'f';
+
+            let shootKey = `${formatKey(qKey)}`;
+            let dashKey = `${formatKey(eKey)}`;
+            let ultKey = `${formatKey(fKey)}`;
+            let textsArray = [shootKey, dashKey, ultKey];
+            for(let i = 0; i < textsArray.length; i++){
+                if(textsArray[i] == ' '){
+                    textsArray[i] = 'Space';
+                }
+                //console.log(''+ i + ' key is ' + textsArray[i]);
+            }
+            this.keybindQButton.text = `Shoot: ` + textsArray[0];
+            this.keybindEButton.text = `Dash: ` + textsArray[1];
+            this.keybindFButton.text = `Ultimate: ` + textsArray[2];
+
+        } 
+        else {
+            // WASD mode: Shoot/Dash/Ultimate
+            let shootKey = `${formatKey(this.wasdKeys.shoot)}`;
+            let dashKey = `${formatKey(this.wasdKeys.dash)}`;
+            let ultKey = `${formatKey(this.wasdKeys.ult)}`;
+            let textsArray = [shootKey, dashKey, ultKey];
+            for(let i = 0; i < textsArray.length; i++){
+                if(textsArray[i] == ' '){
+                    textsArray[i] = 'Space';
+                }
+                //console.log(''+ i + ' key is ' + textsArray[i]);
+            }
+            this.keybindQButton.text = `Shoot: ` + textsArray[0];
+            this.keybindEButton.text = `Dash: ` + textsArray[1];
+            this.keybindFButton.text = `Ultimate: ` + textsArray[2];
+        }
+    }
+
+    draw(context, game, inMainMenu = false) {
+        if (!this.isPaused) return;
+
+        const rX = window.innerWidth / 2560;
+        const rY = window.innerHeight / 1440;
+
+        // Draw semi-transparent overlay
+        context.save();
+        context.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        context.fillRect(0, 0, game.width, game.height);
+        context.restore();
+
+        // Main pause menu
+        if (!this.showKeybinds && !this.showVolume) {
+            // Draw pause menu background
+            context.save();
+            context.fillStyle = 'rgba(10, 20, 40, 0.95)';
+            context.fillRect(830 * rX, 200 * rY, 900 * rX, 780 * rY);
+            context.strokeStyle = '#00ffff';
+            context.shadowColor = '#00ffff';
+            context.shadowBlur = 15 * rX;
+            context.lineWidth = 3 * rY;
+            context.strokeRect(830 * rX, 200 * rY, 900 * rX, 780 * rY);
+            context.restore();
+
+            // Draw title
+            if(!inMainMenu){
+                this.super.drawGlowText(context, 1000, 250, "PAUSED", 70, '#ffffff', '#00ffff', 15);
+            }
+            else{
+                this.super.drawGlowText(context, 1000, 250, "SETTINGS", 70, '#ffffff', '#00ffff', 15);
+            }
+
+            // Draw buttons
+            this.resumeButton.draw(context);
+            this.keybindsButton.draw(context);
+            this.volumeButton.draw(context);
+            if (!inMainMenu) {
+                this.quitButton.draw(context);
+            }
+            this.controlSchemeButton.draw(context);
+        }
+        // Keybinds submenu
+        else if (this.showKeybinds) {
+            // Draw keybinds background
+            context.save();
+            context.fillStyle = 'rgba(10, 20, 40, 0.95)';
+            context.fillRect(650 * rX, 200 * rY, 700 * rX, 550 * rY);
+            context.strokeStyle = '#00ffff';
+            context.shadowColor = '#00ffff';
+            context.shadowBlur = 15 * rX;
+            context.lineWidth = 3 * rY;
+            context.strokeRect(650 * rX, 200 * rY, 700 * rX, 550 * rY);
+            context.restore();
+
+            // Draw title
+            this.super.drawGlowText(context, 850, 260, "KEYBINDS", 60, '#ffffff', '#00ffff', 12);
+
+            // Draw buttons
+            this.keybindQButton.draw(context);
+            this.keybindEButton.draw(context);
+            this.keybindFButton.draw(context);
+            this.keybindBackButton.draw(context);
+
+            // Draw waiting message
+            if (this.waitingForKey) {
+                if (this.controlScheme === 'mouse') {
+                    this.super.drawGlowText(context, 700, 570, "Press any keyboard key...", 40, '#ffff00', '#ffaa00', 8);
+                    this.super.drawGlowText(context, 700, 610, "(Mouse buttons not allowed)", 35, '#ff8888', '#ff4444', 6);
+                    this.super.drawGlowText(context, 700, 650, "Press ESC to cancel", 30, '#aaaaaa', '#888888', 6);
+                } else {
+                    this.super.drawGlowText(context, 700, 570, "Press any key or mouse button...", 40, '#ffff00', '#ffaa00', 8);
+                    this.super.drawGlowText(context, 700, 610, "Press ESC to cancel", 35, '#aaaaaa', '#888888', 6);
+                }
+            }
+        }
+        // Volume submenu
+        else if (this.showVolume) {
+            // Draw volume background
+            context.save();
+            context.fillStyle = 'rgba(10, 20, 40, 0.95)';
+            context.fillRect(650 * rX, 200 * rY, 900 * rX, 500 * rY);
+            context.strokeStyle = '#00ffff';
+            context.shadowColor = '#00ffff';
+            context.shadowBlur = 15 * rX;
+            context.lineWidth = 3 * rY;
+            context.strokeRect(650 * rX, 200 * rY, 900 * rX, 500 * rY);
+            context.restore();
+
+            // Draw title
+            this.super.drawGlowText(context, 950, 260, "VOLUME", 60, '#ffffff', '#00ffff', 12);
+
+            // Draw music volume
+            this.super.drawGlowText(context, 720, 320, "Music Volume", 40, '#ffffff', '#00ffff', 8);
+            this.musicVolumeSlider.draw(context);
+            this.super.drawGlowText(context, 1420, 415, `${Math.round(this.musicVolumeSlider.value * 100)}%`, 35, '#00ff88', '#00ff00', 6);
+
+            // Draw SFX volume
+            this.super.drawGlowText(context, 720, 470, "SFX Volume", 40, '#ffffff', '#00ffff', 8);
+            this.sfxVolumeSlider.draw(context);
+            this.super.drawGlowText(context, 1420, 565, `${Math.round(this.sfxVolumeSlider.value * 100)}%`, 35, '#00ff88', '#00ff00', 6);
+
+            // Draw back button
+            this.volumeBackButton.draw(context);
+        }
+    }
+}
+
+// Slider class for volume controls
+class Slider {
+    constructor(x, y, width, height, min, max) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.min = min;
+        this.max = max;
+        this.value = 0.5;
+        this.isDragging = false;
+    }
+
+    setValue(val) {
+        this.value = Math.max(this.min, Math.min(this.max, val));
+    }
+
+    update(mouseX, mouseY, isMouseDown) {
+        const rX = window.innerWidth / 2560;
+        const rY = window.innerHeight / 1440;
+
+        const sliderX = this.x * rX;
+        const sliderY = this.y * rY;
+        const sliderW = this.width * rX;
+        const sliderH = this.height * rY;
+
+        // Check if mouse is over slider
+        const isOver = mouseX > sliderX && mouseX < sliderX + sliderW &&
+                       mouseY > sliderY - 20 && mouseY < sliderY + sliderH + 20;
+
+        if (isMouseDown && isOver) {
+            this.isDragging = true;
+        }
+
+        if (!isMouseDown) {
+            this.isDragging = false;
+        }
+
+        if (this.isDragging) {
+            const percent = (mouseX - sliderX) / sliderW;
+            this.value = Math.max(this.min, Math.min(this.max, percent * (this.max - this.min) + this.min));
+        }
+    }
+
+    draw(context) {
+        const rX = window.innerWidth / 2560;
+        const rY = window.innerHeight / 1440;
+
+        const sliderX = this.x * rX;
+        const sliderY = this.y * rY;
+        const sliderW = this.width * rX;
+        const sliderH = this.height * rY;
+
+        // Draw track
+        context.save();
+        context.fillStyle = 'rgba(50, 50, 80, 0.8)';
+        context.fillRect(sliderX, sliderY, sliderW, sliderH);
+        context.strokeStyle = '#00ffff';
+        context.lineWidth = 2 * rY;
+        context.strokeRect(sliderX, sliderY, sliderW, sliderH);
+
+        // Draw fill
+        const fillWidth = (this.value - this.min) / (this.max - this.min) * sliderW;
+        context.fillStyle = '#00ff88';
+        context.fillRect(sliderX, sliderY, fillWidth, sliderH);
+
+        // Draw handle
+        const handleX = sliderX + fillWidth;
+        const handleRadius = 15 * rX;
+        context.shadowColor = '#00ffff';
+        context.shadowBlur = 10 * rX;
+        context.fillStyle = '#ffffff';
+        context.beginPath();
+        context.arc(handleX, sliderY + sliderH / 2, handleRadius, 0, Math.PI * 2);
+        context.fill();
+
+        context.restore();
+    }
+}

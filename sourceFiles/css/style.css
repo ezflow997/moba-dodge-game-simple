@@ -1,0 +1,39 @@
+*{
+    margin: 0;
+    padding: 0;
+    border: 0;
+    box-sizing: border-box;
+}
+
+body, html {
+    background-color: #0a0a1a;
+}
+
+#canvas1{
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    max-width: 100%;
+    max-height: 100%;
+    aspect-ratio: auto 2560 / 1440;
+    overflow: hidden;
+    /*  Disable scrollbars */
+    display: block;
+    /* No floating content on sides */
+}
+
+#player{
+    display: none;
+}
+
+#world{
+    display: none;
+}
+
+#rotating-canvas{
+    display: none;
+}
+
+#temp-canvas{
+    display: none;;
+}

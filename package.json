@@ -1,0 +1,13 @@
+{
+  "name": "moba-dodge-simple",
+  "version": "1.0.0",
+  "description": "MOBA Dodge Game - Simple Edition",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "vercel": "^32.0.0"
+  }
+}
