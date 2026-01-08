@@ -143,7 +143,10 @@ window.addEventListener('load', function () {
 				this.effects.update();
 				this.world.update();
 
-				this.score = Math.ceil(this.score + 0.75);
+				// Only increase time-based score when NOT in boss fight
+				if (!this.enemies.bossActive) {
+					this.score = Math.ceil(this.score + 0.75);
+				}
 			}
 			draw(context) {
 				context.clearRect(-100, -100, this.width*2, this.height*2);

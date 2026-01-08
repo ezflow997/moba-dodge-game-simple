@@ -2,9 +2,9 @@
 // Calls serverless functions instead of Supabase directly
 // No API keys exposed to the client!
 
-// API base URL - will be same origin when deployed to Vercel
+// API base URL - use production API for both local and deployed
 const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:3000/api'  // For local development with vercel dev
+    ? 'https://moba-dodge-simple.vercel.app/api'  // Use production API for local testing
     : '/api';  // For production (same origin)
 
 export class SupabaseLeaderboard {
