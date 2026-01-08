@@ -282,7 +282,8 @@ export class Bullets {
     createShotgunBullets(player, gunData, sizeMultiplier) {
         const count = gunData.bulletCount || 7;
         const spreadAngle = (gunData.spreadAngle || 45) * Math.PI / 180;
-        const baseAngle = this.angle;
+        // Calculate the actual angle to the target using atan2 (full 0 to 2*PI range)
+        const baseAngle = Math.atan2(this.endY - player.y, this.endX - player.x);
 
         for (let i = 0; i < count; i++) {
             const angleOffset = (i / (count - 1) - 0.5) * spreadAngle;
@@ -349,9 +350,12 @@ export class Bullets {
     }
 
     createHomingBullets(player, gunData, sizeMultiplier) {
+        // Calculate the actual angle to the target using atan2 (full 0 to 2*PI range)
+        const baseAngle = Math.atan2(this.endY - player.y, this.endX - player.x);
+
         for (let i = 0; i < 3; i++) {
             const spreadAngle = (i - 1) * 0.3;
-            const bulletAngle = this.angle + spreadAngle;
+            const bulletAngle = baseAngle + spreadAngle;
             const maxTravel = this.bulletsMaxTravel * (gunData.rangeMultiplier || 1);
             const endX = player.x + Math.cos(bulletAngle) * maxTravel;
             const endY = player.y + Math.sin(bulletAngle) * maxTravel;
@@ -371,8 +375,10 @@ export class Bullets {
     createTwinBullets(player, gunData, sizeMultiplier) {
         const count = gunData.bulletCount || 2;
         const spacing = (gunData.spacing || 15) * window.innerWidth / 2560;
-        const perpX = -Math.sin(this.angle);
-        const perpY = Math.cos(this.angle);
+        // Calculate the actual angle to the target using atan2 (full 0 to 2*PI range)
+        const actualAngle = Math.atan2(this.endY - player.y, this.endX - player.x);
+        const perpX = -Math.sin(actualAngle);
+        const perpY = Math.cos(actualAngle);
 
         for (let i = 0; i < count; i++) {
             const offset = (i - (count - 1) / 2) * spacing;

@@ -123,7 +123,12 @@ export class VoidBolts {
                         enemies.bossTowardsScore += enemies.enemyScoreValue;
                     }
                 } else if (collision.type === 'boss') {
-                    // Boss hit - don't break streak
+                    // Boss hit - increase streak and add score
+                    enemies.hitStreak += 1;
+                    if (enemies.hitStreak > enemies.best_streak) {
+                        enemies.best_streak = enemies.hitStreak;
+                    }
+                    game.score += enemies.enemyScoreValue * enemies.hitStreak;
                 }
             }
             

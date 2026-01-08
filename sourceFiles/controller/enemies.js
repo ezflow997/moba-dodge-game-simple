@@ -119,6 +119,11 @@ export class Enemies {
                         player.qPressed = false;
                         player.qTriggered = true;
 
+                        // Increase hit streak for boss hits
+                        this.hitStreak += 1;
+                        if (this.hitStreak > this.best_streak) {
+                            this.best_streak = this.hitStreak;
+                        }
                         game.score = game.score + (this.enemyScoreValue * this.hitStreak);
 
                         if(player.ePressed == true){
