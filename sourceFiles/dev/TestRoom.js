@@ -1,3 +1,5 @@
+import { REWARDS } from '../controller/rewardTypes.js';
+
 /**
  * TestRoom - Isolated testing environment with target dummies and pickup grid
  */
@@ -19,8 +21,27 @@ export class TestRoom {
         // Pickup respawn timers
         this.respawnTimers = [];
         
+        // Dummy respawn tracking
+        this.dummyRespawnTimers = [];
+        
         // Saved game state
         this.savedState = null;
+        
+        // Pickup type to reward ID mapping
+        this.pickupTypeToRewardId = {
+            'speed': 'SPEED_COMMON',
+            'shield': 'SHIELD_RARE',
+            'damage': 'BULLET_SIZE_COMMON',
+            'cooldown': 'Q_CD_COMMON',
+            'multishot': 'TWIN_COMMON',
+            'life': 'EXTRA_LIFE',
+            'shotgun_common': 'SHOTGUN_COMMON',
+            'rapidfire_uncommon': 'RAPIDFIRE_UNCOMMON',
+            'piercing_rare': 'PIERCING_RARE',
+            'ricochet_uncommon': 'RICOCHET_UNCOMMON',
+            'homing_rare': 'HOMING_RARE',
+            'twin_common': 'TWIN_COMMON'
+        };
     }
     
     /**
@@ -95,6 +116,12 @@ export class TestRoom {
         }
         this.respawnTimers = [];
         
+        // Clear dummy respawn timers
+        for (const timerId of this.dummyRespawnTimers) {
+            clearTimeout(timerId);
+        }
+        this.dummyRespawnTimers = [];
+        
         this.savedState = null;
         this.active = false;
     }
@@ -135,13 +162,27 @@ export class TestRoom {
             moveRadius: 100,
             moveSpeed: 0.02,
             color: '#888888',
+            dead: false,
+            respawnTime: 0,
             takeDamage(amount) {
-                this.hp = Math.max(0, this.hp - amount);
+                if (!this.dead) {
+                    this.hp = Math.max(0, this.hp - amount);
+                    if (this.hp === 0) {
+                        this.dead = true;
+                    }
+                }
             },
             reset() {
                 this.hp = this.maxHp;
                 this.x = this.startX;
                 this.y = this.startY;
+                this.dead = false;
+                this.respawnTime = 0;
+            },
+            respawn() {
+                this.hp = this.maxHp;
+                this.dead = false;
+                this.respawnTime = 0;
             }
         };
     }
@@ -211,16 +252,28 @@ export class TestRoom {
     update() {
         if (!this.active) return;
         
+        // Check for R key press to reset dummies
+        if (this.game.input.buttons.includes('r')) {
+            this.handleResetKey();
+        }
+        
         // Update moving dummies
         for (const dummy of this.dummies) {
-            if (dummy.moving) {
+            if (dummy.moving && !dummy.dead) {
                 dummy.moveAngle += dummy.moveSpeed;
                 dummy.x = dummy.startX + Math.cos(dummy.moveAngle) * dummy.moveRadius;
                 dummy.y = dummy.startY + Math.sin(dummy.moveAngle) * dummy.moveRadius;
             }
             
-            // Check collisions with bullets
-            this.checkBulletCollisions(dummy);
+            // Check collisions with bullets (only if not dead)
+            if (!dummy.dead) {
+                this.checkBulletCollisions(dummy);
+            }
+            
+            // Check if dummy should respawn
+            if (dummy.dead && dummy.respawnTime > 0 && performance.now() >= dummy.respawnTime) {
+                dummy.respawn();
+            }
         }
         
         // Check pickup collisions
@@ -254,6 +307,18 @@ export class TestRoom {
                 if (this.game.effects) {
                     this.game.effects.spawnBurst(bullet.x, bullet.y, 'enemyDeath');
                 }
+                
+                // Check if dummy died
+                if (dummy.dead && dummy.respawnTime === 0) {
+                    // Set respawn time (3 seconds from now)
+                    dummy.respawnTime = performance.now() + 3000;
+                    
+                    // Create enhanced death effect
+                    if (this.game.effects) {
+                        this.game.effects.spawnBurst(dummy.x, dummy.y, 'enemyDeath');
+                        this.game.effects.spawnBurst(dummy.x, dummy.y, 'enemyDeath');
+                    }
+                }
             }
         }
     }
@@ -271,9 +336,13 @@ export class TestRoom {
             const distance = Math.sqrt(dx * dx + dy * dy);
             
             if (distance < this.PICKUP_COLLECTION_RADIUS + player.size) {
-                // Spawn actual reward through reward manager
+                // Get the reward ID for this pickup type
+                const rewardId = this.pickupTypeToRewardId[pickup.type];
+                const specificReward = rewardId ? REWARDS[rewardId] : null;
+                
+                // Spawn actual reward through reward manager with specific type
                 if (this.game.rewardManager) {
-                    this.game.rewardManager.spawnReward(pickup.x, pickup.y);
+                    this.game.rewardManager.spawnReward(pickup.x, pickup.y, specificReward);
                 }
                 
                 // Save pickup data for respawn
@@ -336,58 +405,101 @@ export class TestRoom {
         for (const dummy of this.dummies) {
             context.save();
             
-            // Draw dummy body
-            const gradient = context.createRadialGradient(
-                dummy.x, dummy.y, 0,
-                dummy.x, dummy.y, dummy.size
-            );
-            gradient.addColorStop(0, '#666666');
-            gradient.addColorStop(1, dummy.color);
-            
-            context.fillStyle = gradient;
-            context.beginPath();
-            context.arc(dummy.x, dummy.y, dummy.size, 0, Math.PI * 2);
-            context.fill();
-            
-            // Draw outline
-            context.strokeStyle = '#ffffff';
-            context.lineWidth = 2 * rX;
-            context.stroke();
-            
-            // Draw HP bar
-            const barWidth = dummy.size * 2;
-            const barHeight = 8 * rX;
-            const barX = dummy.x - barWidth / 2;
-            const barY = dummy.y - dummy.size - 20;
-            
-            // Background
-            context.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            context.fillRect(barX, barY, barWidth, barHeight);
-            
-            // HP fill
-            const hpPercent = dummy.hp / dummy.maxHp;
-            const fillColor = hpPercent > 0.5 ? '#00ff00' : hpPercent > 0.25 ? '#ffff00' : '#ff0000';
-            context.fillStyle = fillColor;
-            context.fillRect(barX, barY, barWidth * hpPercent, barHeight);
-            
-            // HP text
-            context.font = `${14 * rX}px monospace`;
-            context.fillStyle = '#ffffff';
-            context.textAlign = 'center';
-            context.shadowBlur = 3 * rX;
-            context.fillText(`${dummy.hp}/${dummy.maxHp}`, dummy.x, barY - 5);
-            
-            // Draw label
-            context.font = `${16 * rX}px monospace`;
-            const lines = dummy.label.split('\n');
-            for (let i = 0; i < lines.length; i++) {
-                context.fillText(lines[i], dummy.x, dummy.y + dummy.size + 25 + i * 18);
+            // If dummy is dead, show different visuals
+            if (dummy.dead) {
+                // Draw faded dummy with skull or X
+                context.globalAlpha = 0.3;
+                
+                // Draw dummy body (faded)
+                const gradient = context.createRadialGradient(
+                    dummy.x, dummy.y, 0,
+                    dummy.x, dummy.y, dummy.size
+                );
+                gradient.addColorStop(0, '#333333');
+                gradient.addColorStop(1, '#111111');
+                
+                context.fillStyle = gradient;
+                context.beginPath();
+                context.arc(dummy.x, dummy.y, dummy.size, 0, Math.PI * 2);
+                context.fill();
+                
+                // Draw X mark
+                context.globalAlpha = 0.6;
+                context.strokeStyle = '#ff0000';
+                context.lineWidth = 4 * rX;
+                const xSize = dummy.size * 0.5;
+                context.beginPath();
+                context.moveTo(dummy.x - xSize, dummy.y - xSize);
+                context.lineTo(dummy.x + xSize, dummy.y + xSize);
+                context.moveTo(dummy.x + xSize, dummy.y - xSize);
+                context.lineTo(dummy.x - xSize, dummy.y + xSize);
+                context.stroke();
+                
+                // Draw respawn timer
+                context.globalAlpha = 1;
+                const respawnSeconds = Math.max(0, Math.ceil((dummy.respawnTime - performance.now()) / 1000));
+                context.font = `${20 * rX}px monospace`;
+                context.fillStyle = '#ff0000';
+                context.textAlign = 'center';
+                context.shadowColor = '#ff0000';
+                context.shadowBlur = 5 * rX;
+                context.fillText(`Respawning in ${respawnSeconds}s`, dummy.x, dummy.y + dummy.size + 25);
+            } else {
+                // Draw normal dummy
+                
+                // Draw dummy body
+                const gradient = context.createRadialGradient(
+                    dummy.x, dummy.y, 0,
+                    dummy.x, dummy.y, dummy.size
+                );
+                gradient.addColorStop(0, '#666666');
+                gradient.addColorStop(1, dummy.color);
+                
+                context.fillStyle = gradient;
+                context.beginPath();
+                context.arc(dummy.x, dummy.y, dummy.size, 0, Math.PI * 2);
+                context.fill();
+                
+                // Draw outline
+                context.strokeStyle = '#ffffff';
+                context.lineWidth = 2 * rX;
+                context.stroke();
+                
+                // Draw HP bar
+                const barWidth = dummy.size * 2;
+                const barHeight = 8 * rX;
+                const barX = dummy.x - barWidth / 2;
+                const barY = dummy.y - dummy.size - 20;
+                
+                // Background
+                context.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                context.fillRect(barX, barY, barWidth, barHeight);
+                
+                // HP fill
+                const hpPercent = dummy.hp / dummy.maxHp;
+                const fillColor = hpPercent > 0.5 ? '#00ff00' : hpPercent > 0.25 ? '#ffff00' : '#ff0000';
+                context.fillStyle = fillColor;
+                context.fillRect(barX, barY, barWidth * hpPercent, barHeight);
+                
+                // HP text
+                context.font = `${14 * rX}px monospace`;
+                context.fillStyle = '#ffffff';
+                context.textAlign = 'center';
+                context.shadowBlur = 3 * rX;
+                context.fillText(`${dummy.hp}/${dummy.maxHp}`, dummy.x, barY - 5);
+                
+                // Draw label
+                context.font = `${16 * rX}px monospace`;
+                const lines = dummy.label.split('\n');
+                for (let i = 0; i < lines.length; i++) {
+                    context.fillText(lines[i], dummy.x, dummy.y + dummy.size + 25 + i * 18);
+                }
+                
+                // Reset button indicator
+                context.font = `${12 * rX}px monospace`;
+                context.fillStyle = '#00ffff';
+                context.fillText('[R to Reset]', dummy.x, dummy.y + dummy.size + 55);
             }
-            
-            // Reset button indicator
-            context.font = `${12 * rX}px monospace`;
-            context.fillStyle = '#00ffff';
-            context.fillText('[R to Reset]', dummy.x, dummy.y + dummy.size + 55);
             
             context.restore();
         }
