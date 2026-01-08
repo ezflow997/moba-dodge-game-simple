@@ -30,7 +30,7 @@ export class CommandRegistry {
         this.register('maxlevel', this.cmdMaxLevel.bind(this), 'Set to maximum level');
         
         // Spawning & testing
-        this.register('testroom', this.cmdTestRoom.bind(this), 'Load isolated test room', ['test']);
+        this.register('testroom', this.cmdTestRoom.bind(this), 'Load isolated test room');
         this.register('spawn', this.cmdSpawn.bind(this), 'Spawn specific enemy <type>');
         this.register('spawnpickup', this.cmdSpawnPickup.bind(this), 'Spawn specific pickup <type>');
         this.register('clear', this.cmdClear.bind(this), 'Remove all enemies and projectiles', ['clearenemies']);
@@ -63,6 +63,12 @@ export class CommandRegistry {
         this.register('help', this.cmdHelp.bind(this), 'List all available commands or show help for <command>');
         this.register('echo', this.cmdEcho.bind(this), 'Print message to console <message>');
         this.register('reset', this.cmdReset.bind(this), 'Reset all cheats to default state');
+        
+        // Testing commands
+        this.register('test', this.cmdTest.bind(this), 'Run all tests or tests in a category: test [category]');
+        this.register('testfast', this.cmdTestFast.bind(this), 'Run quick smoke tests');
+        this.register('testverbose', this.cmdTestVerbose.bind(this), 'Run tests with verbose output: testverbose [category]');
+        this.register('testlist', this.cmdTestList.bind(this), 'List all available test categories');
     }
     
     /**
@@ -493,5 +499,51 @@ export class CommandRegistry {
         this.game.logic_fps = 60;
         
         return { success: true, message: 'All cheats reset to default state' };
+    }
+    
+    async cmdTest(args) {
+        try {
+            const { globalTestRunner } = await import('../testing/testRunner.js');
+            if (args.length === 0) {
+                const report = await globalTestRunner.runTests({});
+                return { success: true, message: globalTestRunner.formatReport(report) };
+            } else {
+                const category = args[0];
+                const report = await globalTestRunner.runTests({ category });
+                return { success: true, message: globalTestRunner.formatReport(report) };
+            }
+        } catch (error) {
+            return { success: false, message: 'Test system not available: ' + error.message };
+        }
+    }
+    
+    async cmdTestFast(args) {
+        try {
+            const { globalTestRunner } = await import('../testing/testRunner.js');
+            const report = await globalTestRunner.runTests({ tags: ['smoke'] });
+            return { success: true, message: `Smoke tests: ${report.passed}/${report.totalTests} passed (${report.successRate}%)` };
+        } catch (error) {
+            return { success: false, message: 'Test system not available: ' + error.message };
+        }
+    }
+    
+    async cmdTestVerbose(args) {
+        try {
+            const { globalTestRunner } = await import('../testing/testRunner.js');
+            const filter = args.length > 0 ? { category: args[0] } : {};
+            const report = await globalTestRunner.runTests(filter);
+            return { success: true, message: globalTestRunner.formatReport(report) };
+        } catch (error) {
+            return { success: false, message: 'Test system not available: ' + error.message };
+        }
+    }
+    
+    cmdTestList(args) {
+        try {
+            // Dynamic import not needed for sync operation, but we need to handle if not available
+            return { success: true, message: 'Use testfast or test command to run tests. Categories: Player, Enemy, Projectile, Ability, Combat, Smoke' };
+        } catch (error) {
+            return { success: false, message: 'Test system not available' };
+        }
     }
 }

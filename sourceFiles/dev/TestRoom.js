@@ -99,7 +99,7 @@ export class TestRoom {
             this.createDummy(centerX - spacing, topY, 5000, 'Medium HP', false),
             this.createDummy(centerX, topY, 10000, 'High HP', false),
             this.createDummy(centerX + spacing, topY, 20000, 'Very High HP', false),
-            this.createDummy(centerX + spacing * 2, topY, 50000, 'Ultra HP', true) // Moving dummy
+            this.createDummy(centerX + spacing * 2, topY, 50000, 'Ultra HP', false)
         ];
     }
     

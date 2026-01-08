@@ -165,15 +165,17 @@ window.addEventListener('load', function () {
 				this.msUpdate = window.performance.now();
 
 				this.player.update(this.input, this);
-				if(this.challenge_level == 0){
-					this.bullets.update(this.player, this.input, this.enemies, this);
-					this.enemies.update(this, this.player, this.bullets, msNow2);
+				if(!this.testRoom.active) {
+					if(this.challenge_level == 0){
+						this.bullets.update(this.player, this.input, this.enemies, this);
+						this.enemies.update(this, this.player, this.bullets, msNow2);
+					}
+					else if(this.challenge_level == 1){
+						this.voidBolts.update(this.enemies, this);
+						this.enemies.update(this, this.player, this.voidBolts, msNow2);
+					}
+					this.projectiles.update(this.player, this, msNow2);
 				}
-				else if(this.challenge_level == 1){
-					this.voidBolts.update(this.enemies, this);
-					this.enemies.update(this, this.player, this.voidBolts, msNow2);
-				}
-				this.projectiles.update(this.player, this, msNow2);
 				this.display.update(this);
 
 				// Update reward manager
