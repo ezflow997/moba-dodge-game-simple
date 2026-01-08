@@ -14,6 +14,7 @@ import { VoidBolts } from "./controller/voidBolts.js";
 import { SupabaseLeaderboard } from "./supabase/supabase.js";
 import { LeaderboardMenu } from "./menu/leaderboardMenu.js";
 import { NameInputMenu } from "./menu/nameInputMenu.js";
+import { RewardManager } from "./controller/rewardManager.js";
 
 // Simple Score class for local session tracking
 class SimpleScore {
@@ -54,6 +55,7 @@ window.addEventListener('load', function () {
 				this.super = new superFunctions();
 				this.effects = new EffectsManager();
 				this.sound = new SoundManager();
+				this.rewardManager = new RewardManager();
 				window.gameSound = this.sound; // Global reference for menu sounds
 				this.pauseMenu = new PauseMenu();
 
@@ -139,13 +141,18 @@ window.addEventListener('load', function () {
 				this.projectiles.update(this.player, this, msNow2);
 				this.display.update(this);
 
+				// Update reward manager
+				this.rewardManager.update(this.player, this);
+
 				// Update effects and world
 				this.effects.update();
 				this.world.update();
 
 				// Only increase time-based score when NOT in boss fight
 				if (!this.enemies.bossActive) {
-					this.score = Math.ceil(this.score + 0.75);
+					// Apply score multiplier from rewards
+					const multiplier = this.rewardManager.scoreMultiplier || 1;
+					this.score = Math.ceil(this.score + 0.75 * multiplier);
 				}
 			}
 			draw(context) {
@@ -161,6 +168,9 @@ window.addEventListener('load', function () {
 				this.enemies.draw(context);
 				this.projectiles.draw(context);
 				this.effects.draw(context);
+				// Draw rewards (drops and effects)
+				this.rewardManager.draw(context, this.player);
+				this.rewardManager.drawActiveRewardsUI(context);
 				this.display.draw(context, this);
 				this.pauseMenu.draw(context, this, false);
 			}
@@ -189,10 +199,11 @@ window.addEventListener('load', function () {
 					last_score: [new SimpleScore(), new SimpleScore(), new SimpleScore(), new SimpleScore(), new SimpleScore()]
 				};
 
-				// Reset effects and world
+				// Reset effects, world, and rewards
 				this.effects.reset();
 				this.world.reset();
 				this.voidBolts.reset();
+				this.rewardManager.reset();
 			}
 
 			// Submit score to Supabase leaderboard
