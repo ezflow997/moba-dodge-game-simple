@@ -213,36 +213,15 @@ export class CommandRegistry {
     }
     
     cmdTestRoom(args) {
-        this.devMode.inTestRoom = !this.devMode.inTestRoom;
-        
-        if (this.devMode.inTestRoom) {
-            // Save current game state
-            this.devMode.savedGameState = {
-                score: this.game.score,
-                playerX: this.game.player.x,
-                playerY: this.game.player.y,
-                enemies: this.game.enemies.enemiesList.length,
-                gameOver: this.game.gameOver
-            };
-            
-            // Clear game state for test room
-            this.game.enemies.enemiesList = [];
-            this.game.projectiles.projectilesList = [];
-            this.game.bullets.bulletsList = [];
-            this.game.voidBolts.reset();
-            
-            // Position player at center
-            this.game.player.x = this.game.width / 2;
-            this.game.player.y = this.game.height / 2;
-            
+        if (!this.game.testRoom.active) {
+            // Enter test room using TestRoom class
+            this.game.testRoom.enter();
+            this.devMode.inTestRoom = true;
             return { success: true, message: 'Entered test room. Type "testroom" again to return.' };
         } else {
-            // Restore game state
-            if (this.devMode.savedGameState) {
-                this.game.score = this.devMode.savedGameState.score;
-                this.game.player.x = this.devMode.savedGameState.playerX;
-                this.game.player.y = this.devMode.savedGameState.playerY;
-            }
+            // Exit test room using TestRoom class
+            this.game.testRoom.exit();
+            this.devMode.inTestRoom = false;
             return { success: true, message: 'Exited test room and restored game state.' };
         }
     }
