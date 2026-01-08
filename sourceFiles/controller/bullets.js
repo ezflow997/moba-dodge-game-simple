@@ -279,10 +279,23 @@ export class Bullets {
         }
     }
 
+    // Convert internal angle + dirX/dirY to a full-circle angle for trig
+    getFullAngle() {
+        // The internal angle is 0-PI from acos, dirX/dirY indicate quadrant
+        let fullAngle = this.angle;
+        if (this.dirX < 0) {
+            fullAngle = Math.PI - fullAngle;
+        }
+        if (this.dirY < 0) {
+            fullAngle = -fullAngle;
+        }
+        return fullAngle;
+    }
+
     createShotgunBullets(player, gunData, sizeMultiplier) {
         const count = gunData.bulletCount || 7;
         const spreadAngle = (gunData.spreadAngle || 45) * Math.PI / 180;
-        const baseAngle = this.angle;
+        const baseAngle = this.getFullAngle();
 
         for (let i = 0; i < count; i++) {
             const angleOffset = (i / (count - 1) - 0.5) * spreadAngle;
@@ -349,9 +362,10 @@ export class Bullets {
     }
 
     createHomingBullets(player, gunData, sizeMultiplier) {
+        const baseAngle = this.getFullAngle();
         for (let i = 0; i < 3; i++) {
             const spreadAngle = (i - 1) * 0.3;
-            const bulletAngle = this.angle + spreadAngle;
+            const bulletAngle = baseAngle + spreadAngle;
             const maxTravel = this.bulletsMaxTravel * (gunData.rangeMultiplier || 1);
             const endX = player.x + Math.cos(bulletAngle) * maxTravel;
             const endY = player.y + Math.sin(bulletAngle) * maxTravel;
@@ -371,8 +385,9 @@ export class Bullets {
     createTwinBullets(player, gunData, sizeMultiplier) {
         const count = gunData.bulletCount || 2;
         const spacing = (gunData.spacing || 15) * window.innerWidth / 2560;
-        const perpX = -Math.sin(this.angle);
-        const perpY = Math.cos(this.angle);
+        const fullAngle = this.getFullAngle();
+        const perpX = -Math.sin(fullAngle);
+        const perpY = Math.cos(fullAngle);
 
         for (let i = 0; i < count; i++) {
             const offset = (i - (count - 1) / 2) * spacing;
