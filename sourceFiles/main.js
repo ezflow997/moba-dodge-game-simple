@@ -15,6 +15,10 @@ import { SupabaseLeaderboard } from "./supabase/supabase.js";
 import { LeaderboardMenu } from "./menu/leaderboardMenu.js";
 import { NameInputMenu } from "./menu/nameInputMenu.js";
 import { RewardManager } from "./controller/rewardManager.js";
+import { DevMode } from "./dev/DevMode.js";
+import { CommandRegistry } from "./dev/CommandRegistry.js";
+import { DebugConsole } from "./dev/DebugConsole.js";
+import { TestRoom } from "./dev/TestRoom.js";
 
 // Simple Score class for local session tracking
 class SimpleScore {
@@ -94,6 +98,12 @@ window.addEventListener('load', function () {
 
 				// Set up one-time music unlock on first click
 				this.setupMusicUnlock();
+
+				// Dev mode system
+				this.devMode = new DevMode();
+				this.commandRegistry = new CommandRegistry(this, this.devMode);
+				this.debugConsole = new DebugConsole(this.commandRegistry, this.input);
+				this.testRoom = new TestRoom(this);
 			}
 
 			setupMusicUnlock() {
@@ -113,6 +123,31 @@ window.addEventListener('load', function () {
 			}
 			update() {
 				const msNow2 = window.performance.now();
+
+				// Update debug console
+				if (this.devMode.isEnabled()) {
+					this.debugConsole.update(this);
+					
+					// If console is visible, don't process game updates
+					if (this.debugConsole.visible) {
+						return;
+					}
+					
+					// Update FPS counter
+					this.devMode.updateFPS();
+					
+					// Update test room if active
+					if (this.testRoom.active) {
+						this.testRoom.update();
+					}
+					
+					// Apply instant cooldowns if enabled
+					if (this.devMode.instantCooldowns) {
+						this.player.qCoolDownElapsed = this.player.qCoolDown;
+						this.player.eCoolDownElapsed = this.player.eCoolDown;
+						this.player.fCoolDownElapsed = this.player.fCoolDown;
+					}
+				}
 
 				// Check for pause toggle
 				if(this.input.escapePressed) {
@@ -158,6 +193,12 @@ window.addEventListener('load', function () {
 			draw(context) {
 				context.clearRect(-100, -100, this.width*2, this.height*2);
 				this.world.draw(context, game.width, game.height);
+				
+				// Draw test room if active
+				if (this.devMode.isEnabled() && this.testRoom.active) {
+					this.testRoom.draw(context);
+				}
+				
 				this.player.draw(context);
 				if(this.challenge_level == 0){
 					this.bullets.draw(context);
@@ -172,7 +213,22 @@ window.addEventListener('load', function () {
 				this.rewardManager.draw(context, this.player);
 				this.rewardManager.drawActiveRewardsUI(context);
 				this.display.draw(context, this);
+				
+				// Draw dev mode overlays
+				if (this.devMode.isEnabled()) {
+					this.devMode.drawGridOverlay(context, this);
+					this.devMode.drawHitboxes(context, this);
+					this.devMode.drawIndicators(context, this);
+					this.devMode.drawFPS(context);
+					this.devMode.drawStats(context, this);
+				}
+				
 				this.pauseMenu.draw(context, this, false);
+				
+				// Draw debug console (always last so it's on top)
+				if (this.devMode.isEnabled()) {
+					this.debugConsole.draw(context, this);
+				}
 			}
 			drawGameOverWindow(context){
 				context.clearRect(-100, -100, this.width*2, this.height*2);
