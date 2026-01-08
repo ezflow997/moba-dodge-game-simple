@@ -504,6 +504,11 @@ export class CommandRegistry {
     async cmdTest(args) {
         try {
             const { globalTestRunner } = await import('../testing/testRunner.js');
+            const { registerInGameTests } = await import('../testing/inGameTests.js');
+            
+            // Register tests if not already done
+            registerInGameTests(this.game);
+            
             if (args.length === 0) {
                 const report = await globalTestRunner.runTests({});
                 return { success: true, message: globalTestRunner.formatReport(report) };
@@ -520,6 +525,11 @@ export class CommandRegistry {
     async cmdTestFast(args) {
         try {
             const { globalTestRunner } = await import('../testing/testRunner.js');
+            const { registerInGameTests } = await import('../testing/inGameTests.js');
+            
+            // Register tests if not already done
+            registerInGameTests(this.game);
+            
             const report = await globalTestRunner.runTests({ tags: ['smoke'] });
             return { success: true, message: `Smoke tests: ${report.passed}/${report.totalTests} passed (${report.successRate}%)` };
         } catch (error) {
@@ -530,6 +540,11 @@ export class CommandRegistry {
     async cmdTestVerbose(args) {
         try {
             const { globalTestRunner } = await import('../testing/testRunner.js');
+            const { registerInGameTests } = await import('../testing/inGameTests.js');
+            
+            // Register tests if not already done
+            registerInGameTests(this.game);
+            
             const filter = args.length > 0 ? { category: args[0] } : {};
             const report = await globalTestRunner.runTests(filter);
             return { success: true, message: globalTestRunner.formatReport(report) };

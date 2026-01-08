@@ -252,7 +252,7 @@ export class TestRoom {
                 
                 // Visual effect
                 if (this.game.effects) {
-                    this.game.effects.addExplosion(bullet.x, bullet.y, 20, '#ffff00');
+                    this.game.effects.spawnBurst(bullet.x, bullet.y, 'enemyDeath');
                 }
             }
         }
