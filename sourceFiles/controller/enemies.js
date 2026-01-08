@@ -246,10 +246,10 @@ export class Enemies {
                 else{
                     p.update(player);
                     if(game.challenge_level == 0){
-                        p.checkCollision(player, bulletArray);
+                        p.checkCollision(player, bulletArray, game.rewardManager);
                     }
                     else if(game.challenge_level == 1){
-                        p.checkCollision(player, bulletArray);
+                        p.checkCollision(player, bulletArray, game.rewardManager);
                     }
                 }
             }
