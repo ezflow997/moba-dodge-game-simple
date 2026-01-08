@@ -461,12 +461,8 @@ export class superFunctions {
             bullets.dirY = -1;
         }
     
-        let dx = Math.abs(sX - eX);
-        let dy = Math.abs(sY - eY);
-    
-        let c = Math.sqrt(Math.pow(dx,2) + Math.pow(dy,2));
-    
-        bullets.angle = Math.acos(dx/c);
+        // FIX: Use atan2 for proper full-angle calculation
+        bullets.angle = Math.atan2(eY - sY, eX - sX);
 
         //console.log(bullets.angle, sX, sY, eX, eY, bullets.dirX, bullets.dirY, c);
     }

@@ -113,7 +113,7 @@ export class Bullets {
                                     // For piercing bullets, don't clear all - just mark hit
                                     if (this.bulletsList[i].pierceCount > 0) {
                                         this.bulletsList[i].enemyCollision = false;
-                                        this.bulletsHitTarget = true;
+                                        // Don't set bulletsHitTarget - piercing bullets continue moving
                                     } else {
                                         this.bulletsList = [];
                                         this.bulletsHitTarget = true;
@@ -138,7 +138,7 @@ export class Bullets {
                             if(this.bulletsList[i].enemyCollision == true){
                                 if (this.bulletsList[i].pierceCount > 0) {
                                     this.bulletsList[i].enemyCollision = false;
-                                    this.bulletsHitTarget = true;
+                                    // Don't set bulletsHitTarget - piercing bullets continue moving
                                 } else {
                                     this.bulletsList = [];
                                     this.bulletsHitTarget = true;

@@ -133,8 +133,8 @@ export class SpecialBullet {
         const prevX = this.x;
         const prevY = this.y;
 
-        if (this.isHoming) {
-            // Move in current direction
+        if (this.isHoming || this.bouncesRemaining > 0 || this.bounceCount > 0) {
+            // Use directional movement for homing and ricochet bullets
             this.x += this.dirX * this.speed;
             this.y += this.dirY * this.speed;
         } else if (this.x !== this.endX || this.y !== this.endY) {
