@@ -538,7 +538,16 @@ export class CommandRegistry {
         }
     }
     
-    cmdTestList(args) {
-        return { success: true, message: 'Use testfast or test command to run tests. Categories: Player, Enemy, Projectile, Ability, Combat, Smoke' };
+    async cmdTestList(args) {
+        try {
+            const { globalTestRunner } = await import('../testing/testRunner.js');
+            const categories = globalTestRunner.getCategories();
+            if (categories.length === 0) {
+                return { success: true, message: 'No test categories available. Use test or testfast to run tests.' };
+            }
+            return { success: true, message: 'Available test categories: ' + categories.join(', ') };
+        } catch (error) {
+            return { success: false, message: 'Test system not available: ' + error.message };
+        }
     }
 }
