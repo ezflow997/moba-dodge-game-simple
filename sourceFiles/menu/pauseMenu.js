@@ -11,11 +11,12 @@ export class PauseMenu {
         this.keybindWaitDelay = 300; // Delay in ms before accepting input
 
         // Main pause menu buttons
-        this.resumeButton = new Button(880, 290, 800, 90, "Resume (ESC)", 55, 200, 65, false, true, 'white', 'white');
-        this.keybindsButton = new Button(880, 400, 800, 90, "Keybinds", 55, 260, 65, false, true, 'white', 'white');
-        this.volumeButton = new Button(880, 510, 800, 90, "Volume", 55, 280, 65, false, true, 'white', 'white');
-        this.controlSchemeButton = new Button(880, 620, 800, 90, "Controls: Mouse", 55, 140, 65, false, true, 'white', 'white');
-        this.quitButton = new Button(880, 730, 800, 90, "Quit to Menu", 55, 180, 65, false, true, 'white', 'white');
+        this.resumeButton = new Button(880, 270, 800, 80, "Resume (ESC)", 50, 200, 60, false, true, 'white', 'white');
+        this.keybindsButton = new Button(880, 365, 800, 80, "Keybinds", 50, 260, 60, false, true, 'white', 'white');
+        this.volumeButton = new Button(880, 460, 800, 80, "Volume", 50, 280, 60, false, true, 'white', 'white');
+        this.controlSchemeButton = new Button(880, 555, 800, 80, "Controls: Mouse", 50, 140, 60, false, true, 'white', 'white');
+        this.devModeButton = new Button(880, 650, 800, 80, "Dev Mode: OFF", 50, 180, 60, false, true, 'white', 'white');
+        this.quitButton = new Button(880, 745, 800, 80, "Quit to Menu", 50, 180, 60, false, true, 'white', 'white');
 
         // Submenu states
         this.showKeybinds = false;
@@ -295,6 +296,20 @@ export class PauseMenu {
                 
                 this.updateKeybindButtons();
             }
+
+            // Dev Mode button
+            if (game.devMode) {
+                this.devModeButton.text = `Dev Mode: ${game.devMode.isEnabled() ? 'ON' : 'OFF'}`;
+                this.devModeButton.update(inX, inY);
+                if (this.devModeButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                    this.clicked = true;
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    
+                    // Toggle dev mode
+                    game.devMode.setEnabled(!game.devMode.isEnabled());
+                    this.devModeButton.text = `Dev Mode: ${game.devMode.isEnabled() ? 'ON' : 'OFF'}`;
+                }
+            }
         }
         // Keybinds submenu
         else if (this.showKeybinds) {
@@ -448,10 +463,13 @@ export class PauseMenu {
             this.resumeButton.draw(context);
             this.keybindsButton.draw(context);
             this.volumeButton.draw(context);
+            this.controlSchemeButton.draw(context);
+            if (game.devMode) {
+                this.devModeButton.draw(context);
+            }
             if (!inMainMenu) {
                 this.quitButton.draw(context);
             }
-            this.controlSchemeButton.draw(context);
         }
         // Keybinds submenu
         else if (this.showKeybinds) {

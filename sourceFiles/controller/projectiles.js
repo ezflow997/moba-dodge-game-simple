@@ -118,6 +118,12 @@ export class Projectiles{
                     p.update();
                     p.checkCollision(player);
                     if(p.playerCollision == true){
+                        // Check if god mode is enabled
+                        if (game.devMode && game.devMode.isEnabled() && game.devMode.godMode) {
+                            // God mode - ignore collision
+                            continue;
+                        }
+                        
                         // Check if player can survive (shield blocks projectile, or extra life)
                         if (game.rewardManager && game.rewardManager.canSurviveHit(true)) {
                             // Projectile blocked! Remove it and show effect
