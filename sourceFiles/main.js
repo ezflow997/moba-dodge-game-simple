@@ -285,6 +285,7 @@ window.addEventListener('load', function () {
 					game.enemies.reset();
 					game.effects.reset();
 					game.world.reset();
+					game.rewardManager.reset();
 					game.drawGameOverWindow(ctx);
 				}
 
