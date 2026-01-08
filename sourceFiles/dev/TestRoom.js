@@ -140,7 +140,7 @@ export class TestRoom {
         const startY = this.game.height / 2;
         const spacing = 120;
         
-        // Create a grid of different pickup types
+        // Create a grid of different pickup types (left side)
         const pickupTypes = [
             { type: 'speed', label: 'Speed\nBoost', color: '#00ff00' },
             { type: 'shield', label: 'Shield', color: '#0088ff' },
@@ -160,6 +160,33 @@ export class TestRoom {
                 label: pickup.label,
                 color: pickup.color,
                 size: 30
+            });
+        }
+        
+        // Create gun upgrade pickups (right side)
+        const gunStartX = this.game.width - 350;
+        const gunStartY = this.game.height / 2;
+        const gunSpacing = 120;
+        
+        const gunTypes = [
+            { type: 'shotgun_common', label: 'Shotgun', color: '#9d9d9d' },
+            { type: 'rapidfire_uncommon', label: 'Rapid\nFire', color: '#1eff00' },
+            { type: 'piercing_rare', label: 'Piercing', color: '#0070dd' },
+            { type: 'ricochet_uncommon', label: 'Ricochet', color: '#1eff00' },
+            { type: 'homing_rare', label: 'Homing', color: '#0070dd' },
+            { type: 'twin_common', label: 'Twin\nShot', color: '#9d9d9d' }
+        ];
+        
+        for (let i = 0; i < gunTypes.length; i++) {
+            const gun = gunTypes[i];
+            this.pickupGrid.push({
+                x: gunStartX + (i % 3) * gunSpacing,
+                y: gunStartY + Math.floor(i / 3) * gunSpacing,
+                type: gun.type,
+                label: gun.label,
+                color: gun.color,
+                size: 30,
+                isGun: true
             });
         }
     }
@@ -322,7 +349,11 @@ export class TestRoom {
         
         context.save();
         
-        // Draw section title
+        // Separate pickups into left and right groups
+        const leftPickups = this.pickupGrid.filter(p => !p.isGun);
+        const gunPickups = this.pickupGrid.filter(p => p.isGun);
+        
+        // Draw left section title (PICKUPS)
         context.font = `${32 * rX}px monospace`;
         context.fillStyle = '#ffff00';
         context.shadowColor = '#ffff00';
@@ -330,8 +361,37 @@ export class TestRoom {
         context.textAlign = 'left';
         context.fillText('PICKUPS', 100, this.game.height / 2 - 60);
         
-        // Draw pickups
-        for (const pickup of this.pickupGrid) {
+        // Draw left pickups
+        for (const pickup of leftPickups) {
+            // Draw pickup circle
+            context.fillStyle = pickup.color;
+            context.shadowColor = pickup.color;
+            context.shadowBlur = 15 * rX;
+            context.beginPath();
+            context.arc(pickup.x, pickup.y, pickup.size, 0, Math.PI * 2);
+            context.fill();
+            
+            // Draw label
+            context.font = `${14 * rX}px monospace`;
+            context.fillStyle = '#ffffff';
+            context.shadowBlur = 3 * rX;
+            context.textAlign = 'center';
+            const lines = pickup.label.split('\n');
+            for (let i = 0; i < lines.length; i++) {
+                context.fillText(lines[i], pickup.x, pickup.y + pickup.size + 20 + i * 16);
+            }
+        }
+        
+        // Draw right section title (GUN UPGRADES)
+        context.font = `${32 * rX}px monospace`;
+        context.fillStyle = '#ff8000';
+        context.shadowColor = '#ff8000';
+        context.shadowBlur = 8 * rX;
+        context.textAlign = 'right';
+        context.fillText('GUN UPGRADES', this.game.width - 100, this.game.height / 2 - 60);
+        
+        // Draw gun pickups
+        for (const pickup of gunPickups) {
             // Draw pickup circle
             context.fillStyle = pickup.color;
             context.shadowColor = pickup.color;
