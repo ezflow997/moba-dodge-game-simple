@@ -253,7 +253,7 @@ export class TestRoom {
         if (!this.active) return;
         
         // Check for R key press to reset dummies
-        if (this.game.input.buttons.indexOf('r') !== -1) {
+        if (this.game.input.buttons.includes('r')) {
             this.handleResetKey();
         }
         
@@ -313,7 +313,7 @@ export class TestRoom {
                     // Set respawn time (3 seconds from now)
                     dummy.respawnTime = performance.now() + 3000;
                     
-                    // Create death effect
+                    // Create enhanced death effect
                     if (this.game.effects) {
                         this.game.effects.spawnBurst(dummy.x, dummy.y, 'enemyDeath');
                         this.game.effects.spawnBurst(dummy.x, dummy.y, 'enemyDeath');
@@ -437,7 +437,7 @@ export class TestRoom {
                 
                 // Draw respawn timer
                 context.globalAlpha = 1;
-                const respawnSeconds = Math.ceil((dummy.respawnTime - performance.now()) / 1000);
+                const respawnSeconds = Math.max(0, Math.ceil((dummy.respawnTime - performance.now()) / 1000));
                 context.font = `${20 * rX}px monospace`;
                 context.fillStyle = '#ff0000';
                 context.textAlign = 'center';
