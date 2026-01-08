@@ -176,7 +176,7 @@ export function registerInGameTests(game) {
   }, ['smoke']);
 
   registerTest('Input has key tracking', 'Input', () => {
-    assert(game.input.hasOwnProperty('keys'), 'Input should track keys');
+    assert(game.input.hasOwnProperty('buttons'), 'Input should track buttons');
   });
 
   // ===== SOUND TESTS =====
