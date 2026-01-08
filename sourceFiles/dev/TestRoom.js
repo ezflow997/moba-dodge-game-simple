@@ -12,6 +12,13 @@ export class TestRoom {
         this.width = 2000;
         this.height = 1200;
         
+        // Pickup constants
+        this.PICKUP_COLLECTION_RADIUS = 40;
+        this.PICKUP_RESPAWN_DELAY_MS = 3000;
+        
+        // Pickup respawn timers
+        this.respawnTimers = [];
+        
         // Saved game state
         this.savedState = null;
     }
@@ -81,6 +88,13 @@ export class TestRoom {
         // Clear test room data
         this.dummies = [];
         this.pickupGrid = [];
+        
+        // Clear all respawn timers to prevent memory leaks
+        for (const timerId of this.respawnTimers) {
+            clearTimeout(timerId);
+        }
+        this.respawnTimers = [];
+        
         this.savedState = null;
         this.active = false;
     }
@@ -208,6 +222,9 @@ export class TestRoom {
             // Check collisions with bullets
             this.checkBulletCollisions(dummy);
         }
+        
+        // Check pickup collisions
+        this.checkPickupCollisions();
     }
     
     /**
@@ -237,6 +254,41 @@ export class TestRoom {
                 if (this.game.effects) {
                     this.game.effects.addExplosion(bullet.x, bullet.y, 20, '#ffff00');
                 }
+            }
+        }
+    }
+    
+    /**
+     * Check pickup collisions with player
+     */
+    checkPickupCollisions() {
+        const player = this.game.player;
+        
+        for (let i = this.pickupGrid.length - 1; i >= 0; i--) {
+            const pickup = this.pickupGrid[i];
+            const dx = player.x - pickup.x;
+            const dy = player.y - pickup.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < this.PICKUP_COLLECTION_RADIUS + player.size) {
+                // Spawn actual reward through reward manager
+                if (this.game.rewardManager) {
+                    this.game.rewardManager.spawnReward(pickup.x, pickup.y);
+                }
+                
+                // Save pickup data for respawn
+                const originalPickup = {...pickup};
+                this.pickupGrid.splice(i, 1);
+                
+                // Respawn after delay
+                const timerId = setTimeout(() => {
+                    if (this.active) {
+                        this.pickupGrid.push(originalPickup);
+                    }
+                }, this.PICKUP_RESPAWN_DELAY_MS);
+                
+                // Store timer ID for cleanup
+                this.respawnTimers.push(timerId);
             }
         }
     }
