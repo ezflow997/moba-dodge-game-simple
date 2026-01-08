@@ -1,4 +1,4 @@
-// API endpoint to verify password for existing player
+// API endpoint to verify password for existing player (single row per player)
 
 const crypto = require('crypto');
 
@@ -63,7 +63,7 @@ function verifyPassword(password, storedEncrypted) {
 }
 
 async function checkPlayerExists(playerName) {
-    const url = `${SUPABASE_URL}/rest/v1/leaderboard?player_name=eq.${encodeURIComponent(playerName)}&limit=1`;
+    const url = `${SUPABASE_URL}/rest/v1/leaderboard?player_name=eq.${encodeURIComponent(playerName)}&select=player_name,password_hash&limit=1`;
     const response = await fetch(url, {
         method: 'GET',
         headers: getHeaders()

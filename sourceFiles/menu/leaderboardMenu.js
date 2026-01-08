@@ -14,19 +14,37 @@ export class LeaderboardMenu {
         this.isLoading = false;
         this.loadError = null;
 
+        // Pagination state
+        this.currentPage = 1;
+        this.totalPages = 1;
+        this.totalEntries = 0;
+        this.entriesPerPage = 10;
+
+        // Daily filter state
+        this.isDaily = false;
+
         this.clicked = false;
 
-        // Navigation buttons - centered layout
+        // Navigation buttons - difficulty
         this.prevDiffButton = new Button(830, 220, 100, 70, "<", 50, 30, 50, false, true, 'white', 'white');
         this.nextDiffButton = new Button(1630, 220, 100, 70, ">", 50, 30, 50, false, true, 'white', 'white');
-        // Bottom buttons - side by side
-        this.refreshButton = new Button(900, 1000, 280, 80, "Refresh", 45, 60, 55, false, true, 'white', 'white');
-        this.backButton = new Button(1380, 1000, 280, 80, "Back", 45, 80, 55, false, true, 'white', 'white');
+
+        // Daily/All toggle button
+        this.dailyToggleButton = new Button(1180, 280, 200, 50, "All Time", 30, 55, 35, false, true, 'white', 'white');
+
+        // Pagination buttons
+        this.prevPageButton = new Button(1050, 930, 100, 60, "<", 40, 30, 45, false, true, 'white', 'white');
+        this.nextPageButton = new Button(1410, 930, 100, 60, ">", 40, 30, 45, false, true, 'white', 'white');
+
+        // Bottom buttons
+        this.refreshButton = new Button(900, 1010, 280, 70, "Refresh", 40, 60, 50, false, true, 'white', 'white');
+        this.backButton = new Button(1380, 1010, 280, 70, "Back", 40, 80, 50, false, true, 'white', 'white');
     }
 
     async show(initialDifficulty = 0) {
         this.isVisible = true;
         this.currentDifficulty = initialDifficulty;
+        this.currentPage = 1;
         await this.loadLeaderboard();
     }
 
@@ -38,10 +56,15 @@ export class LeaderboardMenu {
         this.isLoading = true;
         this.loadError = null;
         try {
-            this.leaderboardData = await this.supabase.getLeaderboard(
+            const result = await this.supabase.getLeaderboard(
                 this.difficulties[this.currentDifficulty],
-                10
+                this.entriesPerPage,
+                this.currentPage,
+                this.isDaily
             );
+            this.leaderboardData = result.entries || [];
+            this.totalPages = result.pagination?.totalPages || 1;
+            this.totalEntries = result.pagination?.totalEntries || 0;
         } catch (error) {
             this.loadError = "Failed to load leaderboard";
             console.error('Leaderboard load error:', error);
@@ -66,6 +89,7 @@ export class LeaderboardMenu {
             this.clicked = true;
             if (window.gameSound) window.gameSound.playMenuClick();
             this.currentDifficulty = (this.currentDifficulty - 1 + 5) % 5;
+            this.currentPage = 1;
             this.loadLeaderboard();
         }
 
@@ -75,7 +99,41 @@ export class LeaderboardMenu {
             this.clicked = true;
             if (window.gameSound) window.gameSound.playMenuClick();
             this.currentDifficulty = (this.currentDifficulty + 1) % 5;
+            this.currentPage = 1;
             this.loadLeaderboard();
+        }
+
+        // Daily toggle
+        this.dailyToggleButton.update(inX, inY);
+        if (this.dailyToggleButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+            this.clicked = true;
+            if (window.gameSound) window.gameSound.playMenuClick();
+            this.isDaily = !this.isDaily;
+            this.dailyToggleButton.text = this.isDaily ? "Today" : "All Time";
+            this.currentPage = 1;
+            this.loadLeaderboard();
+        }
+
+        // Previous page
+        this.prevPageButton.update(inX, inY);
+        if (this.prevPageButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+            this.clicked = true;
+            if (this.currentPage > 1) {
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.currentPage--;
+                this.loadLeaderboard();
+            }
+        }
+
+        // Next page
+        this.nextPageButton.update(inX, inY);
+        if (this.nextPageButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+            this.clicked = true;
+            if (this.currentPage < this.totalPages) {
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.currentPage++;
+                this.loadLeaderboard();
+            }
         }
 
         // Refresh button
@@ -155,6 +213,9 @@ export class LeaderboardMenu {
         this.super.drawGlowText(context, 1280 - diffOffset, 275, diffText, 60, '#ff00ff', '#ff00ff', 12);
         this.nextDiffButton.draw(context);
 
+        // Daily toggle button
+        this.dailyToggleButton.draw(context);
+
         // Loading/error state
         if (this.isLoading) {
             this.super.drawGlowText(context, 1150, 600, "Loading...", 50, '#ffff00', '#ffaa00', 10);
@@ -165,14 +226,48 @@ export class LeaderboardMenu {
             this.drawLeaderboardEntries(context, rX, rY);
         }
 
+        // Pagination controls
+        this.drawPagination(context, rX, rY);
+
         // Bottom buttons - side by side
         this.refreshButton.draw(context);
         this.backButton.draw(context);
     }
 
+    drawPagination(context, rX, rY) {
+        // Previous page button (gray out if on first page)
+        if (this.currentPage > 1) {
+            this.prevPageButton.draw(context);
+        } else {
+            // Draw grayed out button
+            context.save();
+            context.globalAlpha = 0.3;
+            this.prevPageButton.draw(context);
+            context.restore();
+        }
+
+        // Page indicator
+        const pageText = `Page ${this.currentPage} of ${this.totalPages}`;
+        this.super.drawGlowText(context, 1180, 970, pageText, 32, '#ffffff', '#00ffff', 6);
+
+        // Next page button (gray out if on last page)
+        if (this.currentPage < this.totalPages) {
+            this.nextPageButton.draw(context);
+        } else {
+            context.save();
+            context.globalAlpha = 0.3;
+            this.nextPageButton.draw(context);
+            context.restore();
+        }
+
+        // Total entries count
+        const totalText = `${this.totalEntries} total entries`;
+        this.super.drawGlowText(context, 1200, 905, totalText, 24, '#888888', '#666666', 4);
+    }
+
     drawLeaderboardEntries(context, rX, rY) {
-        const startY = 360;
-        const rowHeight = 60;
+        const startY = 380;
+        const rowHeight = 52;
 
         // Column positions - spread across the wider panel
         const colRank = 730;
@@ -200,8 +295,11 @@ export class LeaderboardMenu {
 
         // Data rows
         if (this.leaderboardData.length === 0) {
-            this.super.drawGlowText(context, 1100, 600, "No scores yet!", 50, '#888888', '#666666', 10);
-            this.super.drawGlowText(context, 1030, 680, "Be the first to play!", 40, '#666666', '#444444', 6);
+            const noDataMsg = this.isDaily ? "No scores today!" : "No scores yet!";
+            this.super.drawGlowText(context, 1100, 600, noDataMsg, 50, '#888888', '#666666', 10);
+            if (!this.isDaily) {
+                this.super.drawGlowText(context, 1030, 680, "Be the first to play!", 40, '#666666', '#444444', 6);
+            }
             return;
         }
 
@@ -209,38 +307,41 @@ export class LeaderboardMenu {
             const entry = this.leaderboardData[i];
             const y = startY + (i + 1) * rowHeight;
 
-            // Rank coloring (gold/silver/bronze for top 3)
+            // Calculate actual rank based on page
+            const actualRank = (this.currentPage - 1) * this.entriesPerPage + i + 1;
+
+            // Rank coloring (gold/silver/bronze for top 3 overall)
             let rankColor = '#ffffff';
             let glowColor = '#00ffff';
-            if (i === 0) { rankColor = '#ffd700'; glowColor = '#ffaa00'; }
-            else if (i === 1) { rankColor = '#c0c0c0'; glowColor = '#888888'; }
-            else if (i === 2) { rankColor = '#cd7f32'; glowColor = '#aa5500'; }
+            if (actualRank === 1) { rankColor = '#ffd700'; glowColor = '#ffaa00'; }
+            else if (actualRank === 2) { rankColor = '#c0c0c0'; glowColor = '#888888'; }
+            else if (actualRank === 3) { rankColor = '#cd7f32'; glowColor = '#aa5500'; }
 
             // Row background for top 3
-            if (i < 3) {
+            if (actualRank <= 3) {
                 context.save();
-                context.fillStyle = `rgba(${i === 0 ? '255,215,0' : i === 1 ? '192,192,192' : '205,127,50'}, 0.12)`;
-                context.fillRect(710 * rX, (y - 30) * rY, 1140 * rX, 55 * rY);
+                context.fillStyle = `rgba(${actualRank === 1 ? '255,215,0' : actualRank === 2 ? '192,192,192' : '205,127,50'}, 0.12)`;
+                context.fillRect(710 * rX, (y - 28) * rY, 1140 * rX, 48 * rY);
                 context.restore();
             }
 
             // Rank
-            this.super.drawGlowText(context, colRank, y, (i + 1).toString(), 36, rankColor, glowColor, 8);
+            this.super.drawGlowText(context, colRank, y, actualRank.toString(), 34, rankColor, glowColor, 8);
 
             // Name (truncate to 12 chars)
             const displayName = entry.player_name.length > 12
                 ? entry.player_name.substring(0, 12) + '...'
                 : entry.player_name;
-            this.super.drawGlowText(context, colName, y, displayName, 36, '#ffffff', '#00ffff', 8);
+            this.super.drawGlowText(context, colName, y, displayName, 34, '#ffffff', '#00ffff', 8);
 
             // Score
-            this.super.drawGlowText(context, colScore, y, entry.score.toString(), 36, '#00ff88', '#00ff00', 8);
+            this.super.drawGlowText(context, colScore, y, entry.score.toString(), 34, '#00ff88', '#00ff00', 8);
 
             // Kills
-            this.super.drawGlowText(context, colKills, y, entry.kills.toString(), 36, '#ff8888', '#ff4444', 8);
+            this.super.drawGlowText(context, colKills, y, entry.kills.toString(), 34, '#ff8888', '#ff4444', 8);
 
             // Best Streak
-            this.super.drawGlowText(context, colStreak, y, entry.best_streak.toString(), 36, '#ffff88', '#ffff00', 8);
+            this.super.drawGlowText(context, colStreak, y, entry.best_streak.toString(), 34, '#ffff88', '#ffff00', 8);
         }
     }
 }

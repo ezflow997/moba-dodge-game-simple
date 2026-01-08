@@ -1,4 +1,4 @@
-// API endpoint to submit score
+// API endpoint to submit score (single row per player, all difficulties)
 
 const crypto = require('crypto');
 
@@ -24,7 +24,6 @@ function encrypt(text) {
     encrypted = Buffer.concat([encrypted, cipher.final()]);
     const authTag = cipher.getAuthTag();
 
-    // Combine IV + authTag + encrypted data
     const combined = Buffer.concat([iv, authTag, encrypted]);
     return combined.toString('base64');
 }
@@ -82,7 +81,17 @@ function verifyPassword(password, storedEncrypted) {
     return storedHash === providedHash;
 }
 
-async function checkPlayerExists(playerName) {
+// Get column names for a difficulty
+function getDifficultyColumns(difficulty) {
+    const diff = difficulty.toLowerCase();
+    return {
+        score: `${diff}_score`,
+        kills: `${diff}_kills`,
+        streak: `${diff}_streak`
+    };
+}
+
+async function getPlayer(playerName) {
     const url = `${SUPABASE_URL}/rest/v1/leaderboard?player_name=eq.${encodeURIComponent(playerName)}&limit=1`;
     const response = await fetch(url, {
         method: 'GET',
@@ -97,33 +106,21 @@ async function checkPlayerExists(playerName) {
     return data.length > 0 ? data[0] : null;
 }
 
-async function getPlayerScore(playerName, difficulty) {
-    const url = `${SUPABASE_URL}/rest/v1/leaderboard?player_name=eq.${encodeURIComponent(playerName)}&difficulty=eq.${difficulty}`;
-    const response = await fetch(url, {
-        method: 'GET',
-        headers: getHeaders()
-    });
+async function insertPlayer(playerName, difficulty, score, kills, bestStreak, passwordHash) {
+    const cols = getDifficultyColumns(difficulty);
 
-    if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-    }
+    const body = {
+        player_name: playerName,
+        password_hash: passwordHash,
+        [cols.score]: score,
+        [cols.kills]: kills,
+        [cols.streak]: bestStreak
+    };
 
-    const data = await response.json();
-    return data.length > 0 ? data[0] : null;
-}
-
-async function insertScore(playerName, difficulty, score, kills, bestStreak, passwordHash) {
     const response = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard`, {
         method: 'POST',
         headers: getHeaders(),
-        body: JSON.stringify({
-            player_name: playerName,
-            difficulty: difficulty,
-            score: score,
-            kills: kills,
-            best_streak: bestStreak,
-            password_hash: passwordHash
-        })
+        body: JSON.stringify(body)
     });
 
     if (!response.ok) {
@@ -134,15 +131,17 @@ async function insertScore(playerName, difficulty, score, kills, bestStreak, pas
     return { inserted: true, data: data };
 }
 
-async function updateScore(playerName, difficulty, score, kills, bestStreak) {
-    const url = `${SUPABASE_URL}/rest/v1/leaderboard?player_name=eq.${encodeURIComponent(playerName)}&difficulty=eq.${difficulty}`;
+async function updatePlayerScore(playerName, difficulty, score, kills, bestStreak) {
+    const cols = getDifficultyColumns(difficulty);
+
+    const url = `${SUPABASE_URL}/rest/v1/leaderboard?player_name=eq.${encodeURIComponent(playerName)}`;
     const response = await fetch(url, {
         method: 'PATCH',
         headers: getHeaders(),
         body: JSON.stringify({
-            score: score,
-            kills: kills,
-            best_streak: bestStreak,
+            [cols.score]: score,
+            [cols.kills]: kills,
+            [cols.streak]: bestStreak,
             updated_at: new Date().toISOString()
         })
     });
@@ -193,14 +192,15 @@ module.exports = async (req, res) => {
 
         const name = playerName.trim();
         const diff = difficulty.toUpperCase();
+        const cols = getDifficultyColumns(diff);
 
         console.log('Submitting score for:', name, 'difficulty:', diff);
 
-        // Check if entry exists for this player+difficulty
-        const existing = await getPlayerScore(name, diff);
+        // Check if player exists
+        const existing = await getPlayer(name);
 
         if (existing) {
-            console.log('Found existing entry for this difficulty');
+            console.log('Found existing player');
 
             // Verify password
             if (existing.password_hash && existing.password_hash.trim() !== '') {
@@ -210,44 +210,28 @@ module.exports = async (req, res) => {
                     return res.status(401).json({ error: 'Invalid password', passwordError: true });
                 }
             } else {
-                console.log('Entry exists without password');
+                console.log('Player exists without password');
                 return res.status(401).json({ error: 'Username exists but has no password', passwordError: true });
             }
 
+            // Get current score for this difficulty
+            const currentScore = existing[cols.score] || 0;
+
             // Only update if new score is higher
-            if (score > existing.score) {
-                const result = await updateScore(name, diff, score, kills || 0, bestStreak || 0);
+            if (score > currentScore) {
+                const result = await updatePlayerScore(name, diff, score, kills || 0, bestStreak || 0);
                 return res.status(200).json({ updated: true, ...result });
             }
 
             return res.status(200).json({ updated: false, reason: 'Existing score is higher' });
         } else {
-            // Check if player exists with different difficulty
-            const playerExists = await checkPlayerExists(name);
-
-            if (playerExists) {
-                console.log('Player exists with different difficulty');
-
-                if (playerExists.password_hash && playerExists.password_hash.trim() !== '') {
-                    const isValid = verifyPassword(password, playerExists.password_hash);
-                    if (!isValid) {
-                        console.log('Password verification failed for existing player');
-                        return res.status(401).json({ error: 'Invalid password', passwordError: true });
-                    }
-                    console.log('Password verified for existing player');
-                } else {
-                    console.log('Player exists without password');
-                    return res.status(401).json({ error: 'Username exists but has no password', passwordError: true });
-                }
-            } else {
-                console.log('New player - creating account');
-            }
+            console.log('New player - creating account');
 
             // Encrypt password for storage
             const encryptedHash = encryptPassword(password);
 
-            // Insert new entry
-            const result = await insertScore(name, diff, score, kills || 0, bestStreak || 0, encryptedHash);
+            // Insert new player
+            const result = await insertPlayer(name, diff, score, kills || 0, bestStreak || 0, encryptedHash);
             return res.status(200).json({ inserted: true, ...result });
         }
     } catch (error) {
