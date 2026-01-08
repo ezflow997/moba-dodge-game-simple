@@ -228,7 +228,7 @@ export class RewardManager {
             this.damageAura = {
                 radius: reward.auraRadius,
                 damage: reward.auraDamage,
-                lastTick: now
+                lastTick: this.damageAura ? this.damageAura.lastTick : now
             };
         }
     }
@@ -248,6 +248,9 @@ export class RewardManager {
             case CATEGORY.SURVIVABILITY:
                 if (reward.sizeReduction) {
                     this.playerSizeMod /= (1 - reward.sizeReduction);
+                }
+                if (reward.blockCount) {
+                    this.shieldCharges = Math.max(0, this.shieldCharges - reward.blockCount);
                 }
                 break;
 
@@ -347,6 +350,10 @@ export class RewardManager {
             const baseSize = 40 * window.innerWidth / 2560;
             player.size = baseSize * this.playerSizeMod;
         }
+
+        // Make bullet modifiers accessible for the bullets system
+        this.currentRangeMod = this.rangeMod;
+        this.currentBulletSizeMod = this.bulletSizeMod;
 
         // Damage aura tick
         if (this.damageAura && game && game.enemies) {
