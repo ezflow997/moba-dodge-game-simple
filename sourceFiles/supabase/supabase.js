@@ -83,32 +83,38 @@ export class SupabaseLeaderboard {
         }
     }
 
-    // Get leaderboard for a specific difficulty
-    async getLeaderboard(difficulty, limit = 10) {
+    // Get leaderboard for a specific difficulty with pagination and daily filter
+    async getLeaderboard(difficulty, limit = 10, page = 1, daily = false) {
         try {
-            const response = await fetch(
-                `${this.apiBase}/leaderboard?difficulty=${encodeURIComponent(difficulty)}&limit=${limit}`,
-                { method: 'GET' }
-            );
+            let url = `${this.apiBase}/leaderboard?difficulty=${encodeURIComponent(difficulty)}&limit=${limit}&page=${page}`;
+            if (daily) {
+                url += '&daily=true';
+            }
+
+            const response = await fetch(url, { method: 'GET' });
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
 
-            return await response.json();
+            const data = await response.json();
+
+            // Return format: { entries: [], pagination: { page, limit, totalEntries, totalPages } }
+            return data;
         } catch (error) {
             console.error('getLeaderboard error:', error);
-            return [];
+            return { entries: [], pagination: { page: 1, limit: 10, totalEntries: 0, totalPages: 0 } };
         }
     }
 
-    // Get all leaderboards (for all difficulties)
+    // Get all leaderboards (for all difficulties) - first page only
     async getAllLeaderboards(limit = 10) {
         const difficulties = ['EASY', 'MEDIUM', 'HARD', 'EXPERT', 'INSANE'];
         const results = {};
 
         for (const diff of difficulties) {
-            results[diff] = await this.getLeaderboard(diff, limit);
+            const data = await this.getLeaderboard(diff, limit, 1, false);
+            results[diff] = data.entries || [];
         }
 
         return results;

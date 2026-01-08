@@ -1,4 +1,4 @@
-// API endpoint to check if player exists
+// API endpoint to check if player exists (single row per player)
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -12,7 +12,7 @@ function getHeaders() {
 }
 
 async function checkPlayerExists(playerName) {
-    const url = `${SUPABASE_URL}/rest/v1/leaderboard?player_name=eq.${encodeURIComponent(playerName)}&limit=1`;
+    const url = `${SUPABASE_URL}/rest/v1/leaderboard?player_name=eq.${encodeURIComponent(playerName)}&select=player_name,password_hash&limit=1`;
     const response = await fetch(url, {
         method: 'GET',
         headers: getHeaders()
