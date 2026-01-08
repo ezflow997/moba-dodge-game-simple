@@ -539,11 +539,6 @@ export class CommandRegistry {
     }
     
     cmdTestList(args) {
-        try {
-            // Dynamic import not needed for sync operation, but we need to handle if not available
-            return { success: true, message: 'Use testfast or test command to run tests. Categories: Player, Enemy, Projectile, Ability, Combat, Smoke' };
-        } catch (error) {
-            return { success: false, message: 'Test system not available' };
-        }
+        return { success: true, message: 'Use testfast or test command to run tests. Categories: Player, Enemy, Projectile, Ability, Combat, Smoke' };
     }
 }
