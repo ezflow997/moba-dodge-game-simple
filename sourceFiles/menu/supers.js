@@ -435,16 +435,16 @@ export class superFunctions {
     }
 
     getOffset(bullets, x, y, aR, C){
-        bullets.offY = y + ((Math.sin(aR) * C) * bullets.dirY);
-        bullets.offX = x + ((Math.cos(aR) * C) * bullets.dirX);
+        bullets.offY = y + (Math.sin(aR) * C);
+        bullets.offX = x + (Math.cos(aR) * C);
 
         //console.log(bullets.offX, x);
         //console.log(bullets.offY, y);
     }
     
     getTravel(bullets, x, y, aR, C){
-        bullets.endY = y + ((Math.sin(aR) * C) * bullets.dirY);
-        bullets.endX = x + ((Math.cos(aR) * C) * bullets.dirX);
+        bullets.endY = y + (Math.sin(aR) * C);
+        bullets.endX = x + (Math.cos(aR) * C);
 
         //console.log(bullets.endX, x);
         //console.log(bullets.endY, y);
