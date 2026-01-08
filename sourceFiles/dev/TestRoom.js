@@ -16,6 +16,9 @@ export class TestRoom {
         this.PICKUP_COLLECTION_RADIUS = 40;
         this.PICKUP_RESPAWN_DELAY_MS = 3000;
         
+        // Pickup respawn timers
+        this.respawnTimers = [];
+        
         // Saved game state
         this.savedState = null;
     }
@@ -85,6 +88,13 @@ export class TestRoom {
         // Clear test room data
         this.dummies = [];
         this.pickupGrid = [];
+        
+        // Clear all respawn timers to prevent memory leaks
+        for (const timerId of this.respawnTimers) {
+            clearTimeout(timerId);
+        }
+        this.respawnTimers = [];
+        
         this.savedState = null;
         this.active = false;
     }
@@ -271,11 +281,14 @@ export class TestRoom {
                 this.pickupGrid.splice(i, 1);
                 
                 // Respawn after delay
-                setTimeout(() => {
+                const timerId = setTimeout(() => {
                     if (this.active) {
                         this.pickupGrid.push(originalPickup);
                     }
                 }, this.PICKUP_RESPAWN_DELAY_MS);
+                
+                // Store timer ID for cleanup
+                this.respawnTimers.push(timerId);
             }
         }
     }
