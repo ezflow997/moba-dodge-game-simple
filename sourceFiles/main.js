@@ -165,13 +165,21 @@ window.addEventListener('load', function () {
 				this.msUpdate = window.performance.now();
 
 				this.player.update(this.input, this);
+				
+				// Always update bullets/voidBolts so player can shoot
+				if(this.challenge_level == 0){
+					this.bullets.update(this.player, this.input, this.enemies, this);
+				}
+				else if(this.challenge_level == 1){
+					this.voidBolts.update(this.enemies, this);
+				}
+				
+				// Only update enemies and projectiles when NOT in test room
 				if(!this.testRoom.active) {
 					if(this.challenge_level == 0){
-						this.bullets.update(this.player, this.input, this.enemies, this);
 						this.enemies.update(this, this.player, this.bullets, msNow2);
 					}
 					else if(this.challenge_level == 1){
-						this.voidBolts.update(this.enemies, this);
 						this.enemies.update(this, this.player, this.voidBolts, msNow2);
 					}
 					this.projectiles.update(this.player, this, msNow2);
@@ -185,8 +193,8 @@ window.addEventListener('load', function () {
 				this.effects.update();
 				this.world.update();
 
-				// Only increase time-based score when NOT in boss fight
-				if (!this.enemies.bossActive) {
+				// Only increase time-based score when NOT in boss fight and NOT in test room
+				if (!this.enemies.bossActive && !this.testRoom.active) {
 					// Apply score multiplier from rewards
 					const multiplier = this.rewardManager.scoreMultiplier || 1;
 					this.score = Math.ceil(this.score + 0.75 * multiplier);

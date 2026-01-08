@@ -208,6 +208,9 @@ export class TestRoom {
             // Check collisions with bullets
             this.checkBulletCollisions(dummy);
         }
+        
+        // Check pickup collisions
+        this.checkPickupCollisions();
     }
     
     /**
@@ -237,6 +240,39 @@ export class TestRoom {
                 if (this.game.effects) {
                     this.game.effects.addExplosion(bullet.x, bullet.y, 20, '#ffff00');
                 }
+            }
+        }
+    }
+    
+    /**
+     * Check pickup collisions with player
+     */
+    checkPickupCollisions() {
+        const player = this.game.player;
+        const pickupRadius = 40; // Pickup collection radius
+        
+        for (let i = this.pickupGrid.length - 1; i >= 0; i--) {
+            const pickup = this.pickupGrid[i];
+            const dx = player.x - pickup.x;
+            const dy = player.y - pickup.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < pickupRadius + player.size) {
+                // Spawn actual reward through reward manager
+                if (this.game.rewardManager) {
+                    this.game.rewardManager.spawnReward(pickup.x, pickup.y);
+                }
+                
+                // Respawn pickup after a delay (or remove and re-add)
+                const originalPickup = {...pickup};
+                this.pickupGrid.splice(i, 1);
+                
+                // Respawn after 3 seconds
+                setTimeout(() => {
+                    if (this.active) {
+                        this.pickupGrid.push(originalPickup);
+                    }
+                }, 3000);
             }
         }
     }
