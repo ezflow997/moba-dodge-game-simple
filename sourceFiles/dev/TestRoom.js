@@ -12,6 +12,10 @@ export class TestRoom {
         this.width = 2000;
         this.height = 1200;
         
+        // Pickup constants
+        this.PICKUP_COLLECTION_RADIUS = 40;
+        this.PICKUP_RESPAWN_DELAY_MS = 3000;
+        
         // Saved game state
         this.savedState = null;
     }
@@ -249,7 +253,6 @@ export class TestRoom {
      */
     checkPickupCollisions() {
         const player = this.game.player;
-        const pickupRadius = 40; // Pickup collection radius
         
         for (let i = this.pickupGrid.length - 1; i >= 0; i--) {
             const pickup = this.pickupGrid[i];
@@ -257,22 +260,22 @@ export class TestRoom {
             const dy = player.y - pickup.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
             
-            if (distance < pickupRadius + player.size) {
+            if (distance < this.PICKUP_COLLECTION_RADIUS + player.size) {
                 // Spawn actual reward through reward manager
                 if (this.game.rewardManager) {
                     this.game.rewardManager.spawnReward(pickup.x, pickup.y);
                 }
                 
-                // Respawn pickup after a delay (or remove and re-add)
+                // Save pickup data for respawn
                 const originalPickup = {...pickup};
                 this.pickupGrid.splice(i, 1);
                 
-                // Respawn after 3 seconds
+                // Respawn after delay
                 setTimeout(() => {
                     if (this.active) {
                         this.pickupGrid.push(originalPickup);
                     }
-                }, 3000);
+                }, this.PICKUP_RESPAWN_DELAY_MS);
             }
         }
     }
