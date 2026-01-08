@@ -86,8 +86,17 @@ export class Enemies {
             const collision = this.boss.checkCollision(player, bullets);
             if (collision) {
                 if (collision.type === 'player') {
-                    game.gameOver = true;
-                    if (window.gameSound) window.gameSound.playPlayerDeath();
+                    // Check if player can survive (extra life / ghost mode)
+                    if (game.rewardManager && game.rewardManager.canSurviveHit(false)) {
+                        // Player survived! Flash effect
+                        if (game.effects) {
+                            game.effects.addScreenFlash('#ff0000', 300, 0.5);
+                            game.world.shake(15, 20);
+                        }
+                    } else {
+                        game.gameOver = true;
+                        if (window.gameSound) window.gameSound.playPlayerDeath();
+                    }
                 } else if (collision.type === 'bullet') {
                     // Trigger effects on boss hit
                     if (game.effects) {
@@ -182,6 +191,18 @@ export class Enemies {
             for(let i = 0; i < this.enemiesList.length; i++){
                 let p = this.enemiesList[i];
                 if(p.playerCollision == true){
+                    // Check if player can survive (extra life / ghost mode)
+                    if (game.rewardManager && game.rewardManager.canSurviveHit(false)) {
+                        // Player survived! Flash effect and remove enemy
+                        if (game.effects) {
+                            game.effects.addScreenFlash('#ff0000', 300, 0.5);
+                            game.effects.spawnBurst(p.x, p.y, 'enemyDeath');
+                            game.world.shake(10, 15);
+                        }
+                        this.enemiesList.splice(i, 1);
+                        i--;
+                        continue;
+                    }
                     game.gameOver = true;
                     if (window.gameSound) window.gameSound.playPlayerDeath();
                 }
@@ -360,6 +381,11 @@ export class Enemies {
         }
         if (window.gameSound) {
             window.gameSound.playBossDeath();
+        }
+
+        // Spawn reward drop at boss position
+        if (game.rewardManager) {
+            game.rewardManager.spawnReward(this.boss.x, this.boss.y);
         }
 
         // Mark boss as defeated

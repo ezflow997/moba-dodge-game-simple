@@ -118,6 +118,17 @@ export class Projectiles{
                     p.update();
                     p.checkCollision(player);
                     if(p.playerCollision == true){
+                        // Check if player can survive (shield blocks projectile, or extra life)
+                        if (game.rewardManager && game.rewardManager.canSurviveHit(true)) {
+                            // Projectile blocked! Remove it and show effect
+                            if (game.effects) {
+                                game.effects.spawnBurst(p.x, p.y, 'shieldBlock');
+                                game.world.shake(5, 10);
+                            }
+                            this.projectilesList.splice(i, 1);
+                            i--;
+                            continue;
+                        }
                         game.gameOver = true;
                         if (window.gameSound) window.gameSound.playPlayerDeath();
                         this.projectilesList = [];
