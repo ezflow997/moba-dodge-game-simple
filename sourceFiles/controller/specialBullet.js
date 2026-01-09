@@ -327,6 +327,9 @@ export class SpecialBullet {
     }
 
     bounceOffEnemy(enemy) {
+        // Mark enemy as hit so it gets killed
+        enemy.bulletCollision = true;
+
         // Calculate reflection direction based on collision normal
         const dx = this.x - enemy.x;
         const dy = this.y - enemy.y;
