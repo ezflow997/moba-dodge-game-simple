@@ -223,7 +223,7 @@ export class RankedMenu {
         } else if (this.state === 'queue_view') {
             // Page navigation buttons at top
             const refPanelTop = 720 - refPanelH / 2;
-            const pageNavY = refPanelTop + 100;
+            const pageNavY = refPanelTop + 70;
             setButtonPos(this.prevPageButton, refCenterX - 160, pageNavY, 150, 50);
             setButtonPos(this.nextPageButton, refCenterX + 10, pageNavY, 150, 50);
 
@@ -444,9 +444,9 @@ export class RankedMenu {
         // Draw indicator for current page
         context.font = `${16 * rX}px Arial`;
         context.fillStyle = this.queueViewPage === 0 ? '#ffaa00' : '#666666';
-        context.fillText('_____', centerX - 85 * rX, panelY + 130 * rY);
+        context.fillText('_____', centerX - 85 * rX, panelY + 100 * rY);
         context.fillStyle = this.queueViewPage === 1 ? '#ffaa00' : '#666666';
-        context.fillText('_____', centerX + 85 * rX, panelY + 130 * rY);
+        context.fillText('_____', centerX + 85 * rX, panelY + 100 * rY);
 
         if (this.queueViewPage === 0) {
             this.drawMyQueuePage(context, centerX, panelY, rX, rY);
