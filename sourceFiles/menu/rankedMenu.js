@@ -17,6 +17,12 @@ export class RankedMenu {
         this.playerRank = null;
         this.gamesPlayed = 0;
 
+        // Attempts tracking
+        this.attemptsUsed = 0;
+        this.attemptsRemaining = 5;
+        this.maxAttempts = 5;
+        this.bestScore = null;
+
         // Tournament results
         this.tournamentResults = null;
         this.playerResult = null;
@@ -26,12 +32,12 @@ export class RankedMenu {
 
         this.clicked = false;
 
-        // Confirmation buttons
-        this.confirmButton = new Button(980, 600, 200, 70, "Queue Up", 32, 40, 48, false, true, 'white', 'white');
-        this.cancelButton = new Button(1320, 600, 200, 70, "Cancel", 32, 50, 48, false, true, 'white', 'white');
+        // Confirmation buttons (positions set dynamically in update)
+        this.confirmButton = new Button(0, 0, 260, 85, "Queue Up", 36, 0, 0, false, true, 'white', 'white');
+        this.cancelButton = new Button(0, 0, 260, 85, "Cancel", 36, 0, 0, false, true, 'white', 'white');
 
         // Results/Queued screen buttons
-        this.closeButton = new Button(1100, 800, 280, 70, "Continue", 36, 65, 50, false, true, 'white', 'white');
+        this.closeButton = new Button(0, 0, 320, 85, "Continue", 38, 0, 0, false, true, 'white', 'white');
     }
 
     show(state = 'confirm') {
@@ -60,6 +66,11 @@ export class RankedMenu {
         if (status.queuePosition) {
             this.queuePosition = status.queuePosition;
         }
+        // Attempts tracking
+        this.attemptsUsed = status.attemptsUsed || 0;
+        this.attemptsRemaining = status.attemptsRemaining !== undefined ? status.attemptsRemaining : 5;
+        this.maxAttempts = status.maxAttempts || 5;
+        this.bestScore = status.bestScore || null;
     }
 
     setTournamentResults(results) {
@@ -70,8 +81,12 @@ export class RankedMenu {
 
     setQueuedState(queueInfo) {
         this.queuePosition = queueInfo.queuePosition;
-        this.queueSize = queueInfo.totalInQueue;
+        this.queueSize = queueInfo.totalInQueue || queueInfo.uniquePlayers;
         this.playersNeeded = queueInfo.playersNeeded;
+        this.attemptsUsed = queueInfo.attemptsUsed || 0;
+        this.attemptsRemaining = queueInfo.attemptsRemaining !== undefined ? queueInfo.attemptsRemaining : 5;
+        this.maxAttempts = queueInfo.maxAttempts || 5;
+        this.bestScore = queueInfo.bestScore || null;
         this.state = 'queued';
     }
 
@@ -84,20 +99,30 @@ export class RankedMenu {
 
         const inX = game.input.mouseX;
         const inY = game.input.mouseY;
-        const rX = window.innerWidth / 2560;
-        const rY = window.innerHeight / 1440;
 
-        // Scale button positions
-        const scaleButton = (btn, baseX, baseY, baseW, baseH) => {
-            btn.x = baseX * rX;
-            btn.y = baseY * rY;
-            btn.w = baseW * rX;
-            btn.h = baseH * rY;
+        // Panel dimensions in reference coordinates (2560x1440)
+        // Panel: 800x700, centered
+        const refCenterX = 1280;
+        const refPanelBottom = 720 + 350; // centerY + panelH/2 = 1070
+        const buttonY = refPanelBottom - 50 - 85; // 50px padding from bottom, 85px button height
+
+        // Set button positions (unscaled - Button.draw() handles scaling)
+        const setButtonPos = (btn, x, y, w, h) => {
+            btn.x = x;
+            btn.y = y;
+            btn.w = w;
+            btn.h = h;
         };
 
         if (this.state === 'confirm') {
-            scaleButton(this.confirmButton, 980, 620, 200, 70);
-            scaleButton(this.cancelButton, 1320, 620, 200, 70);
+            // Two buttons with 30px gap, each 260 wide
+            const btnW = 260;
+            const gap = 30;
+            const leftBtnX = refCenterX - btnW - gap / 2; // 1005
+            const rightBtnX = refCenterX + gap / 2; // 1295
+
+            setButtonPos(this.confirmButton, leftBtnX, buttonY, btnW, 85);
+            setButtonPos(this.cancelButton, rightBtnX, buttonY, btnW, 85);
 
             this.confirmButton.update(inX, inY);
             this.cancelButton.update(inX, inY);
@@ -115,14 +140,20 @@ export class RankedMenu {
                 return true;
             }
 
-            if (this.confirmButton.isHovered && clicking && !this.clicked) {
+            // Only allow queue if attempts remaining (or never queued)
+            const canQueue = this.attemptsUsed === 0 || this.attemptsRemaining > 0;
+            if (this.confirmButton.isHovered && clicking && !this.clicked && canQueue) {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
                 // Signal to start ranked game
                 return 'start_ranked';
             }
         } else if (this.state === 'queued' || this.state === 'results') {
-            scaleButton(this.closeButton, 1100, 820, 280, 70);
+            // Single centered button, 320 wide
+            const closeBtnW = 320;
+            const closeBtnX = refCenterX - closeBtnW / 2; // 1120
+
+            setButtonPos(this.closeButton, closeBtnX, buttonY, closeBtnW, 85);
             this.closeButton.update(inX, inY);
 
             const clicking = game.input.buttons.indexOf(0) > -1;
@@ -158,7 +189,7 @@ export class RankedMenu {
 
         // Panel dimensions
         const panelW = 800 * rX;
-        const panelH = 600 * rY;
+        const panelH = 700 * rY;
         const panelX = centerX - panelW / 2;
         const panelY = centerY - panelH / 2;
         const cornerRadius = 15 * rX;
@@ -225,21 +256,60 @@ export class RankedMenu {
         context.fillStyle = '#aaaaaa';
         context.fillText(`Players in queue: ${this.queueSize}/10`, centerX, panelY + 280 * rY);
 
+        // Attempts info (if already in queue)
+        if (this.attemptsUsed > 0) {
+            context.font = `${24 * rX}px Arial`;
+            context.fillStyle = this.attemptsRemaining > 0 ? '#00ff88' : '#ff4444';
+            context.fillText(`Attempts: ${this.attemptsUsed}/${this.maxAttempts} used`, centerX, panelY + 320 * rY);
+            if (this.bestScore !== null) {
+                context.fillStyle = '#ffaa00';
+                context.fillText(`Best Score: ${this.bestScore.toLocaleString()}`, centerX, panelY + 350 * rY);
+            }
+        }
+
         // Rules
         context.font = `${22 * rX}px Arial`;
         context.fillStyle = '#ffffff';
+        const rulesStartY = this.attemptsUsed > 0 ? 400 : 350;
         const rules = [
             'EASY difficulty only',
-            'One attempt per queue',
+            `${this.maxAttempts} attempts per tournament`,
+            'Best score counts for placement',
             'Tournament resolves at 10 players',
             'Top 25% gain ELO, Bottom 25% lose ELO'
         ];
         rules.forEach((rule, i) => {
-            context.fillText(rule, centerX, panelY + 350 * rY + i * 35 * rY);
+            context.fillText(rule, centerX, panelY + rulesStartY * rY + i * 32 * rY);
         });
 
-        // Draw buttons
-        this.confirmButton.draw(context);
+        // Draw buttons (disable confirm if no attempts remaining)
+        const canQueue = this.attemptsUsed === 0 || this.attemptsRemaining > 0;
+        if (!canQueue) {
+            // Draw disabled button manually
+            const btn = this.confirmButton;
+            const rX2 = window.innerWidth / 2560;
+            const rY2 = window.innerHeight / 1440;
+            const bx = btn.x * rX2;
+            const by = btn.y * rY2;
+            const bw = btn.w * rX2;
+            const bh = btn.h * rY2;
+            const cornerR = 8 * rX2;
+
+            context.beginPath();
+            context.roundRect(bx, by, bw, bh, cornerR);
+            context.fillStyle = 'rgba(50, 50, 50, 0.8)';
+            context.fill();
+            context.strokeStyle = '#555555';
+            context.lineWidth = 2 * rX2;
+            context.stroke();
+
+            context.font = `${28 * rX2}px Arial`;
+            context.textAlign = 'center';
+            context.fillStyle = '#666666';
+            context.fillText('No Attempts', bx + bw / 2, by + bh / 2 + 10 * rY2);
+        } else {
+            this.confirmButton.draw(context);
+        }
         this.cancelButton.draw(context);
     }
 
@@ -253,22 +323,34 @@ export class RankedMenu {
         context.fillText('SCORE SUBMITTED!', centerX, panelY + 80 * rY);
         context.shadowBlur = 0;
 
-        // Queue position
-        context.font = `${36 * rX}px Arial`;
-        context.fillStyle = '#ffffff';
-        context.fillText(`Queue Position: #${this.queuePosition}`, centerX, panelY + 180 * rY);
+        // Attempts status
+        context.font = `${28 * rX}px Arial`;
+        context.fillStyle = this.attemptsRemaining > 0 ? '#00ff88' : '#ffaa00';
+        context.fillText(`Attempts: ${this.attemptsUsed}/${this.maxAttempts}`, centerX, panelY + 140 * rY);
+
+        // Best score
+        if (this.bestScore !== null) {
+            context.font = `${32 * rX}px Arial`;
+            context.fillStyle = '#ffaa00';
+            context.fillText(`Best Score: ${this.bestScore.toLocaleString()}`, centerX, panelY + 190 * rY);
+        }
 
         // Queue status
-        context.font = `${28 * rX}px Arial`;
+        context.font = `${26 * rX}px Arial`;
         context.fillStyle = '#aaaaaa';
-        context.fillText(`${this.queueSize} of 10 players`, centerX, panelY + 240 * rY);
-        context.fillText(`Waiting for ${this.playersNeeded} more player${this.playersNeeded !== 1 ? 's' : ''}...`, centerX, panelY + 290 * rY);
+        context.fillText(`${this.queueSize} of 10 players in queue`, centerX, panelY + 260 * rY);
+        context.fillText(`Waiting for ${this.playersNeeded} more player${this.playersNeeded !== 1 ? 's' : ''}...`, centerX, panelY + 300 * rY);
 
-        // Info
+        // Info based on attempts remaining
         context.font = `${22 * rX}px Arial`;
         context.fillStyle = '#88ffff';
-        context.fillText('Tournament will resolve when 10 players have submitted.', centerX, panelY + 380 * rY);
-        context.fillText('Check back later to see your results!', centerX, panelY + 420 * rY);
+        if (this.attemptsRemaining > 0) {
+            context.fillText(`You have ${this.attemptsRemaining} attempt${this.attemptsRemaining !== 1 ? 's' : ''} remaining!`, centerX, panelY + 380 * rY);
+            context.fillText('Play again to try for a higher score.', centerX, panelY + 420 * rY);
+        } else {
+            context.fillText('All attempts used. Wait for tournament to resolve.', centerX, panelY + 380 * rY);
+            context.fillText('Check back later to see your results!', centerX, panelY + 420 * rY);
+        }
 
         // Draw button
         this.closeButton.draw(context);

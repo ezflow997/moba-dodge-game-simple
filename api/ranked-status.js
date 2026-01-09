@@ -3,6 +3,8 @@
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
+const MAX_ATTEMPTS_PER_PLAYER = 5;
+
 function setCorsHeaders(res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -81,13 +83,16 @@ export default async function handler(req, res) {
 
         // Get current queue
         const queue = await getUnresolvedQueue();
-        const queueSize = queue.length;
+
+        // Count unique players in queue
+        const uniquePlayers = new Set(queue.map(e => e.player_name)).size;
 
         // Basic response without player info
         if (!playerName) {
             return res.status(200).json({
-                queueSize,
-                playersNeeded: Math.max(0, 10 - queueSize)
+                queueSize: uniquePlayers,
+                totalEntries: queue.length,
+                playersNeeded: Math.max(0, 10 - uniquePlayers)
             });
         }
 
@@ -95,7 +100,17 @@ export default async function handler(req, res) {
 
         // Get player-specific info
         const eloRecord = await getPlayerElo(name);
-        const isQueued = queue.some(e => e.player_name === name);
+
+        // Get player's queue entries
+        const playerEntries = queue.filter(e => e.player_name === name);
+        const isQueued = playerEntries.length > 0;
+        const attemptsUsed = playerEntries.length;
+        const attemptsRemaining = MAX_ATTEMPTS_PER_PLAYER - attemptsUsed;
+
+        // Get player's best score in current queue
+        const bestScore = isQueued ? Math.max(...playerEntries.map(e => e.score)) : null;
+
+        // Get queue position (first entry)
         const queuePosition = isQueued ? queue.findIndex(e => e.player_name === name) + 1 : null;
 
         // Get player rank
@@ -105,8 +120,9 @@ export default async function handler(req, res) {
         const history = await getPlayerHistory(name, 5);
 
         return res.status(200).json({
-            queueSize,
-            playersNeeded: Math.max(0, 10 - queueSize),
+            queueSize: uniquePlayers,
+            totalEntries: queue.length,
+            playersNeeded: Math.max(0, 10 - uniquePlayers),
             player: eloRecord ? {
                 elo: eloRecord.elo,
                 gamesPlayed: eloRecord.games_played,
@@ -119,6 +135,10 @@ export default async function handler(req, res) {
             },
             isQueued,
             queuePosition,
+            attemptsUsed,
+            attemptsRemaining,
+            maxAttempts: MAX_ATTEMPTS_PER_PLAYER,
+            bestScore,
             recentHistory: history.map(h => ({
                 placement: h.placement,
                 totalPlayers: h.total_players,

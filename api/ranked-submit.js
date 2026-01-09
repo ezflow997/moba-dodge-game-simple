@@ -7,6 +7,7 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 
 const MIN_PLAYERS_FOR_TOURNAMENT = 10;
+const MAX_ATTEMPTS_PER_PLAYER = 5;
 const BASE_ELO_GAIN = 25;
 const BASE_ELO_LOSS = 20;
 
@@ -93,13 +94,13 @@ async function getOrCreatePlayerElo(playerName) {
     return insertedData[0];
 }
 
-// Check if player already has unresolved entry in queue
-async function checkAlreadyQueued(playerName) {
-    const url = `${SUPABASE_URL}/rest/v1/ranked_queue?player_name=eq.${encodeURIComponent(playerName)}&resolved=eq.false&limit=1`;
+// Get player's unresolved attempts count
+async function getPlayerAttempts(playerName) {
+    const url = `${SUPABASE_URL}/rest/v1/ranked_queue?player_name=eq.${encodeURIComponent(playerName)}&resolved=eq.false`;
     const response = await fetch(url, { method: 'GET', headers: getHeaders() });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    return data.length > 0;
+    return data;
 }
 
 // Submit score to ranked queue
@@ -122,17 +123,33 @@ async function submitToQueue(playerName, score, kills, bestStreak) {
 
 // Get all unresolved queue entries
 async function getUnresolvedQueue() {
-    const url = `${SUPABASE_URL}/rest/v1/ranked_queue?resolved=eq.false&order=score.desc`;
+    const url = `${SUPABASE_URL}/rest/v1/ranked_queue?resolved=eq.false&order=submitted_at.asc`;
     const response = await fetch(url, { method: 'GET', headers: getHeaders() });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return await response.json();
 }
 
-// Get queue position for a player
-async function getQueuePosition(playerName) {
-    const queue = await getUnresolvedQueue();
-    const position = queue.findIndex(e => e.player_name === playerName) + 1;
-    return { position, total: queue.length };
+// Get unique players with their best scores from queue entries
+function getPlayerBestScores(entries) {
+    const playerBests = {};
+
+    for (const entry of entries) {
+        const name = entry.player_name;
+        if (!playerBests[name] || entry.score > playerBests[name].score) {
+            playerBests[name] = {
+                player_name: name,
+                score: entry.score,
+                kills: entry.kills,
+                best_streak: entry.best_streak,
+                entryIds: playerBests[name] ? [...playerBests[name].entryIds, entry.id] : [entry.id]
+            };
+        } else {
+            playerBests[name].entryIds.push(entry.id);
+        }
+    }
+
+    // Sort by score descending
+    return Object.values(playerBests).sort((a, b) => b.score - a.score);
 }
 
 // Calculate ELO changes for tournament
@@ -148,15 +165,14 @@ function calculateEloChanges(entries) {
         if (index < top25Cutoff) {
             // Top 25% - gain ELO (higher placement = more ELO)
             const positionInTop = index / top25Cutoff;
-            const multiplier = 1 + (1 - positionInTop) * 0.5; // 1.5x for #1, 1.0x for last in top 25%
+            const multiplier = 1 + (1 - positionInTop) * 0.5;
             eloChange = Math.round(BASE_ELO_GAIN * multiplier);
         } else if (index >= bottom25Start) {
             // Bottom 25% - lose ELO (lower placement = more loss)
             const positionInBottom = (index - bottom25Start) / (total - bottom25Start);
-            const multiplier = 1 + positionInBottom * 0.5; // 1.0x for first in bottom, 1.5x for last
+            const multiplier = 1 + positionInBottom * 0.5;
             eloChange = -Math.round(BASE_ELO_LOSS * multiplier);
         }
-        // Middle 50% gets 0 change
 
         return {
             ...entry,
@@ -167,10 +183,13 @@ function calculateEloChanges(entries) {
 }
 
 // Resolve tournament
-async function resolveTournament(entries) {
+async function resolveTournament(allEntries) {
     const tournamentId = crypto.randomUUID();
-    const results = calculateEloChanges(entries);
-    const totalPlayers = entries.length;
+
+    // Get best score per player
+    const playerBests = getPlayerBestScores(allEntries);
+    const results = calculateEloChanges(playerBests);
+    const totalPlayers = results.length;
 
     // Process each player
     for (const result of results) {
@@ -206,8 +225,14 @@ async function resolveTournament(entries) {
             })
         });
 
-        // Mark queue entry as resolved
-        await fetch(`${SUPABASE_URL}/rest/v1/ranked_queue?id=eq.${result.id}`, {
+        // Add ELO info to result for response
+        result.eloBefore = eloBefore;
+        result.eloAfter = eloAfter;
+    }
+
+    // Mark ALL queue entries as resolved
+    for (const entry of allEntries) {
+        await fetch(`${SUPABASE_URL}/rest/v1/ranked_queue?id=eq.${entry.id}`, {
             method: 'PATCH',
             headers: getHeaders(),
             body: JSON.stringify({
@@ -215,10 +240,6 @@ async function resolveTournament(entries) {
                 tournament_id: tournamentId
             })
         });
-
-        // Add ELO info to result for response
-        result.eloBefore = eloBefore;
-        result.eloAfter = eloAfter;
     }
 
     return {
@@ -269,24 +290,33 @@ export default async function handler(req, res) {
             return res.status(401).json({ error: 'Invalid password', passwordError: true });
         }
 
-        // Check if already queued
-        const alreadyQueued = await checkAlreadyQueued(name);
-        if (alreadyQueued) {
-            const queueInfo = await getQueuePosition(name);
+        // Check player's current attempts
+        const playerAttempts = await getPlayerAttempts(name);
+        const attemptsUsed = playerAttempts.length;
+
+        if (attemptsUsed >= MAX_ATTEMPTS_PER_PLAYER) {
+            // Find their best score
+            const bestScore = Math.max(...playerAttempts.map(a => a.score));
             return res.status(400).json({
-                error: 'Already queued for ranked',
-                queuePosition: queueInfo.position,
-                totalInQueue: queueInfo.total
+                error: 'Maximum attempts reached',
+                attemptsUsed: attemptsUsed,
+                maxAttempts: MAX_ATTEMPTS_PER_PLAYER,
+                bestScore: bestScore,
+                message: 'Wait for the tournament to close before queuing again.'
             });
         }
 
         // Submit to queue
         await submitToQueue(name, score, kills, bestStreak);
+        const newAttemptsUsed = attemptsUsed + 1;
 
-        // Check if we should resolve tournament
+        // Get current queue state
         const queue = await getUnresolvedQueue();
 
-        if (queue.length >= MIN_PLAYERS_FOR_TOURNAMENT) {
+        // Count unique players
+        const uniquePlayers = new Set(queue.map(e => e.player_name)).size;
+
+        if (uniquePlayers >= MIN_PLAYERS_FOR_TOURNAMENT) {
             // Resolve tournament!
             const tournamentResult = await resolveTournament(queue);
 
@@ -313,14 +343,20 @@ export default async function handler(req, res) {
                 }))
             });
         } else {
-            // Not enough players yet
-            const queueInfo = await getQueuePosition(name);
+            // Not enough players yet - find player's best score
+            const updatedAttempts = await getPlayerAttempts(name);
+            const bestScore = Math.max(...updatedAttempts.map(a => a.score));
+
             return res.status(200).json({
                 success: true,
                 tournamentResolved: false,
-                queuePosition: queueInfo.position,
-                totalInQueue: queueInfo.total,
-                playersNeeded: MIN_PLAYERS_FOR_TOURNAMENT - queueInfo.total
+                attemptsUsed: newAttemptsUsed,
+                attemptsRemaining: MAX_ATTEMPTS_PER_PLAYER - newAttemptsUsed,
+                maxAttempts: MAX_ATTEMPTS_PER_PLAYER,
+                bestScore: bestScore,
+                currentScore: score,
+                uniquePlayers: uniquePlayers,
+                playersNeeded: MIN_PLAYERS_FOR_TOURNAMENT - uniquePlayers
             });
         }
     } catch (error) {
