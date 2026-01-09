@@ -649,6 +649,9 @@ export class RewardManager {
 
         // Draw notifications
         this.drawNotifications(context, rX);
+
+        // Draw weapon slots UI (includes loadout button)
+        this.drawWeaponSlotsUI(context);
     }
 
     drawNotifications(context, rX) {
