@@ -262,15 +262,19 @@ export class RankedMenu {
                 const viewHeight = 400;
                 this.maxScrollOffset = Math.max(0, totalHeight - viewHeight);
 
-                // Scrollbar dimensions (in reference coordinates)
-                const scrollbarX = refCenterX + 530;
-                const scrollbarY = 720 - refPanelH / 2 + 180;
-                const scrollbarHeight = 420;
-                const scrollbarWidth = 25;
+                // Scale factors for coordinate conversion
+                const scaleX = window.innerWidth / 2560;
+                const scaleY = window.innerHeight / 1440;
+
+                // Scrollbar dimensions (in screen coordinates)
+                const scrollbarX = (refCenterX + 530) * scaleX;
+                const scrollbarY = (720 - refPanelH / 2 + 180) * scaleY;
+                const scrollbarHeight = 420 * scaleY;
+                const scrollbarWidth = 40 * scaleX; // Wider hit area for easier clicking
 
                 // Calculate thumb size and position
                 const thumbHeight = this.maxScrollOffset > 0
-                    ? Math.max(40, (viewHeight / totalHeight) * scrollbarHeight)
+                    ? Math.max(40 * scaleY, (viewHeight / totalHeight) * scrollbarHeight)
                     : scrollbarHeight;
                 const thumbY = this.maxScrollOffset > 0
                     ? scrollbarY + (this.scrollOffset / this.maxScrollOffset) * (scrollbarHeight - thumbHeight)
@@ -278,8 +282,9 @@ export class RankedMenu {
 
                 // Handle scrollbar dragging
                 if (clicking && this.maxScrollOffset > 0) {
-                    // Check if clicking on scrollbar track or thumb
-                    if (inX >= scrollbarX && inX <= scrollbarX + scrollbarWidth &&
+                    // Check if clicking on scrollbar track or thumb (with extra padding for easier clicks)
+                    const hitPadding = 15 * scaleX;
+                    if (inX >= scrollbarX - hitPadding && inX <= scrollbarX + scrollbarWidth + hitPadding &&
                         inY >= scrollbarY && inY <= scrollbarY + scrollbarHeight) {
                         if (!this.isDraggingScrollbar && !this.clicked) {
                             this.isDraggingScrollbar = true;
