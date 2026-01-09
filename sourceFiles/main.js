@@ -579,6 +579,13 @@ window.addEventListener('load', function () {
 						game.rankedMenu.state = 'queue_view';
 					});
 				}
+
+				// Refresh ranked status after returning from queued state
+				if (rankedResult === 'refresh_ranked_status') {
+					game.supabase.getRankedStatus(game.playerName).then(status => {
+						game.rankedMenu.setQueueStatus(status);
+					});
+				}
 			}
 
 			// Draw and update name input menu if visible

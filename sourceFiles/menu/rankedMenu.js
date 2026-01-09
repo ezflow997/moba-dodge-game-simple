@@ -323,7 +323,19 @@ export class RankedMenu {
                 this.state = 'confirm';
                 return true;
             }
-        } else if (this.state === 'queued' || this.state === 'results') {
+        } else if (this.state === 'queued') {
+            const closeBtnW = 280;
+            setButtonPos(this.closeButton, refCenterX - closeBtnW / 2, buttonY, closeBtnW, 70);
+            this.closeButton.update(inX, inY);
+
+            if (this.closeButton.isHovered && clicking && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                // Return to confirm state to see queue status and play again
+                this.state = 'confirm';
+                return 'refresh_ranked_status';
+            }
+        } else if (this.state === 'results') {
             const closeBtnW = 280;
             setButtonPos(this.closeButton, refCenterX - closeBtnW / 2, buttonY, closeBtnW, 70);
             this.closeButton.update(inX, inY);
@@ -828,9 +840,9 @@ export class RankedMenu {
         // Queue status
         context.font = `${26 * rX}px Arial`;
         context.fillStyle = '#aaaaaa';
-        context.fillText(`${this.queueSize} of 10 players in queue`, centerX, panelY + 250 * rY);
+        context.fillText(`${this.queueSize} of ${this.maxPlayers} players in queue`, centerX, panelY + 250 * rY);
 
-        if (this.queueSize >= 10) {
+        if (this.queueSize >= this.maxPlayers) {
             context.fillStyle = '#88ffff';
             context.fillText(`${this.playersReady}/${this.totalQueuedPlayers} players completed all attempts`, centerX, panelY + 290 * rY);
         } else {
