@@ -494,8 +494,8 @@ window.addEventListener('load', function () {
 				window.gameSound.playMenuMusic();
 			}
 
-			// Check for pause menu toggle in main menu (not when leaderboard is open)
-			if(game.input.escapePressed && !game.pauseMenu.isPaused && !game.leaderboardMenu.isVisible) {
+			// Check for pause menu toggle in main menu (not when leaderboard or ranked menu is open)
+			if(game.input.escapePressed && !game.pauseMenu.isPaused && !game.leaderboardMenu.isVisible && !game.rankedMenu.isVisible) {
 				game.pauseMenu.toggle(true); // Pass true to indicate we're in main menu
 				game.input.escapePressed = false;
 			}
@@ -517,14 +517,21 @@ window.addEventListener('load', function () {
 
 			// Draw and update leaderboard menu if visible
 			if(game.leaderboardMenu.isVisible) {
-				game.leaderboardMenu.update(game);
+				const leaderboardResult = game.leaderboardMenu.update(game);
 				game.leaderboardMenu.draw(ctx, game);
+
+				// Return to ranked panel if leaderboard was opened from there
+				if (leaderboardResult === 'return_to_ranked') {
+					game.rankedMenu.show('confirm');
+				}
 			}
 
 			// Draw and update ranked menu if visible
 			if(game.rankedMenu.isVisible) {
 				const rankedResult = game.rankedMenu.update(game);
 				game.rankedMenu.draw(ctx, game);
+				// Reset wheel delta after ranked menu processes scroll
+				game.input.resetWheelDelta();
 
 				// Check if player confirmed to start ranked game
 				if (rankedResult === 'start_ranked') {

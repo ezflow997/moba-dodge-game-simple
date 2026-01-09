@@ -30,6 +30,12 @@ export class RankedMenu {
         this.queueStandings = [];
         this.playersReady = 0;
         this.totalQueuedPlayers = 0;
+        this.timeRemaining = null;
+        this.allQueuesSummary = [];
+
+        // Queue view pagination
+        this.queueViewPage = 0; // 0 = current queue, 1 = all queues
+        this.scrollOffset = 0;
 
         // Tournament results
         this.tournamentResults = null;
@@ -49,6 +55,10 @@ export class RankedMenu {
         // Results/Queued screen buttons
         this.closeButton = new Button(0, 0, 280, 70, "Continue", 34, 0, 0, false, true, 'white', 'white');
         this.backButton = new Button(0, 0, 200, 70, "Back", 30, 0, 0, false, true, 'white', 'white');
+
+        // Queue view page navigation buttons
+        this.prevPageButton = new Button(0, 0, 150, 50, "My Queue", 20, 0, 0, false, true, 'white', 'white');
+        this.nextPageButton = new Button(0, 0, 150, 50, "All Queues", 20, 0, 0, false, true, 'white', 'white');
     }
 
     show(state = 'confirm') {
@@ -56,6 +66,11 @@ export class RankedMenu {
         this.state = state;
         this.clicked = false;
         this.errorMessage = null;
+        // Reset queue view page when entering
+        if (state === 'queue_view') {
+            this.queueViewPage = 0;
+            this.scrollOffset = 0;
+        }
     }
 
     hide() {
@@ -91,6 +106,11 @@ export class RankedMenu {
         }
         this.playersReady = status.playersReady || 0;
         this.totalQueuedPlayers = status.totalQueuedPlayers || this.queueSize;
+        // Time remaining and all queues summary
+        this.timeRemaining = status.timeRemaining !== undefined ? status.timeRemaining : null;
+        if (status.allQueuesSummary) {
+            this.allQueuesSummary = status.allQueuesSummary;
+        }
     }
 
     setTournamentResults(results) {
@@ -125,6 +145,13 @@ export class RankedMenu {
 
     update(game) {
         if (!this.isVisible) return true;
+
+        // Handle ESC to close ranked panel
+        if (game.input.escapePressed) {
+            this.hide();
+            game.input.escapePressed = false;  // Consume the flag so pause menu doesn't open
+            return true;
+        }
 
         const inX = game.input.mouseX;
         const inY = game.input.mouseY;
@@ -191,13 +218,50 @@ export class RankedMenu {
                 return 'start_ranked';
             }
         } else if (this.state === 'queue_view') {
+            // Page navigation buttons at top
+            const refPanelTop = 720 - refPanelH / 2;
+            const pageNavY = refPanelTop + 100;
+            setButtonPos(this.prevPageButton, refCenterX - 160, pageNavY, 150, 50);
+            setButtonPos(this.nextPageButton, refCenterX + 10, pageNavY, 150, 50);
+
+            this.prevPageButton.update(inX, inY);
+            this.nextPageButton.update(inX, inY);
+
             // Back button
             setButtonPos(this.backButton, refCenterX - 100, buttonY, 200, 70);
             this.backButton.update(inX, inY);
 
+            // Page navigation
+            if (this.prevPageButton.isHovered && clicking && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.queueViewPage = 0;
+                this.scrollOffset = 0;
+                return true;
+            }
+
+            if (this.nextPageButton.isHovered && clicking && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.queueViewPage = 1;
+                this.scrollOffset = 0;
+                return true;
+            }
+
+            // Handle scroll on page 1 (all queues)
+            if (this.queueViewPage === 1 && game.input.wheelDelta) {
+                this.scrollOffset += game.input.wheelDelta > 0 ? -60 : 60;
+                // Calculate max scroll based on content height
+                const totalHeight = this.allQueuesSummary.reduce((h, q) => h + 80 + q.players.length * 30, 0);
+                const maxScroll = Math.max(0, totalHeight - 400);
+                this.scrollOffset = Math.max(0, Math.min(maxScroll, this.scrollOffset));
+            }
+
             if (this.backButton.isHovered && clicking && !this.clicked) {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
+                this.queueViewPage = 0;
+                this.scrollOffset = 0;
                 this.state = 'confirm';
                 return true;
             }
@@ -366,16 +430,51 @@ export class RankedMenu {
         context.fillStyle = '#ffaa00';
         context.shadowColor = '#ffaa00';
         context.shadowBlur = 10 * rX;
-        context.fillText('QUEUE STANDINGS', centerX, panelY + 70 * rY);
+        const title = this.queueViewPage === 0 ? 'MY QUEUE' : 'ALL QUEUES';
+        context.fillText(title, centerX, panelY + 60 * rY);
         context.shadowBlur = 0;
+
+        // Draw page navigation buttons
+        this.prevPageButton.draw(context);
+        this.nextPageButton.draw(context);
+
+        // Draw indicator for current page
+        context.font = `${16 * rX}px Arial`;
+        context.fillStyle = this.queueViewPage === 0 ? '#ffaa00' : '#666666';
+        context.fillText('_____', centerX - 85 * rX, panelY + 130 * rY);
+        context.fillStyle = this.queueViewPage === 1 ? '#ffaa00' : '#666666';
+        context.fillText('_____', centerX + 85 * rX, panelY + 130 * rY);
+
+        if (this.queueViewPage === 0) {
+            this.drawMyQueuePage(context, centerX, panelY, rX, rY);
+        } else {
+            this.drawAllQueuesPage(context, centerX, panelY, rX, rY);
+        }
+
+        // Draw back button
+        this.backButton.draw(context);
+    }
+
+    drawMyQueuePage(context, centerX, panelY, rX, rY) {
+        // Time remaining display
+        if (this.timeRemaining !== null) {
+            const minutes = Math.floor(this.timeRemaining / 60000);
+            const seconds = Math.floor((this.timeRemaining % 60000) / 1000);
+            const timeStr = `${minutes}m ${seconds}s remaining`;
+
+            context.font = `${22 * rX}px Arial`;
+            context.textAlign = 'center';
+            context.fillStyle = minutes < 10 ? '#ff8844' : '#88ffff';
+            context.fillText(timeStr, centerX, panelY + 160 * rY);
+        }
 
         // Queue status
         context.font = `${24 * rX}px Arial`;
         context.fillStyle = '#aaaaaa';
-        context.fillText(`${this.queueSize} players | ${this.playersReady} ready`, centerX, panelY + 110 * rY);
+        context.fillText(`${this.queueSize}/${this.maxPlayers} players | ${this.playersReady} ready`, centerX, panelY + 195 * rY);
 
         // Column headers
-        const startY = 160;
+        const startY = 230;
         const colRank = centerX - 350 * rX;
         const colName = centerX - 250 * rX;
         const colScore = centerX + 50 * rX;
@@ -399,45 +498,157 @@ export class RankedMenu {
 
         // Queue entries
         context.font = `${22 * rX}px Arial`;
-        const rowHeight = 40;
-        const maxRows = 12;
+        const rowHeight = 38;
+        const maxRows = 10;
 
         if (this.queueStandings.length === 0) {
             context.fillStyle = '#666666';
             context.textAlign = 'center';
-            context.fillText('No players in queue yet', centerX, panelY + (startY + 80) * rY);
+            context.fillText('You are not in a queue', centerX, panelY + (startY + 80) * rY);
         } else {
             for (let i = 0; i < Math.min(this.queueStandings.length, maxRows); i++) {
                 const entry = this.queueStandings[i];
                 const y = panelY + (startY + 50 + i * rowHeight) * rY;
 
-                // Highlight if all attempts used
                 const isReady = entry.attempts >= this.maxAttempts;
 
-                // Rank
                 context.textAlign = 'left';
                 context.fillStyle = i < 3 ? ['#ffd700', '#c0c0c0', '#cd7f32'][i] : '#ffffff';
                 context.fillText(`${i + 1}`, colRank, y);
 
-                // Name
                 const displayName = entry.player_name.length > 12
                     ? entry.player_name.substring(0, 12) + '...'
                     : entry.player_name;
                 context.fillStyle = isReady ? '#00ff88' : '#ffffff';
                 context.fillText(displayName, colName, y);
 
-                // Score
                 context.fillStyle = '#ffaa00';
                 context.fillText(entry.score.toLocaleString(), colScore, y);
 
-                // Attempts
                 context.fillStyle = isReady ? '#00ff88' : '#88ffff';
                 context.fillText(`${entry.attempts}/${this.maxAttempts}`, colAttempts, y);
             }
         }
+    }
 
-        // Draw back button
-        this.backButton.draw(context);
+    drawAllQueuesPage(context, centerX, panelY, rX, rY) {
+        const panelW = 900 * rX;
+        const panelH = 800 * rY;
+
+        // Scroll info
+        context.font = `${18 * rX}px Arial`;
+        context.textAlign = 'center';
+        context.fillStyle = '#666666';
+        context.fillText('Scroll to see more queues', centerX, panelY + 160 * rY);
+
+        // Draw clipping region for scrollable content
+        context.save();
+        const clipY = panelY + 180 * rY;
+        const clipH = panelH - 280 * rY;
+        context.beginPath();
+        context.rect(centerX - panelW / 2 + 20 * rX, clipY, panelW - 40 * rX, clipH);
+        context.clip();
+
+        // Queue colors for different queues
+        const queueColors = [
+            'rgba(255, 100, 100, 0.3)',   // Red
+            'rgba(100, 255, 100, 0.3)',   // Green
+            'rgba(100, 100, 255, 0.3)',   // Blue
+            'rgba(255, 255, 100, 0.3)',   // Yellow
+            'rgba(255, 100, 255, 0.3)',   // Magenta
+            'rgba(100, 255, 255, 0.3)',   // Cyan
+            'rgba(255, 180, 100, 0.3)',   // Orange
+            'rgba(180, 100, 255, 0.3)',   // Purple
+        ];
+
+        const borderColors = [
+            '#ff6464',
+            '#64ff64',
+            '#6464ff',
+            '#ffff64',
+            '#ff64ff',
+            '#64ffff',
+            '#ffb464',
+            '#b464ff',
+        ];
+
+        if (this.allQueuesSummary.length === 0) {
+            context.fillStyle = '#666666';
+            context.font = `${22 * rX}px Arial`;
+            context.fillText('No active queues', centerX, clipY + 100 * rY);
+        } else {
+            let currentY = clipY + 20 * rY - this.scrollOffset * rY;
+
+            this.allQueuesSummary.forEach((queue, qIndex) => {
+                const colorIndex = qIndex % queueColors.length;
+                const boxPadding = 15 * rX;
+                const playerLineHeight = 28 * rY;
+                const headerHeight = 35 * rY;
+                const boxHeight = headerHeight + queue.players.length * playerLineHeight + boxPadding * 2;
+                const boxWidth = panelW - 80 * rX;
+                const boxX = centerX - boxWidth / 2;
+
+                // Skip drawing if completely outside visible area
+                if (currentY + boxHeight < clipY - 50 || currentY > clipY + clipH + 50) {
+                    currentY += boxHeight + 15 * rY;
+                    return;
+                }
+
+                // Draw queue box background
+                context.beginPath();
+                context.roundRect(boxX, currentY, boxWidth, boxHeight, 10 * rX);
+                context.fillStyle = queueColors[colorIndex];
+                context.fill();
+                context.strokeStyle = borderColors[colorIndex];
+                context.lineWidth = 2 * rX;
+                context.stroke();
+
+                // Time remaining for this queue
+                const qMinutes = Math.floor(queue.timeRemaining / 60000);
+                const qSeconds = Math.floor((queue.timeRemaining % 60000) / 1000);
+                const qTimeStr = `${qMinutes}m ${qSeconds}s`;
+
+                // Queue header
+                context.font = `bold ${18 * rX}px Arial`;
+                context.textAlign = 'left';
+                context.fillStyle = borderColors[colorIndex];
+                context.fillText(`Queue ${qIndex + 1}`, boxX + boxPadding, currentY + 25 * rY);
+
+                // Status on right side
+                context.textAlign = 'right';
+                context.font = `${16 * rX}px Arial`;
+                context.fillStyle = '#aaaaaa';
+                context.fillText(`${queue.playerCount}/${this.maxPlayers} | ${queue.playersReady} ready | ${qTimeStr}`, boxX + boxWidth - boxPadding, currentY + 25 * rY);
+
+                // Player names
+                context.font = `${20 * rX}px Arial`;
+                context.textAlign = 'left';
+                queue.players.forEach((playerName, pIndex) => {
+                    const playerY = currentY + headerHeight + boxPadding + pIndex * playerLineHeight;
+                    context.fillStyle = '#ffffff';
+                    const displayName = playerName.length > 25 ? playerName.substring(0, 25) + '...' : playerName;
+                    context.fillText(displayName, boxX + boxPadding + 10 * rX, playerY);
+                });
+
+                currentY += boxHeight + 15 * rY;
+            });
+        }
+
+        context.restore();
+
+        // Draw scroll indicators if needed
+        const totalContentHeight = this.allQueuesSummary.reduce((h, q) => h + (35 + q.players.length * 28 + 30 + 15), 0);
+        if (totalContentHeight > 400) {
+            context.font = `${14 * rX}px Arial`;
+            context.textAlign = 'center';
+            context.fillStyle = '#555555';
+            if (this.scrollOffset > 0) {
+                context.fillText('\u25B2', centerX, clipY + 10 * rY);
+            }
+            if (this.scrollOffset < totalContentHeight - 400) {
+                context.fillText('\u25BC', centerX, clipY + clipH - 5 * rY);
+            }
+        }
     }
 
     drawQueuedState(context, centerX, panelY, rX, rY) {

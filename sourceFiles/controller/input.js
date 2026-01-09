@@ -4,6 +4,7 @@ export class InputHandler {
         this.mouseX = 0;
         this.mouseY = 0;
         this.clicking = false;
+        this.wheelDelta = 0;
 
         this.typingInformation = false;
         this.information = [];
@@ -117,5 +118,16 @@ export class InputHandler {
                 //console.log(ev.target.clientWidth, this.mouseX, ev.target.clientHeight, this.mouseY);
             }
         });
+
+        window.addEventListener('wheel', ev => {
+            if(ev.target.id == 'canvas1'){
+                this.wheelDelta = ev.deltaY;
+            }
+        });
+    }
+
+    // Call this at end of each frame to reset wheel delta
+    resetWheelDelta() {
+        this.wheelDelta = 0;
     }
 }

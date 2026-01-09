@@ -112,6 +112,24 @@ export default async function handler(req, res) {
         const totalQueues = Object.keys(queues).length;
         const totalPlayersAllQueues = allEntries.length;
 
+        // Build all queues summary for the queue list view
+        const allQueuesSummary = Object.entries(queues).map(([queueId, entries]) => {
+            const oldestEntry = entries.reduce((oldest, entry) => {
+                const entryTime = new Date(entry.submitted_at).getTime();
+                return entryTime < oldest ? entryTime : oldest;
+            }, Date.now());
+            const queueAge = Date.now() - oldestEntry;
+            const timeRemaining = Math.max(0, QUEUE_TIMEOUT_MS - queueAge);
+
+            return {
+                queueId,
+                players: entries.map(e => e.player_name).sort(),
+                playerCount: entries.length,
+                playersReady: entries.filter(e => (e.attempts || 1) >= MAX_ATTEMPTS_PER_PLAYER).length,
+                timeRemaining
+            };
+        });
+
         // Basic response without player info - show first queue (available or full)
         if (!playerName) {
             // Get first queue (prefer available, but show full if none available)
@@ -149,6 +167,7 @@ export default async function handler(req, res) {
                 totalQueuedPlayers: uniquePlayers,
                 totalQueues,
                 totalPlayersAllQueues,
+                allQueuesSummary,
                 timeRemaining,
                 maxPlayers: MIN_PLAYERS_FOR_TOURNAMENT
             });
@@ -226,6 +245,7 @@ export default async function handler(req, res) {
             queueId,
             totalQueues,
             totalPlayersAllQueues,
+            allQueuesSummary,
             timeRemaining,
             maxPlayers: MIN_PLAYERS_FOR_TOURNAMENT
         });
