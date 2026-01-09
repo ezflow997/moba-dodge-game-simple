@@ -9,7 +9,9 @@ export class Enemies {
         this.boss = null;
         this.bossActive = false;
         this.bossDefeated = 0;
-        this.bossScoreThreshold = 50;
+        this.bossScoreThreshold = 70;
+        this.bossThresholdVariation = 0.3; // ±30% randomness
+        this.currentBossThreshold = this.calculateBossThreshold();
         this.bossTowardsScore = 0;
         this.bossDefeatBonus = 2000;
         this.difficulty_speed = [5.9, 6.2, 6.6, 7.0, 8.5];
@@ -68,13 +70,20 @@ export class Enemies {
         this.bossActive = false;
         this.bossDefeated = 0;
         this.bossTowardsScore = 0;
+        this.currentBossThreshold = this.calculateBossThreshold();
+    }
+
+    calculateBossThreshold() {
+        const baseThreshold = this.bossScoreThreshold * (this.bossDefeated + 1);
+        const variation = (Math.random() * 2 - 1) * this.bossThresholdVariation; // -0.3 to +0.3
+        return Math.round(baseThreshold * (1 + variation));
     }
     update(game, player, bullets, update){
         // Get the correct bullet/bolt array based on challenge mode
         const bulletArray = game.challenge_level === 0 ? bullets.bulletsList : bullets.bolts;
         
         if(!this.bossActive &&
-            this.bossTowardsScore >= (this.bossScoreThreshold * (this.bossDefeated + 1))){
+            this.bossTowardsScore >= this.currentBossThreshold){
                 this.spawnBoss(game);
         }
 
@@ -408,5 +417,6 @@ export class Enemies {
         this.bossDefeated++;
         this.boss = null;
         this.bossTowardsScore = 0;
+        this.currentBossThreshold = this.calculateBossThreshold();
     }
 }

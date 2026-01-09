@@ -72,6 +72,7 @@ window.addEventListener('load', function () {
 				this.rankedMenu = new RankedMenu();
 				this.playerName = localStorage.getItem('playerName') || '';
 				this.playerPassword = localStorage.getItem('playerPassword') || '';
+				this.sessionAccountCreated = false; // Track if account was created this session
 				this.pendingScore = null;
 				this.awaitingNameInput = false;
 				this.submitError = '';

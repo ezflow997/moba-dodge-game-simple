@@ -19,7 +19,7 @@ export class Display{
 
         // Boss progress tracking
         this.bossProgress = 0;
-        this.bossThreshold = 50;
+        this.bossThreshold = 70;
         this.bossDefeated = 0;
         this.bossActive = false;
         this.bossPulse = 0;
@@ -37,7 +37,7 @@ export class Display{
 
         // Reset boss progress
         this.bossProgress = 0;
-        this.bossThreshold = 50;
+        this.bossThreshold = 70;
         this.bossDefeated = 0;
         this.bossActive = false;
         this.bossPulse = 0;
@@ -65,7 +65,7 @@ export class Display{
 
         // Update boss progress from enemies controller
         this.bossProgress = game.enemies.bossTowardsScore;
-        this.bossThreshold = game.enemies.bossScoreThreshold * (game.enemies.bossDefeated + 1);
+        this.bossThreshold = game.enemies.currentBossThreshold;
         this.bossDefeated = game.enemies.bossDefeated;
         this.bossActive = game.enemies.bossActive;
         this.bossPulse += 0.1;

@@ -182,16 +182,22 @@ export class Menu{
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
                 // Show login/register menu
+                // Allow registration if no account created this session OR dev mode is enabled
+                const allowRegistration = !game.sessionAccountCreated || (game.devMode && game.devMode.isEnabled());
                 game.awaitingNameInput = true;
                 game.nameInputMenu.show((result) => {
                     if (result) {
                         game.playerName = result.name;
                         game.playerPassword = result.password;
+                        // Track if a new account was created this session
+                        if (result.isNewPlayer) {
+                            game.sessionAccountCreated = true;
+                        }
                         localStorage.setItem('playerName', result.name);
                         localStorage.setItem('playerPassword', result.password);
                     }
                     game.awaitingNameInput = false;
-                });
+                }, allowRegistration);
             }
         }
 

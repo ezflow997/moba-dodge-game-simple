@@ -257,9 +257,10 @@ export class LeaderboardMenu {
 
         // Handle ESC to close leaderboard (and consume the escape flag)
         if (game.input.escapePressed) {
+            const wasRankedOnly = this.rankedOnly;
             this.hide();
             game.input.escapePressed = false;  // Consume the flag so pause menu doesn't open
-            return false;
+            return wasRankedOnly ? 'return_to_ranked' : false;
         }
 
         const inX = game.input.mouseX;
@@ -424,8 +425,9 @@ export class LeaderboardMenu {
         if (this.backButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
             this.clicked = true;
             if (window.gameSound) window.gameSound.playMenuClick();
+            const wasRankedOnly = this.rankedOnly;
             this.hide();
-            return true; // Signal that we closed
+            return wasRankedOnly ? 'return_to_ranked' : true; // Signal to return to ranked panel if opened from there
         }
 
         return false;

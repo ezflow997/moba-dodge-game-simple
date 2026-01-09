@@ -31,7 +31,7 @@ export class NameInputMenu {
         this.keyHandler = this.handleKeyPress.bind(this);
     }
 
-    show(onSubmitCallback) {
+    show(onSubmitCallback, allowRegistration = true) {
         this.isVisible = true;
         this.playerName = '';
         this.password = '';
@@ -42,6 +42,7 @@ export class NameInputMenu {
         this.isNewPlayer = false;
         this.errorMessage = '';
         this.showPassword = false;
+        this.allowRegistration = allowRegistration;
 
         // Add keyboard listener
         document.addEventListener('keydown', this.keyHandler);
@@ -118,6 +119,14 @@ export class NameInputMenu {
         try {
             const exists = await this.supabase.checkPlayerExists(this.playerName.trim());
             this.isNewPlayer = !exists;
+
+            // Block new account creation if not allowed
+            if (this.isNewPlayer && !this.allowRegistration) {
+                this.errorMessage = 'New accounts disabled this session';
+                this.inputState = 'name';
+                return;
+            }
+
             this.inputState = 'password';
             this.activeField = 'password';
         } catch (error) {
@@ -157,7 +166,7 @@ export class NameInputMenu {
         // Password verified (or new player), proceed
         if (name.length > 0 && this.onSubmit) {
             this.hide();
-            this.onSubmit({ name: name, password: this.password });
+            this.onSubmit({ name: name, password: this.password, isNewPlayer: this.isNewPlayer });
         }
     }
 

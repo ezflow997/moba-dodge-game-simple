@@ -11,6 +11,7 @@ const MAX_ATTEMPTS_PER_PLAYER = 5;
 const QUEUE_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour in milliseconds
 const MIN_TIME_TO_JOIN_QUEUE_MS = 10 * 60 * 1000; // 10 minutes - don't join queues with less time remaining
 const K_FACTOR = 32; // ELO sensitivity factor
+const MAX_CONSECUTIVE_MATCHES = 5; // Max times you can play the same opponent in a row
 
 function setCorsHeaders(res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -95,6 +96,49 @@ async function getOrCreatePlayerElo(playerName) {
     return insertedData[0];
 }
 
+// Update opponent tracking after a match
+async function updateOpponentTracking(playerName, opponentName) {
+    const eloRecord = await getOrCreatePlayerElo(playerName);
+
+    let newConsecutiveCount;
+    if (eloRecord.last_opponent === opponentName) {
+        // Same opponent, increment count
+        newConsecutiveCount = (eloRecord.consecutive_opponent_count || 0) + 1;
+    } else {
+        // New opponent, reset count
+        newConsecutiveCount = 1;
+    }
+
+    await fetch(`${SUPABASE_URL}/rest/v1/player_elo?player_name=eq.${encodeURIComponent(playerName)}`, {
+        method: 'PATCH',
+        headers: getHeaders(),
+        body: JSON.stringify({
+            last_opponent: opponentName,
+            consecutive_opponent_count: newConsecutiveCount
+        })
+    });
+
+    return newConsecutiveCount;
+}
+
+// Check if player would exceed consecutive match limit with anyone in a queue
+async function wouldExceedConsecutiveLimit(playerName, queueEntries) {
+    if (queueEntries.length === 0) return false;
+
+    const eloRecord = await getOrCreatePlayerElo(playerName);
+    const lastOpponent = eloRecord.last_opponent;
+    const consecutiveCount = eloRecord.consecutive_opponent_count || 0;
+
+    // Check if any player in the queue is the same as last opponent
+    for (const entry of queueEntries) {
+        if (entry.player_name === lastOpponent && consecutiveCount >= MAX_CONSECUTIVE_MATCHES) {
+            return true; // Would exceed limit
+        }
+    }
+
+    return false;
+}
+
 // Get player's queue entry (single entry per player with attempts count)
 async function getPlayerQueueEntry(playerName) {
     const url = `${SUPABASE_URL}/rest/v1/ranked_queue?player_name=eq.${encodeURIComponent(playerName)}&limit=1`;
@@ -120,8 +164,8 @@ async function getQueueEntries(queueId) {
     return await response.json();
 }
 
-// Find an available queue (has room and enough time remaining) or return null
-function findAvailableQueue(allEntries) {
+// Find an available queue (has room, not exceeding consecutive match limit) or return null
+async function findAvailableQueue(allEntries, playerName) {
     // Group entries by queue_id
     const queues = {};
     for (const entry of allEntries) {
@@ -130,17 +174,19 @@ function findAvailableQueue(allEntries) {
         queues[qid].push(entry);
     }
 
-    // Find a queue with room AND enough time remaining
+    // Find a queue with room that doesn't exceed consecutive match limit
     for (const [queueId, entries] of Object.entries(queues)) {
         if (entries.length < MIN_PLAYERS_FOR_TOURNAMENT) {
-            // Timer only matters if queue has minimum players already
-            // If queue doesn't have minimum players, timer hasn't started yet
-            // so always allow joining
-            return queueId;
+            // Check if joining this queue would exceed consecutive match limit
+            const wouldExceed = await wouldExceedConsecutiveLimit(playerName, entries);
+            if (!wouldExceed) {
+                return queueId;
+            }
+            // Skip this queue - would exceed consecutive limit
         }
     }
 
-    return null; // All queues are full
+    return null; // All queues are full or would exceed consecutive limit
 }
 
 // Generate a new queue ID
@@ -325,6 +371,14 @@ async function resolveTournament(allEntries) {
         });
     }
 
+    // Track opponents for consecutive match limit (for 2-player queues)
+    if (totalPlayers === 2) {
+        const player1 = results[0].player_name;
+        const player2 = results[1].player_name;
+        await updateOpponentTracking(player1, player2);
+        await updateOpponentTracking(player2, player1);
+    }
+
     return {
         tournamentId,
         results,
@@ -398,7 +452,7 @@ export default async function handler(req, res) {
         } else {
             // Find an available queue or create a new one
             const allEntries = await getAllQueueEntries();
-            targetQueueId = findAvailableQueue(allEntries);
+            targetQueueId = await findAvailableQueue(allEntries, name);
 
             if (!targetQueueId) {
                 // All queues are full, create a new one
