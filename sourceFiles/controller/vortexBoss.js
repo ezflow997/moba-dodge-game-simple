@@ -672,12 +672,32 @@ export class VortexBoss {
                         const oy = this.y + Math.sin(orbital.angle + this.rotationAngle) * orbital.radius * rX;
                         const dx = ox - bullet.x;
                         const dy = oy - bullet.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
 
-                        if (Math.sqrt(dx * dx + dy * dy) < (orbital.size + bullet.size)) {
+                        if (dist < (orbital.size + bullet.size)) {
                             orbital.health--;
                             orbitalHitX = bullet.x;
                             orbitalHitY = bullet.y;
-                            bullets.bulletsList.splice(i, 1);
+
+                            // Ricochet bullets bounce off orbitals
+                            if (bullet.gunType === 'ricochet' && bullet.bouncesRemaining > 0) {
+                                const nx = -dx / dist;
+                                const ny = -dy / dist;
+                                const dot = bullet.dirX * nx + bullet.dirY * ny;
+                                bullet.dirX = bullet.dirX - 2 * dot * nx;
+                                bullet.dirY = bullet.dirY - 2 * dot * ny;
+                                bullet.angle = Math.atan2(bullet.dirY, bullet.dirX);
+                                bullet.x = ox + nx * (orbital.size + bullet.size + 5);
+                                bullet.y = oy + ny * (orbital.size + bullet.size + 5);
+                                bullet.bouncesRemaining--;
+                                bullet.maxTravel += bullet.maxTravel * 0.3;
+                                const remaining = bullet.maxTravel - bullet.distanceTraveled;
+                                bullet.endX = bullet.x + bullet.dirX * remaining;
+                                bullet.endY = bullet.y + bullet.dirY * remaining;
+                            } else {
+                                bullets.bulletsList.splice(i, 1);
+                            }
+
                             hitOrbital = true;
                             if (window.gameSound) window.gameSound.playMenuClick();
                             break;
@@ -690,24 +710,42 @@ export class VortexBoss {
                 if (hitOrbital) {
                     return { type: 'orbital', x: orbitalHitX, y: orbitalHitY };
                 }
-                
+
                 // Check boss body
                 const bulletDx = this.x - bullet.x;
                 const bulletDy = this.y - bullet.y;
-                if (Math.sqrt(bulletDx * bulletDx + bulletDy * bulletDy) < (this.size * 0.5 + bullet.size)) {
-                    bullets.bulletsList.splice(i, 1);
+                const bodyDist = Math.sqrt(bulletDx * bulletDx + bulletDy * bulletDy);
+                if (bodyDist < (this.size * 0.5 + bullet.size)) {
+                    // Ricochet bullets bounce off boss body
+                    if (bullet.gunType === 'ricochet' && bullet.bouncesRemaining > 0) {
+                        const nx = -bulletDx / bodyDist;
+                        const ny = -bulletDy / bodyDist;
+                        const dot = bullet.dirX * nx + bullet.dirY * ny;
+                        bullet.dirX = bullet.dirX - 2 * dot * nx;
+                        bullet.dirY = bullet.dirY - 2 * dot * ny;
+                        bullet.angle = Math.atan2(bullet.dirY, bullet.dirX);
+                        bullet.x = this.x + nx * (this.size * 0.5 + bullet.size + 5);
+                        bullet.y = this.y + ny * (this.size * 0.5 + bullet.size + 5);
+                        bullet.bouncesRemaining--;
+                        bullet.maxTravel += bullet.maxTravel * 0.3;
+                        const remaining = bullet.maxTravel - bullet.distanceTraveled;
+                        bullet.endX = bullet.x + bullet.dirX * remaining;
+                        bullet.endY = bullet.y + bullet.dirY * remaining;
+                    } else {
+                        bullets.bulletsList.splice(i, 1);
+                    }
                     this.takeDamage();
-                    
+
                     // Phase 3 shockwave on hit
                     if (this.phase >= 3) {
                         this.executeShockwave();
                     }
-                    
+
                     return { type: 'bullet', x: bullet.x, y: bullet.y };
                 }
             }
         }
-        
+
         return null;
     }
 

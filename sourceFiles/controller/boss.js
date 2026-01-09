@@ -283,8 +283,32 @@ export class Boss {
                 const bullet = bullets.bulletsList[i];
                 const bulletDx = this.x - bullet.x;
                 const bulletDy = this.y - bullet.y;
-                if (Math.sqrt(bulletDx * bulletDx + bulletDy * bulletDy) < (this.size + bullet.size)) {
-                    bullets.bulletsList.splice(i, 1);
+                const dist = Math.sqrt(bulletDx * bulletDx + bulletDy * bulletDy);
+                if (dist < (this.size + bullet.size)) {
+                    // Ricochet bullets bounce off boss instead of being destroyed
+                    if (bullet.gunType === 'ricochet' && bullet.bouncesRemaining > 0) {
+                        // Calculate reflection
+                        const nx = -bulletDx / dist;
+                        const ny = -bulletDy / dist;
+                        const dot = bullet.dirX * nx + bullet.dirY * ny;
+                        bullet.dirX = bullet.dirX - 2 * dot * nx;
+                        bullet.dirY = bullet.dirY - 2 * dot * ny;
+                        bullet.angle = Math.atan2(bullet.dirY, bullet.dirX);
+
+                        // Push bullet outside boss
+                        bullet.x = this.x + nx * (this.size + bullet.size + 5);
+                        bullet.y = this.y + ny * (this.size + bullet.size + 5);
+
+                        bullet.bouncesRemaining--;
+                        bullet.maxTravel += bullet.maxTravel * 0.3;
+
+                        // Update end position
+                        const remaining = bullet.maxTravel - bullet.distanceTraveled;
+                        bullet.endX = bullet.x + bullet.dirX * remaining;
+                        bullet.endY = bullet.y + bullet.dirY * remaining;
+                    } else {
+                        bullets.bulletsList.splice(i, 1);
+                    }
                     this.takeDamage();
                     return { type: 'bullet', x: bullet.x, y: bullet.y };
                 }

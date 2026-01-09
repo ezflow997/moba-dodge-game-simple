@@ -251,7 +251,6 @@ export class Enemies {
                         // Check if using a multi-hit weapon (ricochet, piercing)
                         const activeGun = game.rewardManager ? game.rewardManager.activeGun : null;
                         const isMultiHitGun = activeGun && (activeGun.gunType === 'ricochet' || activeGun.gunType === 'piercing');
-                        console.log('[ENEMIES] Enemy killed. activeGun:', activeGun?.gunType, 'isMultiHitGun:', isMultiHitGun, 'bulletsList length:', bullets.bulletsList.length);
 
                         // Only clear all bullets for single-hit weapons
                         if (!isMultiHitGun) {
