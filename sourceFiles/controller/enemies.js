@@ -247,19 +247,25 @@ export class Enemies {
                     if(game.challenge_level == 0){
                         player.qCoolDownElapsed = 0;
                         game.input.q_key += 60;
-                        
-                        // Clear bullets/bolts based on challenge mode
-                        if(game.challenge_level === 0) {
-                            bullets.bulletsList = [];
-                            bullets.bulletsSpawned = false;
-                        } else {
-                            bullets.bolts = [];
-                            bullets.canRecast = false;
-                            bullets.activeBolt = null;
+
+                        // Check if using a multi-hit weapon (ricochet, piercing)
+                        const activeGun = game.rewardManager ? game.rewardManager.activeGun : null;
+                        const isMultiHitGun = activeGun && (activeGun.gunType === 'ricochet' || activeGun.gunType === 'piercing');
+
+                        // Only clear all bullets for single-hit weapons
+                        if (!isMultiHitGun) {
+                            if(game.challenge_level === 0) {
+                                bullets.bulletsList = [];
+                                bullets.bulletsSpawned = false;
+                            } else {
+                                bullets.bolts = [];
+                                bullets.canRecast = false;
+                                bullets.activeBolt = null;
+                            }
+                            player.qPressed = false;
+                            player.qTriggered = true;
                         }
-                        
-                        player.qPressed = false;
-                        player.qTriggered = true;
+
                         this.enemiesList.splice(i,1);
                         this.hitStreak += 1;
                         if(this.hitStreak > this.best_streak){
@@ -269,6 +275,9 @@ export class Enemies {
                         game.score = game.score + (this.enemyScoreValue * this.hitStreak);
                         this.bossTowardsScore = this.bossTowardsScore + this.enemyScoreValue;
                         if (window.gameSound) window.gameSound.playEnemyDeath();
+                        if (game.effects) {
+                            game.effects.spawnBurst(p.x, p.y, 'enemyDeath');
+                        }
                         i = i - 1;
                         if(i == 0){
                             break;

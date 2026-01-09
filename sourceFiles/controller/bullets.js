@@ -156,7 +156,7 @@ export class Bullets {
                                     if (bullet.pierceCount > 0) {
                                         bullet.enemyCollision = false;
                                     // For ricochet bullets with bounces remaining, continue bouncing
-                                    } else if (bullet.gunType === 'ricochet' && bullet.bouncesRemaining >= 0) {
+                                    } else if (bullet.gunType === 'ricochet' && bullet.bouncesRemaining > 0) {
                                         bullet.enemyCollision = false;
                                     } else if (isIndependent) {
                                         // Independent bullets: remove only this bullet
@@ -192,7 +192,7 @@ export class Bullets {
                                 if (bullet.pierceCount > 0) {
                                     bullet.enemyCollision = false;
                                 // For ricochet bullets with bounces remaining, continue bouncing
-                                } else if (bullet.gunType === 'ricochet' && bullet.bouncesRemaining >= 0) {
+                                } else if (bullet.gunType === 'ricochet' && bullet.bouncesRemaining > 0) {
                                     bullet.enemyCollision = false;
                                 } else if (isIndependent) {
                                     // Independent bullets: remove only this bullet
