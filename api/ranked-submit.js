@@ -10,8 +10,7 @@ const MIN_PLAYERS_FOR_TOURNAMENT = 2;
 const MAX_ATTEMPTS_PER_PLAYER = 5;
 const QUEUE_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour in milliseconds
 const MIN_TIME_TO_JOIN_QUEUE_MS = 10 * 60 * 1000; // 10 minutes - don't join queues with less time remaining
-const BASE_ELO_GAIN = 25;
-const BASE_ELO_LOSS = 20;
+const K_FACTOR = 32; // ELO sensitivity factor
 
 function setCorsHeaders(res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -194,32 +193,52 @@ async function submitToQueue(playerName, score, kills, bestStreak, queueId) {
     }
 }
 
-// Calculate ELO changes for tournament
-function calculateEloChanges(entries) {
+// Calculate expected win probability based on ELO difference
+function getExpectedScore(playerElo, opponentElo) {
+    return 1 / (1 + Math.pow(10, (opponentElo - playerElo) / 400));
+}
+
+// Calculate ELO changes for tournament using dynamic ELO system
+// Factors in: player ELO vs average opponent ELO, score performance vs average
+function calculateEloChanges(entries, eloMap) {
     const total = entries.length;
-    const top25Cutoff = Math.ceil(total * 0.25);
-    const bottom25Start = Math.floor(total * 0.75);
+    if (total < 2) return entries.map(e => ({ ...e, placement: 1, eloChange: 0 }));
+
+    // Calculate average score for performance comparison
+    const avgScore = entries.reduce((sum, e) => sum + e.score, 0) / total;
+    const maxScore = entries[0].score; // Already sorted by score desc
+    const minScore = entries[total - 1].score;
+    const scoreRange = maxScore - minScore || 1; // Avoid division by zero
+
+    // Calculate average ELO of all players
+    const avgElo = entries.reduce((sum, e) => sum + (eloMap[e.player_name] || 1000), 0) / total;
 
     return entries.map((entry, index) => {
         const placement = index + 1;
-        let eloChange = 0;
+        const playerElo = eloMap[entry.player_name] || 1000;
 
-        if (index < top25Cutoff) {
-            // Top 25% - gain ELO (higher placement = more ELO)
-            const positionInTop = index / top25Cutoff;
-            const multiplier = 1 + (1 - positionInTop) * 0.5;
-            eloChange = Math.round(BASE_ELO_GAIN * multiplier);
-        } else if (index >= bottom25Start) {
-            // Bottom 25% - lose ELO (lower placement = more loss)
-            const positionInBottom = (index - bottom25Start) / (total - bottom25Start);
-            const multiplier = 1 + positionInBottom * 0.5;
-            eloChange = -Math.round(BASE_ELO_LOSS * multiplier);
-        }
+        // Calculate expected score against average opponent
+        const expectedScore = getExpectedScore(playerElo, avgElo);
+
+        // Actual score: 1 for winner (1st place), 0 for last place, scaled in between
+        const actualScore = (total - index - 1) / (total - 1);
+
+        // Score performance factor: how much better/worse than average
+        // Ranges from 0.5 (way below avg) to 1.5 (way above avg)
+        const scoreDeviation = (entry.score - avgScore) / scoreRange;
+        const performanceFactor = 1 + (scoreDeviation * 0.5);
+
+        // Base ELO change from expected vs actual outcome
+        const baseChange = K_FACTOR * (actualScore - expectedScore);
+
+        // Apply performance factor - amplifies gains for dominant wins, losses for bad performances
+        const eloChange = Math.round(baseChange * performanceFactor);
 
         return {
             ...entry,
             placement,
-            eloChange
+            eloChange,
+            playerElo // Include for reference
         };
     });
 }
@@ -230,14 +249,21 @@ async function resolveTournament(allEntries) {
 
     // Sort entries by score descending (each entry is already one per player with best score)
     const sortedEntries = [...allEntries].sort((a, b) => b.score - a.score);
-    const results = calculateEloChanges(sortedEntries);
+
+    // Fetch all player ELOs first for the calculation
+    const eloMap = {};
+    for (const entry of sortedEntries) {
+        const eloRecord = await getOrCreatePlayerElo(entry.player_name);
+        eloMap[entry.player_name] = eloRecord.elo;
+    }
+
+    // Calculate ELO changes using dynamic system
+    const results = calculateEloChanges(sortedEntries, eloMap);
     const totalPlayers = results.length;
 
     // Process each player
     for (const result of results) {
-        // Get current ELO
-        const eloRecord = await getOrCreatePlayerElo(result.player_name);
-        const eloBefore = eloRecord.elo;
+        const eloBefore = eloMap[result.player_name];
         const eloAfter = eloBefore + result.eloChange;
 
         // Update player ELO
