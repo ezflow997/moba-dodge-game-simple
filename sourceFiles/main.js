@@ -15,6 +15,7 @@ import { SupabaseLeaderboard } from "./supabase/supabase.js";
 import { LeaderboardMenu } from "./menu/leaderboardMenu.js";
 import { NameInputMenu } from "./menu/nameInputMenu.js";
 import { RankedMenu } from "./menu/rankedMenu.js";
+import { AccountMenu } from "./menu/accountMenu.js";
 import { RewardManager } from "./controller/rewardManager.js";
 import { DevMode } from "./dev/DevMode.js";
 import { CommandRegistry } from "./dev/CommandRegistry.js";
@@ -70,12 +71,15 @@ window.addEventListener('load', function () {
 				this.leaderboardMenu = new LeaderboardMenu();
 				this.nameInputMenu = new NameInputMenu();
 				this.rankedMenu = new RankedMenu();
+				this.accountMenu = new AccountMenu();
 				this.playerName = localStorage.getItem('playerName') || '';
 				this.playerPassword = localStorage.getItem('playerPassword') || '';
-				this.sessionAccountCreated = false; // Track if account was created this session
+				this.sessionAccountCreated = sessionStorage.getItem('sessionAccountCreated') === 'true'; // Track if account was created this session
 				this.pendingScore = null;
 				this.awaitingNameInput = false;
 				this.submitError = '';
+				this.pendingSecurityQuestion = null;
+				this.pendingSecurityAnswer = null;
 
 				// Ranked system
 				this.isRankedGame = false;
@@ -304,9 +308,17 @@ window.addEventListener('load', function () {
 						this.pendingScore.score,
 						this.pendingScore.kills,
 						this.pendingScore.bestStreak,
-						this.playerPassword
+						this.playerPassword,
+						this.pendingSecurityQuestion,
+						this.pendingSecurityAnswer
 					);
 					console.log('Score submitted:', result);
+
+					// Clear security question/answer after first submission
+					if (this.pendingSecurityQuestion) {
+						this.pendingSecurityQuestion = null;
+						this.pendingSecurityAnswer = null;
+					}
 
 					// Handle password error - clear stored credentials and prompt again
 					if (result.passwordError) {
@@ -323,6 +335,7 @@ window.addEventListener('load', function () {
 		}
 
 		const game = new Game(canvas.width, canvas.height);
+		window.game = game; // Global reference for account menu
 
 		// Handle window resize - only resize canvas when window actually changes
 		function handleResize() {
@@ -593,6 +606,12 @@ window.addEventListener('load', function () {
 			if(game.awaitingNameInput) {
 				game.nameInputMenu.update(game);
 				game.nameInputMenu.draw(ctx, game);
+			}
+
+			// Draw and update account menu if visible
+			if(game.accountMenu.isVisible) {
+				game.accountMenu.update(game);
+				game.accountMenu.draw(ctx, game);
 			}
 
 			game.pauseMenu.draw(ctx, game, true);

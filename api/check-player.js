@@ -19,7 +19,7 @@ function getHeaders() {
 }
 
 async function checkPlayerExists(playerName) {
-    const url = `${SUPABASE_URL}/rest/v1/leaderboard?player_name=eq.${encodeURIComponent(playerName)}&select=player_name,password_hash&limit=1`;
+    const url = `${SUPABASE_URL}/rest/v1/leaderboard?player_name=eq.${encodeURIComponent(playerName)}&select=player_name,password_hash,security_question&limit=1`;
     const response = await fetch(url, {
         method: 'GET',
         headers: getHeaders()
@@ -68,7 +68,8 @@ export default async function handler(req, res) {
 
         return res.status(200).json({
             exists: !!player,
-            hasPassword: player ? !!(player.password_hash && player.password_hash.trim() !== '') : false
+            hasPassword: player ? !!(player.password_hash && player.password_hash.trim() !== '') : false,
+            hasSecurityQuestion: player ? !!(player.security_question && player.security_question.trim() !== '') : false
         });
     } catch (error) {
         console.error('check-player error:', error);

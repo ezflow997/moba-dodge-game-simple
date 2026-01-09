@@ -88,6 +88,13 @@ function verifyPassword(password, storedEncrypted) {
     return storedHash === providedHash;
 }
 
+// Hash and encrypt security answer (case-insensitive, trimmed)
+function encryptSecurityAnswer(answer) {
+    const normalized = answer.trim().toLowerCase();
+    const hash = crypto.createHash('sha256').update(normalized).digest('hex');
+    return encrypt(hash);
+}
+
 // Get column names for a difficulty
 function getDifficultyColumns(difficulty) {
     const diff = difficulty.toLowerCase();
@@ -123,7 +130,7 @@ async function getPlayer(playerName) {
     return data.length > 0 ? data[0] : null;
 }
 
-async function insertPlayer(playerName, difficulty, score, kills, bestStreak, passwordHash) {
+async function insertPlayer(playerName, difficulty, score, kills, bestStreak, passwordHash, securityQuestion, securityAnswerHash) {
     const cols = getDifficultyColumns(difficulty);
     const today = getTodayDate();
 
@@ -138,6 +145,12 @@ async function insertPlayer(playerName, difficulty, score, kills, bestStreak, pa
         [cols.dailyStreak]: bestStreak,
         [cols.dailyDate]: today
     };
+
+    // Add security question/answer if provided
+    if (securityQuestion && securityAnswerHash) {
+        body.security_question = securityQuestion;
+        body.security_answer_hash = securityAnswerHash;
+    }
 
     const response = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard`, {
         method: 'POST',
@@ -228,7 +241,7 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { playerName, difficulty, score, kills, bestStreak, password } = req.body;
+        const { playerName, difficulty, score, kills, bestStreak, password, securityQuestion, securityAnswer } = req.body;
 
         // Validate required fields
         if (!playerName || playerName.trim() === '') {
@@ -282,8 +295,14 @@ export default async function handler(req, res) {
             // Encrypt password for storage
             const encryptedHash = encryptPassword(password);
 
+            // Encrypt security answer if provided
+            let securityAnswerHash = null;
+            if (securityQuestion && securityAnswer && securityAnswer.trim().length >= 1) {
+                securityAnswerHash = encryptSecurityAnswer(securityAnswer);
+            }
+
             // Insert new player
-            const result = await insertPlayer(name, diff, score, kills || 0, bestStreak || 0, encryptedHash);
+            const result = await insertPlayer(name, diff, score, kills || 0, bestStreak || 0, encryptedHash, securityQuestion, securityAnswerHash);
             return res.status(200).json({ inserted: true, ...result });
         }
     } catch (error) {

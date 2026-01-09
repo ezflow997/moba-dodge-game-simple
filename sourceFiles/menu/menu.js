@@ -28,6 +28,7 @@ export class Menu{
         this.leaderboardButton = new Button(btnX, 80 + btnSpacing * 5, btnW, btnH, "Leaderboard", 32, 0, 0, false, true, 'white', 'white');
         this.loginButton = new Button(btnX, 80 + btnSpacing * 6, btnW, btnH, "Login", 32, 0, 0, false, true, 'white', 'white');
         this.logoutButton = new Button(btnX + btnW + 20, 80 + btnSpacing * 6, 120, 50, "Logout", 24, 0, 0, false, true, 'white', 'white');
+        this.accountButton = new Button(btnX, 80 + btnSpacing * 7, btnW, btnH, "Account", 32, 0, 0, false, true, 'white', 'white');
 
         // Player leaderboard data cache
         this.playerLeaderboardData = null;
@@ -183,15 +184,23 @@ export class Menu{
                 if (window.gameSound) window.gameSound.playMenuClick();
                 // Show login/register menu
                 // Allow registration if no account created this session OR dev mode is enabled
-                const allowRegistration = !game.sessionAccountCreated || (game.devMode && game.devMode.isEnabled());
+                const devModeEnabled = game.devMode && game.devMode.isEnabled();
+                const allowRegistration = !game.sessionAccountCreated || devModeEnabled;
+                console.log('[LOGIN] sessionAccountCreated:', game.sessionAccountCreated, 'devMode:', devModeEnabled, 'allowRegistration:', allowRegistration);
                 game.awaitingNameInput = true;
                 game.nameInputMenu.show((result) => {
                     if (result) {
+                        console.log('[LOGIN] Result:', result.name, 'isNewPlayer:', result.isNewPlayer);
                         game.playerName = result.name;
                         game.playerPassword = result.password;
                         // Track if a new account was created this session
                         if (result.isNewPlayer) {
                             game.sessionAccountCreated = true;
+                            sessionStorage.setItem('sessionAccountCreated', 'true');
+                            console.log('[LOGIN] Set sessionAccountCreated = true');
+                            // Store security question/answer for first score submission
+                            game.pendingSecurityQuestion = result.securityQuestion;
+                            game.pendingSecurityAnswer = result.securityAnswer;
                         }
                         localStorage.setItem('playerName', result.name);
                         localStorage.setItem('playerPassword', result.password);
@@ -202,7 +211,7 @@ export class Menu{
         }
 
         // Logout button - only show when logged in
-        if(game.playerName && !game.leaderboardMenu.isVisible) {
+        if(game.playerName && !game.leaderboardMenu.isVisible && !game.accountMenu.isVisible) {
             this.logoutButton.update(inX, inY);
             if(this.logoutButton.isHovered == true && game.input.buttons.indexOf(0) > -1 && this.clicked == false){
                 this.clicked = true;
@@ -212,6 +221,16 @@ export class Menu{
                 game.playerPassword = '';
                 localStorage.removeItem('playerName');
                 localStorage.removeItem('playerPassword');
+            }
+        }
+
+        // Account button - show for both logged in (change password) and logged out (forgot password)
+        if(!game.leaderboardMenu.isVisible && !game.accountMenu.isVisible && !game.rankedMenu.isVisible) {
+            this.accountButton.update(inX, inY);
+            if(this.accountButton.isHovered == true && game.input.buttons.indexOf(0) > -1 && this.clicked == false){
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                game.accountMenu.show(!!game.playerName, game.playerName);
             }
         }
 
@@ -262,6 +281,9 @@ export class Menu{
         } else {
             this.loginButton.draw(context);
         }
+
+        // Draw Account button
+        this.accountButton.draw(context);
 
         // Draw Help button
         this.helpButton.draw(context);

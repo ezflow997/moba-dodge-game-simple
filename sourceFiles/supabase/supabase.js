@@ -27,7 +27,11 @@ export class SupabaseLeaderboard {
 
             const data = await response.json();
             // Return format compatible with existing code
-            return data.exists ? { player_name: playerName, hasPassword: data.hasPassword } : null;
+            return data.exists ? {
+                player_name: playerName,
+                hasPassword: data.hasPassword,
+                hasSecurityQuestion: data.hasSecurityQuestion
+            } : null;
         } catch (error) {
             console.error('checkPlayerExists error:', error);
             return null;
@@ -54,20 +58,28 @@ export class SupabaseLeaderboard {
         }
     }
 
-    // Submit score
-    async submitScore(playerName, difficulty, score, kills, bestStreak, password) {
+    // Submit score (with optional security question for new accounts)
+    async submitScore(playerName, difficulty, score, kills, bestStreak, password, securityQuestion = null, securityAnswer = null) {
         try {
+            const body = {
+                playerName,
+                difficulty,
+                score,
+                kills,
+                bestStreak,
+                password
+            };
+
+            // Add security question/answer if provided (for new accounts)
+            if (securityQuestion && securityAnswer) {
+                body.securityQuestion = securityQuestion;
+                body.securityAnswer = securityAnswer;
+            }
+
             const response = await fetch(`${this.apiBase}/submit-score`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    playerName,
-                    difficulty,
-                    score,
-                    kills,
-                    bestStreak,
-                    password
-                })
+                body: JSON.stringify(body)
             });
 
             const data = await response.json();
@@ -79,6 +91,84 @@ export class SupabaseLeaderboard {
             return data;
         } catch (error) {
             console.error('submitScore error:', error);
+            return { error: error.message };
+        }
+    }
+
+    // Change password (requires current password)
+    async changePassword(playerName, currentPassword, newPassword) {
+        try {
+            const response = await fetch(`${this.apiBase}/change-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    playerName,
+                    currentPassword,
+                    newPassword
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                return { error: data.error };
+            }
+
+            return data;
+        } catch (error) {
+            console.error('changePassword error:', error);
+            return { error: error.message };
+        }
+    }
+
+    // Get security question for password recovery
+    async getSecurityQuestion(playerName) {
+        try {
+            const response = await fetch(`${this.apiBase}/recover-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    playerName,
+                    action: 'getQuestion'
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                return { error: data.error };
+            }
+
+            return data;
+        } catch (error) {
+            console.error('getSecurityQuestion error:', error);
+            return { error: error.message };
+        }
+    }
+
+    // Recover password using security answer
+    async recoverPassword(playerName, securityAnswer, newPassword) {
+        try {
+            const response = await fetch(`${this.apiBase}/recover-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    playerName,
+                    action: 'recover',
+                    securityAnswer,
+                    newPassword
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                return { error: data.error };
+            }
+
+            return data;
+        } catch (error) {
+            console.error('recoverPassword error:', error);
             return { error: error.message };
         }
     }
