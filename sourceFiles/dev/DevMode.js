@@ -30,6 +30,10 @@ export class DevMode {
         // Test room state
         this.inTestRoom = false;
         this.savedGameState = null;
+
+        // Track if dev mode was used during current game session
+        // This prevents turning off dev mode to save cheated scores
+        this.usedThisSession = false;
         
         // FPS tracking
         this.fps = 0;
@@ -43,7 +47,12 @@ export class DevMode {
     setEnabled(enabled) {
         this.enabled = enabled;
         localStorage.setItem('devModeEnabled', enabled.toString());
-        
+
+        // Mark that dev mode was used this session (can't be undone until new game)
+        if (enabled) {
+            this.usedThisSession = true;
+        }
+
         // Reset all cheats when disabling
         if (!enabled) {
             this.resetAllCheats();
@@ -76,6 +85,21 @@ export class DevMode {
         this.showPaths = false;
         this.cameraX = 0;
         this.cameraY = 0;
+    }
+
+    /**
+     * Reset session tracking for new game
+     * Call this when starting a new game to allow score saving again
+     */
+    resetSession() {
+        this.usedThisSession = this.enabled; // If still enabled, mark as used
+    }
+
+    /**
+     * Check if dev mode was used at any point during this game session
+     */
+    wasUsedThisSession() {
+        return this.usedThisSession || this.enabled;
     }
     
     /**

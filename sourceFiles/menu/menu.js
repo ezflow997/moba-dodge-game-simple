@@ -65,6 +65,10 @@ export class Menu{
             }
             game.gameOver = false;
             this.mainMenuShow = false;
+            // Reset dev mode session tracking for new game
+            if (game.devMode) {
+                game.devMode.resetSession();
+            }
         }
 
         // Leaderboard button - only active when leaderboard menu is not visible

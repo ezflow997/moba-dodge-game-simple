@@ -341,8 +341,8 @@ window.addEventListener('load', function () {
 
 			if(game.gameOver == true){
 				if(game.showMessage == '' && game.score != 0){
-					// Check if dev mode is enabled - don't save scores
-					if (game.devMode && game.devMode.isEnabled()) {
+					// Check if dev mode was used this session - don't save scores
+					if (game.devMode && game.devMode.wasUsedThisSession()) {
 						game.showMessage = 'Dev Mode - Score not saved (' + game.score + ')';
 						game.showMessageNow = window.performance.now();
 						game.pendingScore = null; // Don't submit to leaderboard
