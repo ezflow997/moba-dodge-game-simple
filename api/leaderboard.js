@@ -27,6 +27,8 @@ function getDifficultyColumns(difficulty) {
         kills: `${diff}_kills`,
         streak: `${diff}_streak`,
         dailyScore: `${diff}_daily_score`,
+        dailyKills: `${diff}_daily_kills`,
+        dailyStreak: `${diff}_daily_streak`,
         dailyDate: `${diff}_daily_date`
     };
 }
@@ -45,7 +47,7 @@ async function getLeaderboard(difficulty, limit = 10, offset = 0, dailyOnly = fa
     const dateCol = cols.dailyDate;
 
     // Select columns we need
-    const selectCols = `player_name,${cols.score},${cols.kills},${cols.streak},${cols.dailyScore},${cols.dailyDate},updated_at`;
+    const selectCols = `player_name,${cols.score},${cols.kills},${cols.streak},${cols.dailyScore},${cols.dailyKills},${cols.dailyStreak},${cols.dailyDate},updated_at`;
 
     // Build URL with filters
     let url = `${SUPABASE_URL}/rest/v1/leaderboard?select=${selectCols}&${scoreCol}=gt.0&order=${scoreCol}.desc&limit=${limit}&offset=${offset}`;
@@ -126,12 +128,12 @@ export default async function handler(req, res) {
         const { data, totalCount } = result;
         const cols = getDifficultyColumns(diff);
 
-        // Transform to expected format - use daily score if daily filter
+        // Transform to expected format - use daily stats if daily filter
         const safeData = data.map(entry => ({
             player_name: entry.player_name,
             score: dailyOnly ? (entry[cols.dailyScore] || 0) : (entry[cols.score] || 0),
-            kills: entry[cols.kills] || 0,
-            best_streak: entry[cols.streak] || 0,
+            kills: dailyOnly ? (entry[cols.dailyKills] || 0) : (entry[cols.kills] || 0),
+            best_streak: dailyOnly ? (entry[cols.dailyStreak] || 0) : (entry[cols.streak] || 0),
             difficulty: diff
         }));
 

@@ -96,6 +96,8 @@ function getDifficultyColumns(difficulty) {
         kills: `${diff}_kills`,
         streak: `${diff}_streak`,
         dailyScore: `${diff}_daily_score`,
+        dailyKills: `${diff}_daily_kills`,
+        dailyStreak: `${diff}_daily_streak`,
         dailyDate: `${diff}_daily_date`
     };
 }
@@ -132,6 +134,8 @@ async function insertPlayer(playerName, difficulty, score, kills, bestStreak, pa
         [cols.kills]: kills,
         [cols.streak]: bestStreak,
         [cols.dailyScore]: score,
+        [cols.dailyKills]: kills,
+        [cols.dailyStreak]: bestStreak,
         [cols.dailyDate]: today
     };
 
@@ -153,7 +157,7 @@ async function updatePlayerScore(playerName, difficulty, score, kills, bestStrea
     const cols = getDifficultyColumns(difficulty);
     const today = getTodayDate();
 
-    // Check if it's a new day - reset daily score if so
+    // Check if it's a new day - reset daily stats if so
     const existingDailyDate = existingPlayer[cols.dailyDate];
     const isNewDay = existingDailyDate !== today;
     const existingDailyScore = isNewDay ? 0 : (existingPlayer[cols.dailyScore] || 0);
@@ -170,13 +174,11 @@ async function updatePlayerScore(playerName, difficulty, score, kills, bestStrea
         updateData[cols.streak] = bestStreak;
     }
 
-    // Update daily score if new score is higher than today's daily score (or if new day)
-    if (score > existingDailyScore) {
+    // Update daily stats if new score is higher than today's daily score (or if new day)
+    if (score > existingDailyScore || isNewDay) {
         updateData[cols.dailyScore] = score;
-        updateData[cols.dailyDate] = today;
-    } else if (isNewDay) {
-        // New day but score not higher - still set the daily score to this score
-        updateData[cols.dailyScore] = score;
+        updateData[cols.dailyKills] = kills;
+        updateData[cols.dailyStreak] = bestStreak;
         updateData[cols.dailyDate] = today;
     }
 
