@@ -22,6 +22,16 @@ export class LoadoutMenu {
         // Selected rewards for this game
         this.selectedRewards = []; // Array of reward objects
 
+        // Category tabs
+        this.categories = Object.keys(CATEGORY_INFO);
+        this.selectedCategory = CATEGORY.GUN;
+
+        // Category tab buttons
+        this.categoryButtons = {};
+        for (const cat of this.categories) {
+            this.categoryButtons[cat] = new Button(0, 0, 110, 40, CATEGORY_INFO[cat].name, 14, 0, 0, false, true, 'white', 'white');
+        }
+
         // Scrolling
         this.scrollOffset = 0;
         this.maxScrollOffset = 0;
@@ -40,6 +50,7 @@ export class LoadoutMenu {
         this.clicked = false;
         this.scrollOffset = 0;
         this.selectedRewards = [];
+        this.selectedCategory = CATEGORY.GUN;
     }
 
     hide() {
@@ -58,13 +69,14 @@ export class LoadoutMenu {
         return this.selectedRewards.map(r => r.id);
     }
 
-    // Get available items (owned quantity > 0 or permanently unlocked)
+    // Get available items for current category (owned quantity > 0 or permanently unlocked)
     getAvailableItems() {
         const available = [];
         for (const [rewardId, data] of Object.entries(this.inventory)) {
             if (data.permanentUnlock || data.quantity > 0) {
                 const reward = Object.values(REWARDS).find(r => r.id === rewardId);
-                if (reward) {
+                // Filter by selected category
+                if (reward && reward.category === this.selectedCategory) {
                     available.push({
                         reward,
                         quantity: data.quantity,
@@ -73,13 +85,6 @@ export class LoadoutMenu {
                 }
             }
         }
-        // Sort by category then rarity
-        available.sort((a, b) => {
-            if (a.reward.category !== b.reward.category) {
-                return Object.keys(CATEGORY_INFO).indexOf(a.reward.category) - Object.keys(CATEGORY_INFO).indexOf(b.reward.category);
-            }
-            return 0;
-        });
         return available;
     }
 
@@ -194,14 +199,35 @@ export class LoadoutMenu {
             this.selectedRewards = [];
         }
 
+        // Update category buttons
+        const refPanelLeft = refCenterX - 600;
+        const catBtnY = refPanelTop + 95;
+        const catBtnStartX = refPanelLeft + 40;
+
+        for (let i = 0; i < this.categories.length; i++) {
+            const cat = this.categories[i];
+            const btn = this.categoryButtons[cat];
+            btn.x = catBtnStartX + i * 120;
+            btn.y = catBtnY;
+            btn.w = 110;
+            btn.h = 40;
+            btn.update(inX, inY);
+
+            if (btn.isHovered && clicking && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.selectedCategory = cat;
+                this.scrollOffset = 0;
+            }
+        }
+
         // Handle scrolling
         const available = this.getAvailableItems();
         const itemHeight = 70;
 
         // Grid coordinates (matching draw function)
-        const refPanelLeft = refCenterX - 600; // Panel half-width is 600
         const gridLeft = refPanelLeft + 30;    // List starts at panelX + 30
-        const gridTop = refPanelTop + 140;
+        const gridTop = refPanelTop + 150;
         const gridWidth = 730;
         const gridHeight = refPanelH - 280;
         const contentHeight = available.length * itemHeight;
@@ -342,9 +368,12 @@ export class LoadoutMenu {
         context.shadowBlur = 0;
 
         // Subtitle
-        context.font = `${20 * rX}px Arial`;
+        context.font = `${18 * rX}px Arial`;
         context.fillStyle = '#aaaaaa';
-        context.fillText('Choose rewards to start with (click to add/remove)', centerX, panelY + 90 * rY);
+        context.fillText('Click to select rewards for your next game', centerX, panelY + 82 * rY);
+
+        // Draw category tabs
+        this.drawCategoryTabs(context, rX, rY, panelX, panelY);
 
         // Draw available items
         this.drawAvailableItems(context, rX, rY, panelX, panelY, panelH);
@@ -360,19 +389,64 @@ export class LoadoutMenu {
         context.restore();
     }
 
+    drawCategoryTabs(context, rX, rY, panelX, panelY) {
+        const tabY = panelY + 95 * rY;
+        const tabStartX = panelX + 40 * rX;
+
+        for (let i = 0; i < this.categories.length; i++) {
+            const cat = this.categories[i];
+            const btn = this.categoryButtons[cat];
+            const bx = tabStartX + i * 120 * rX;
+            const by = tabY;
+            const bw = 110 * rX;
+            const bh = 40 * rY;
+
+            const isActive = cat === this.selectedCategory;
+
+            context.beginPath();
+            context.roundRect(bx, by, bw, bh, 6 * rX);
+
+            if (isActive) {
+                context.fillStyle = 'rgba(0, 255, 170, 0.25)';
+                context.fill();
+                context.strokeStyle = '#00ffaa';
+                context.lineWidth = 2 * rX;
+                context.stroke();
+            } else if (btn.isHovered) {
+                context.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                context.fill();
+                context.strokeStyle = '#666666';
+                context.lineWidth = 1 * rX;
+                context.stroke();
+            } else {
+                context.fillStyle = 'rgba(30, 40, 60, 0.8)';
+                context.fill();
+                context.strokeStyle = '#444444';
+                context.lineWidth = 1 * rX;
+                context.stroke();
+            }
+
+            context.font = `${14 * rX}px Arial`;
+            context.textAlign = 'center';
+            context.fillStyle = isActive ? '#00ffaa' : '#aaaaaa';
+            context.fillText(CATEGORY_INFO[cat].name, bx + bw / 2, by + bh / 2 + 5 * rY);
+        }
+    }
+
     drawAvailableItems(context, rX, rY, panelX, panelY, panelH) {
         const listX = panelX + 30 * rX;
-        const listY = panelY + 130 * rY;
+        const listY = panelY + 145 * rY;
         const listW = 730 * rX;
         const listH = panelH - 270 * rY;
 
-        // List header
-        context.font = `bold ${22 * rX}px Arial`;
+        // List header - show current category
+        const categoryName = CATEGORY_INFO[this.selectedCategory].name;
+        context.font = `bold ${20 * rX}px Arial`;
         context.textAlign = 'left';
-        context.fillStyle = '#ffffff';
-        context.fillText('Available Items', listX + 10 * rX, listY);
+        context.fillStyle = '#00ffaa';
+        context.fillText(categoryName, listX + 10 * rX, listY);
 
-        const gridTop = listY + 20 * rY;
+        const gridTop = listY + 15 * rY;
 
         // Clip region
         context.save();
@@ -384,11 +458,11 @@ export class LoadoutMenu {
         const itemHeight = 70 * rY;
 
         if (available.length === 0) {
-            context.font = `${20 * rX}px Arial`;
+            context.font = `${18 * rX}px Arial`;
             context.textAlign = 'center';
             context.fillStyle = '#666666';
-            context.fillText('No items owned', listX + listW / 2, gridTop + 60 * rY);
-            context.fillText('Visit the Shop to purchase items!', listX + listW / 2, gridTop + 90 * rY);
+            context.fillText(`No ${categoryName.toLowerCase()} owned`, listX + listW / 2, gridTop + 60 * rY);
+            context.fillText('Visit the Shop to purchase!', listX + listW / 2, gridTop + 90 * rY);
         }
 
         for (let i = 0; i < available.length; i++) {
