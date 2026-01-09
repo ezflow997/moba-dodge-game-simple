@@ -417,6 +417,9 @@ window.addEventListener('load', function () {
 					game.menu.mainMenuShow = true;
 					game.showMessage = '';
 
+					// Force refresh leaderboard scores when returning to menu
+					game.menu.forceRefreshScores();
+
 					// Switch to menu music when returning to menu
 					if (window.gameSound) {
 						window.gameSound.playMenuMusic();

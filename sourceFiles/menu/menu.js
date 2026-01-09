@@ -85,6 +85,14 @@ export class Menu{
 
         this.fetchingScores = false;
     }
+
+    /**
+     * Force refresh of player scores on next update (bypasses cooldown)
+     */
+    forceRefreshScores() {
+        this.lastFetchTime = 0;
+    }
+
     updateMain(game){
         var inX = game.input.mouseX;
         var inY = game.input.mouseY;
