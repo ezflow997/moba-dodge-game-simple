@@ -686,26 +686,36 @@ window.addEventListener('load', function () {
 
 				// Handle purchase action
 				if (shopResult && shopResult.action === 'purchase') {
-					game.supabase.purchaseItem(
-						game.playerName,
-						game.playerPassword,
-						shopResult.rewardId,
-						shopResult.rarityName,
-						shopResult.isPermanent
-					).then(result => {
-						if (result.success) {
-							game.shopMenu.setMessage(result.message, false);
-							// Refresh shop data
-							game.supabase.getShopData(game.playerName).then(data => {
-								game.shopMenu.setShopData(data);
-								game.menu.shopPoints = data.points || 0;
-							});
-						} else {
-							game.shopMenu.setMessage(result.error || 'Purchase failed', true);
-						}
-					}).catch(err => {
-						game.shopMenu.setMessage(err.message, true);
-					});
+					// Check if password is available
+					if (!game.playerPassword) {
+						game.shopMenu.setMessage('Please log out and log back in to purchase', true);
+					} else {
+						game.supabase.purchaseItem(
+							game.playerName,
+							game.playerPassword,
+							shopResult.rewardId,
+							shopResult.rarityName,
+							shopResult.isPermanent
+						).then(result => {
+							if (result.success) {
+								game.shopMenu.setMessage(result.message, false);
+								// Refresh shop data
+								game.supabase.getShopData(game.playerName).then(data => {
+									game.shopMenu.setShopData(data);
+									game.menu.shopPoints = data.points || 0;
+								});
+							} else {
+								// More helpful message for password errors
+								if (result.error === 'Invalid password') {
+									game.shopMenu.setMessage('Session expired - please log out and log back in', true);
+								} else {
+									game.shopMenu.setMessage(result.error || 'Purchase failed', true);
+								}
+							}
+						}).catch(err => {
+							game.shopMenu.setMessage(err.message, true);
+						});
+					}
 				}
 			}
 
