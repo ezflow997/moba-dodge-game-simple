@@ -391,7 +391,7 @@ window.addEventListener('load', function () {
 					// Allow click to skip after minimum read time (500ms)
 					const minReadTime = 500;
 					const clicked = game.input.buttons.indexOf(0) > -1;
-					if(msPassed > 2200 || (msPassed > minReadTime && clicked)){
+					if(msPassed > 5000 || (msPassed > minReadTime && clicked)){
 						game.showMessage = 'None';
 
 						// After showing score message, check if we need name/password input
