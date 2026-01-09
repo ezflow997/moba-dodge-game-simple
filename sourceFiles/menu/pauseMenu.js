@@ -30,6 +30,8 @@ export class PauseMenu {
         this.konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowLeft', 'ArrowRight', 'ArrowRight'];
         this.konamiProgress = 0;
         this.lastKonamiTime = 0;
+        this.lastCheckedPlayer = ''; // Track which player we last checked
+        this.gameRef = null; // Reference to game for event handlers
 
         // Submenu states
         this.showKeybinds = false;
@@ -68,7 +70,7 @@ export class PauseMenu {
 
             // Konami code detection (only when pause menu is open and not in submenu)
             if (this.isPaused && !this.showKeybinds && !this.showVolume && !this.waitingForKey) {
-                this.checkKonamiCode(ev.key);
+                this.checkKonamiCode(ev.key, this.gameRef);
             }
         };
         window.addEventListener('keydown', this.keydownHandler);
@@ -109,7 +111,7 @@ export class PauseMenu {
     /**
      * Check for konami code input to reveal dev mode
      */
-    checkKonamiCode(key) {
+    checkKonamiCode(key, game) {
         const now = performance.now();
 
         // Reset if too much time passed (2 seconds)
@@ -127,6 +129,11 @@ export class PauseMenu {
                 this.devModeVisible = true;
                 this.konamiProgress = 0;
                 if (window.gameSound) window.gameSound.playMenuClick();
+
+                // Save unlock state for logged-in player
+                if (game && game.playerName) {
+                    localStorage.setItem(`devModeUnlocked_${game.playerName}`, 'true');
+                }
             }
         } else {
             // Wrong key, reset
@@ -134,7 +141,38 @@ export class PauseMenu {
         }
     }
 
+    /**
+     * Check if dev mode is unlocked for the current player
+     */
+    checkDevModeUnlock(game) {
+        if (!game) return;
+
+        // Only check when player changes
+        const currentPlayer = game.playerName || '';
+        if (currentPlayer === this.lastCheckedPlayer) return;
+        this.lastCheckedPlayer = currentPlayer;
+
+        // Check if this player has unlocked dev mode
+        if (currentPlayer) {
+            const isUnlocked = localStorage.getItem(`devModeUnlocked_${currentPlayer}`) === 'true';
+            if (isUnlocked) {
+                this.devModeVisible = true;
+            }
+        } else {
+            // Not logged in - reset visibility unless dev mode is already on
+            if (!game.devMode || !game.devMode.isEnabled()) {
+                this.devModeVisible = false;
+            }
+        }
+    }
+
     update(game) {
+        // Store game reference for event handlers
+        this.gameRef = game;
+
+        // Check if dev mode is unlocked for current player
+        this.checkDevModeUnlock(game);
+
         if (!this.isPaused) return;
 
         const input = game.input;
@@ -395,9 +433,12 @@ export class PauseMenu {
                         game.devMode.setEnabled(!game.devMode.isEnabled());
                         this.devModeButton.text = `Dev Mode: ${game.devMode.isEnabled() ? 'ON' : 'OFF'}`;
 
-                        // If turning OFF, hide the button again
+                        // If turning OFF, hide the button again (unless player has permanent unlock)
                         if (!game.devMode.isEnabled()) {
-                            this.devModeVisible = false;
+                            const hasUnlock = game.playerName && localStorage.getItem(`devModeUnlocked_${game.playerName}`) === 'true';
+                            if (!hasUnlock) {
+                                this.devModeVisible = false;
+                            }
                         }
                     }
                 }
