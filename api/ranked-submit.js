@@ -103,8 +103,49 @@ async function getPlayerQueueEntry(playerName) {
     return data.length > 0 ? data[0] : null;
 }
 
-// Submit or update score in ranked queue (one entry per player)
-async function submitToQueue(playerName, score, kills, bestStreak) {
+// Get all queue entries
+async function getAllQueueEntries() {
+    const url = `${SUPABASE_URL}/rest/v1/ranked_queue?order=submitted_at.asc`;
+    const response = await fetch(url, { method: 'GET', headers: getHeaders() });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+}
+
+// Get entries for a specific queue
+async function getQueueEntries(queueId) {
+    const url = `${SUPABASE_URL}/rest/v1/ranked_queue?queue_id=eq.${encodeURIComponent(queueId)}&order=submitted_at.asc`;
+    const response = await fetch(url, { method: 'GET', headers: getHeaders() });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+}
+
+// Find an available queue (< 10 players) or return null if all full
+function findAvailableQueue(allEntries) {
+    // Group entries by queue_id
+    const queues = {};
+    for (const entry of allEntries) {
+        const qid = entry.queue_id || 'default';
+        if (!queues[qid]) queues[qid] = [];
+        queues[qid].push(entry);
+    }
+
+    // Find a queue with room
+    for (const [queueId, entries] of Object.entries(queues)) {
+        if (entries.length < MIN_PLAYERS_FOR_TOURNAMENT) {
+            return queueId;
+        }
+    }
+
+    return null; // All queues are full
+}
+
+// Generate a new queue ID
+function generateQueueId() {
+    return `queue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+// Submit or update score in ranked queue (one entry per player per queue)
+async function submitToQueue(playerName, score, kills, bestStreak, queueId) {
     // Check if player already has an entry
     const existing = await getPlayerQueueEntry(playerName);
 
@@ -127,9 +168,9 @@ async function submitToQueue(playerName, score, kills, bestStreak) {
         });
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return { updated: true, newHighScore: score > existing.score, attempts: (existing.attempts || 1) + 1 };
+        return { updated: true, newHighScore: score > existing.score, attempts: (existing.attempts || 1) + 1, queueId: existing.queue_id };
     } else {
-        // Insert new entry
+        // Insert new entry with queue_id
         const response = await fetch(`${SUPABASE_URL}/rest/v1/ranked_queue`, {
             method: 'POST',
             headers: getHeaders(),
@@ -138,21 +179,14 @@ async function submitToQueue(playerName, score, kills, bestStreak) {
                 score: score,
                 kills: kills || 0,
                 best_streak: bestStreak || 0,
-                attempts: 1
+                attempts: 1,
+                queue_id: queueId
             })
         });
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return { updated: false, newHighScore: true, attempts: 1 };
+        return { updated: false, newHighScore: true, attempts: 1, queueId };
     }
-}
-
-// Get all queue entries (entries are deleted after resolution)
-async function getUnresolvedQueue() {
-    const url = `${SUPABASE_URL}/rest/v1/ranked_queue?order=submitted_at.asc`;
-    const response = await fetch(url, { method: 'GET', headers: getHeaders() });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.json();
 }
 
 // Calculate ELO changes for tournament
@@ -322,34 +356,37 @@ export default async function handler(req, res) {
             });
         }
 
-        // Check if queue is full (10 players) and player is not already in it
-        if (!playerEntry) {
-            const currentQueue = await getUnresolvedQueue();
+        // Determine which queue to use
+        let targetQueueId;
+        if (playerEntry) {
+            // Player already in a queue, use that one
+            targetQueueId = playerEntry.queue_id || 'default';
+        } else {
+            // Find an available queue or create a new one
+            const allEntries = await getAllQueueEntries();
+            targetQueueId = findAvailableQueue(allEntries);
 
-            if (currentQueue.length >= MIN_PLAYERS_FOR_TOURNAMENT) {
-                return res.status(400).json({
-                    error: 'Queue is full',
-                    queueSize: currentQueue.length,
-                    message: 'Tournament queue is full. Please wait for it to resolve before joining.'
-                });
+            if (!targetQueueId) {
+                // All queues are full, create a new one
+                targetQueueId = generateQueueId();
             }
         }
 
         // Submit to queue (inserts new or updates existing)
-        const submitResult = await submitToQueue(name, score, kills, bestStreak);
+        const submitResult = await submitToQueue(name, score, kills, bestStreak, targetQueueId);
         const newAttemptsUsed = submitResult.attempts;
 
-        // Get current queue state
-        const queue = await getUnresolvedQueue();
+        // Get entries for the player's specific queue
+        const queue = await getQueueEntries(targetQueueId);
 
-        // Each entry now has attempts field directly
+        // Check queue status
         const uniquePlayers = queue.length;
         const playersReady = queue.filter(p => (p.attempts || 1) >= MAX_ATTEMPTS_PER_PLAYER).length;
 
-        // Tournament resolves when: 10+ players AND all players have completed all attempts
+        // Tournament resolves when: 10 players AND all players have completed all attempts
         const allReady = queue.every(p => (p.attempts || 1) >= MAX_ATTEMPTS_PER_PLAYER);
         if (uniquePlayers >= MIN_PLAYERS_FOR_TOURNAMENT && allReady) {
-            // Resolve tournament!
+            // Resolve tournament for this queue!
             const tournamentResult = await resolveTournament(queue);
 
             // Find this player's result
@@ -375,9 +412,9 @@ export default async function handler(req, res) {
                 }))
             });
         } else {
-            // Not ready yet - find player's best score
-            const updatedAttempts = await getPlayerAttempts(name);
-            const bestScore = Math.max(...updatedAttempts.map(a => a.score));
+            // Not ready yet - get player's entry for best score
+            const updatedEntry = await getPlayerQueueEntry(name);
+            const bestScore = updatedEntry ? updatedEntry.score : score;
 
             return res.status(200).json({
                 success: true,
@@ -390,7 +427,8 @@ export default async function handler(req, res) {
                 uniquePlayers: uniquePlayers,
                 playersNeeded: Math.max(0, MIN_PLAYERS_FOR_TOURNAMENT - uniquePlayers),
                 playersReady: playersReady,
-                totalQueuedPlayers: uniquePlayers
+                totalQueuedPlayers: uniquePlayers,
+                queueId: targetQueueId
             });
         }
     } catch (error) {
