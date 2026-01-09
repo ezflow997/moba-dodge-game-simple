@@ -287,6 +287,19 @@ export class SpecialBullet {
                 // Mark this enemy as hit
                 this.piercedEnemies.add(enemy);
 
+                // Ricochet - bounce off enemy if we have bounces left
+                if (this.gunType === 'ricochet' && this.bouncesRemaining > 0) {
+                    this.bounceOffEnemy(enemy);
+                    this.enemyCollision = true;
+
+                    // Chain lightning effect
+                    if (this.chainsRemaining > 0 && onChain) {
+                        this.triggerChain(enemy, enemies, onChain);
+                    }
+
+                    return; // Continue moving after bounce
+                }
+
                 // Piercing - continue if we have pierce left
                 if (this.pierceCount > 0) {
                     this.pierceCount--;
@@ -311,6 +324,40 @@ export class SpecialBullet {
         }
 
         this.enemyCollision = false;
+    }
+
+    bounceOffEnemy(enemy) {
+        // Calculate reflection direction based on collision normal
+        const dx = this.x - enemy.x;
+        const dy = this.y - enemy.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // Normal vector from enemy center to bullet
+        const nx = dx / dist;
+        const ny = dy / dist;
+
+        // Reflect direction: d' = d - 2(d·n)n
+        const dot = this.dirX * nx + this.dirY * ny;
+        this.dirX = this.dirX - 2 * dot * nx;
+        this.dirY = this.dirY - 2 * dot * ny;
+
+        // Update angle
+        this.angle = Math.atan2(this.dirY, this.dirX);
+
+        // Push bullet outside enemy to prevent multiple collisions
+        this.x = enemy.x + nx * (enemy.size + this.size + 5);
+        this.y = enemy.y + ny * (enemy.size + this.size + 5);
+
+        // Decrement bounce count
+        this.bouncesRemaining--;
+
+        // Extend range on each bounce (add 30% more range)
+        this.maxTravel += this.maxTravel * 0.3;
+
+        // Update end position
+        const remaining = this.maxTravel - this.distanceTraveled;
+        this.endX = this.x + this.dirX * remaining;
+        this.endY = this.y + this.dirY * remaining;
     }
 
     triggerChain(hitEnemy, enemies, onChain) {
