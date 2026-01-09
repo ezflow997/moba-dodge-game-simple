@@ -356,6 +356,7 @@ window.addEventListener('load', function () {
 						game.isRankedGame = false;
 					} else if (game.isRankedGame) {
 						// Ranked game - store for ranked submission
+						console.log('[RANKED] Game over. Score:', game.score, 'Player:', game.playerName);
 						game.pendingRankedScore = {
 							score: game.score,
 							kills: game.enemies.enemiesTakenDown,
@@ -414,7 +415,9 @@ window.addEventListener('load', function () {
 
 						// Handle ranked score submission
 						if (game.pendingRankedScore) {
+							console.log('[RANKED] Attempting to submit. Name:', game.playerName, 'Has password:', !!game.playerPassword);
 							if (game.playerName && game.playerPassword) {
+								console.log('[RANKED] Submitting score:', game.pendingRankedScore.score);
 								game.supabase.submitRankedScore(
 									game.playerName,
 									game.playerPassword,
@@ -422,14 +425,20 @@ window.addEventListener('load', function () {
 									game.pendingRankedScore.kills,
 									game.pendingRankedScore.bestStreak
 								).then(result => {
+									console.log('[RANKED] Submit result:', result);
 									if (result.error) {
+										console.log('[RANKED] Error:', result.error);
 										game.rankedMenu.setError(result.error);
 										game.rankedMenu.show('confirm');
 									} else if (result.tournamentResolved) {
+										console.log('[RANKED] Tournament resolved!');
 										game.rankedMenu.setTournamentResults(result);
 									} else {
+										console.log('[RANKED] Queued successfully');
 										game.rankedMenu.setQueuedState(result);
 									}
+								}).catch(err => {
+									console.error('[RANKED] Submit failed:', err);
 								});
 							} else {
 								// Missing credentials - show error
@@ -541,6 +550,7 @@ window.addEventListener('load', function () {
 
 				// Check if player confirmed to start ranked game
 				if (rankedResult === 'start_ranked') {
+					console.log('[RANKED] Starting ranked game for:', game.playerName);
 					game.rankedMenu.hide();
 					game.isRankedGame = true;
 					game.difficulty_level = 0; // Force EASY
