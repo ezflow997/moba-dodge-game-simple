@@ -9,6 +9,7 @@ const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 const MIN_PLAYERS_FOR_TOURNAMENT = 2;
 const MAX_ATTEMPTS_PER_PLAYER = 5;
 const QUEUE_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour in milliseconds
+const MIN_TIME_TO_JOIN_QUEUE_MS = 10 * 60 * 1000; // 10 minutes - don't join queues with less time remaining
 const BASE_ELO_GAIN = 25;
 const BASE_ELO_LOSS = 20;
 
@@ -120,7 +121,7 @@ async function getQueueEntries(queueId) {
     return await response.json();
 }
 
-// Find an available queue (< 10 players) or return null if all full
+// Find an available queue (has room and enough time remaining) or return null
 function findAvailableQueue(allEntries) {
     // Group entries by queue_id
     const queues = {};
@@ -130,14 +131,26 @@ function findAvailableQueue(allEntries) {
         queues[qid].push(entry);
     }
 
-    // Find a queue with room
+    // Find a queue with room AND enough time remaining
     for (const [queueId, entries] of Object.entries(queues)) {
         if (entries.length < MIN_PLAYERS_FOR_TOURNAMENT) {
-            return queueId;
+            // Check time remaining on this queue
+            const oldestEntry = entries.reduce((oldest, entry) => {
+                const entryTime = new Date(entry.submitted_at).getTime();
+                return entryTime < oldest ? entryTime : oldest;
+            }, Date.now());
+            const queueAge = Date.now() - oldestEntry;
+            const timeRemaining = QUEUE_TIMEOUT_MS - queueAge;
+
+            // Only join if there's enough time remaining (> 10 minutes)
+            if (timeRemaining > MIN_TIME_TO_JOIN_QUEUE_MS) {
+                return queueId;
+            }
+            // Skip this queue - not enough time remaining for new player
         }
     }
 
-    return null; // All queues are full
+    return null; // All queues are full or don't have enough time
 }
 
 // Generate a new queue ID
