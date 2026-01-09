@@ -51,8 +51,17 @@ export class LoadoutMenu {
         this.scrollbarDragStartY = 0;
         this.scrollbarDragStartOffset = 0;
 
-        // Collapsed groups (for gun types)
-        this.collapsedGroups = {}; // { gunType: true/false }
+        // Collapsed groups (for gun types) - collapsed by default
+        this.collapsedGroups = {
+            'shotgun': true,
+            'rapidfire': true,
+            'piercing': true,
+            'ricochet': true,
+            'homing': true,
+            'twin': true,
+            'nova': true,
+            'chain': true
+        };
 
         // Buttons
         this.startButton = new Button(0, 0, 220, 70, "Start Game", 30, 0, 0, false, true, 'white', 'white');
