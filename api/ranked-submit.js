@@ -425,9 +425,20 @@ export default async function handler(req, res) {
         const leaderIsOnlyOneWithAttempts = playersWithAttemptsLeft.length === 1 &&
             playersWithAttemptsLeft[0].player_name === leader.player_name;
 
+        // Debug logging
+        console.log('[RANKED DEBUG] Queue state:', {
+            uniquePlayers,
+            playersWithAttemptsLeft: playersWithAttemptsLeft.map(p => ({ name: p.player_name, attempts: p.attempts })),
+            leader: { name: leader?.player_name, score: leader?.score, attempts: leader?.attempts },
+            leaderIsOnlyOneWithAttempts,
+            allPlayersAttempts: queue.map(p => ({ name: p.player_name, attempts: p.attempts || 1, score: p.score }))
+        });
+
         // Tournament resolves when: min players AND (all attempts complete OR timed out OR leader is only one with attempts left)
         const allReady = queue.every(p => (p.attempts || 1) >= MAX_ATTEMPTS_PER_PLAYER);
         const shouldResolveEarly = uniquePlayers >= MIN_PLAYERS_FOR_TOURNAMENT && leaderIsOnlyOneWithAttempts;
+
+        console.log('[RANKED DEBUG] Resolution check:', { allReady, isTimedOut, shouldResolveEarly, willResolve: allReady || isTimedOut || shouldResolveEarly });
 
         if (uniquePlayers >= MIN_PLAYERS_FOR_TOURNAMENT && (allReady || isTimedOut || shouldResolveEarly)) {
             // Resolve tournament for this queue!
