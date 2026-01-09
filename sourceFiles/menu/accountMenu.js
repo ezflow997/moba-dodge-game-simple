@@ -35,8 +35,8 @@ export class AccountMenu {
         this.changePasswordButton = new Button(830, 400, 400, 70, "Change Password", 32, 0, 0, false, true, 'white', 'white');
         this.forgotPasswordButton = new Button(830, 500, 400, 70, "Forgot Password", 32, 0, 0, false, true, 'white', 'white');
         this.backButton = new Button(830, 600, 400, 70, "Back", 32, 0, 0, false, true, 'white', 'white');
-        this.submitButton = new Button(1050, 620, 200, 60, "Submit", 28, 0, 0, false, true, 'white', 'white');
-        this.cancelButton = new Button(810, 620, 200, 60, "Cancel", 28, 0, 0, false, true, 'white', 'white');
+        this.submitButton = new Button(1050, 680, 200, 60, "Submit", 28, 0, 0, false, true, 'white', 'white');
+        this.cancelButton = new Button(810, 680, 200, 60, "Cancel", 28, 0, 0, false, true, 'white', 'white');
         this.nextButton = new Button(1050, 550, 200, 60, "Next", 28, 0, 0, false, true, 'white', 'white');
 
         // Keyboard handler
@@ -424,7 +424,7 @@ export class AccountMenu {
         context.restore();
 
         // Panel
-        const panelHeight = this.mode === 'main' ? 400 : 450;
+        const panelHeight = this.mode === 'main' ? 400 : 480;
         context.save();
         context.fillStyle = 'rgba(10, 20, 40, 0.95)';
         context.fillRect(580 * rX, 280 * rY, 900 * rX, panelHeight * rY);
