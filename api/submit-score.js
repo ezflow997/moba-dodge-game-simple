@@ -94,8 +94,16 @@ function getDifficultyColumns(difficulty) {
     return {
         score: `${diff}_score`,
         kills: `${diff}_kills`,
-        streak: `${diff}_streak`
+        streak: `${diff}_streak`,
+        dailyScore: `${diff}_daily_score`,
+        dailyDate: `${diff}_daily_date`
     };
+}
+
+// Get today's date in YYYY-MM-DD format (UTC)
+function getTodayDate() {
+    const now = new Date();
+    return now.toISOString().split('T')[0];
 }
 
 async function getPlayer(playerName) {
@@ -115,13 +123,16 @@ async function getPlayer(playerName) {
 
 async function insertPlayer(playerName, difficulty, score, kills, bestStreak, passwordHash) {
     const cols = getDifficultyColumns(difficulty);
+    const today = getTodayDate();
 
     const body = {
         player_name: playerName,
         password_hash: passwordHash,
         [cols.score]: score,
         [cols.kills]: kills,
-        [cols.streak]: bestStreak
+        [cols.streak]: bestStreak,
+        [cols.dailyScore]: score,
+        [cols.dailyDate]: today
     };
 
     const response = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard`, {
@@ -138,19 +149,42 @@ async function insertPlayer(playerName, difficulty, score, kills, bestStreak, pa
     return { inserted: true, data: data };
 }
 
-async function updatePlayerScore(playerName, difficulty, score, kills, bestStreak) {
+async function updatePlayerScore(playerName, difficulty, score, kills, bestStreak, existingPlayer) {
     const cols = getDifficultyColumns(difficulty);
+    const today = getTodayDate();
+
+    // Check if it's a new day - reset daily score if so
+    const existingDailyDate = existingPlayer[cols.dailyDate];
+    const isNewDay = existingDailyDate !== today;
+    const existingDailyScore = isNewDay ? 0 : (existingPlayer[cols.dailyScore] || 0);
+    const existingAllTimeScore = existingPlayer[cols.score] || 0;
+
+    const updateData = {
+        updated_at: new Date().toISOString()
+    };
+
+    // Update all-time score if new score is higher
+    if (score > existingAllTimeScore) {
+        updateData[cols.score] = score;
+        updateData[cols.kills] = kills;
+        updateData[cols.streak] = bestStreak;
+    }
+
+    // Update daily score if new score is higher than today's daily score (or if new day)
+    if (score > existingDailyScore) {
+        updateData[cols.dailyScore] = score;
+        updateData[cols.dailyDate] = today;
+    } else if (isNewDay) {
+        // New day but score not higher - still set the daily score to this score
+        updateData[cols.dailyScore] = score;
+        updateData[cols.dailyDate] = today;
+    }
 
     const url = `${SUPABASE_URL}/rest/v1/leaderboard?player_name=eq.${encodeURIComponent(playerName)}`;
     const response = await fetch(url, {
         method: 'PATCH',
         headers: getHeaders(),
-        body: JSON.stringify({
-            [cols.score]: score,
-            [cols.kills]: kills,
-            [cols.streak]: bestStreak,
-            updated_at: new Date().toISOString()
-        })
+        body: JSON.stringify(updateData)
     });
 
     if (!response.ok) {
@@ -158,24 +192,12 @@ async function updatePlayerScore(playerName, difficulty, score, kills, bestStrea
     }
 
     const data = await response.json();
-    return { updated: true, data: data };
-}
-
-async function updatePlayerTimestamp(playerName) {
-    const url = `${SUPABASE_URL}/rest/v1/leaderboard?player_name=eq.${encodeURIComponent(playerName)}`;
-    const response = await fetch(url, {
-        method: 'PATCH',
-        headers: getHeaders(),
-        body: JSON.stringify({
-            updated_at: new Date().toISOString()
-        })
-    });
-
-    if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-    }
-
-    return { timestampUpdated: true };
+    return {
+        updated: true,
+        newAllTimeHigh: score > existingAllTimeScore,
+        newDailyHigh: score > existingDailyScore,
+        data: data
+    };
 }
 
 export default async function handler(req, res) {
@@ -249,19 +271,9 @@ export default async function handler(req, res) {
                 return res.status(401).json({ error: 'Username exists but has no password', passwordError: true });
             }
 
-            // Get current score for this difficulty
-            const currentScore = existing[cols.score] || 0;
-
-            // Check if new score is higher
-            if (score > currentScore) {
-                // Update score, kills, streak, and timestamp
-                const result = await updatePlayerScore(name, diff, score, kills || 0, bestStreak || 0);
-                return res.status(200).json({ updated: true, newHighScore: true, ...result });
-            } else {
-                // Score not higher, but still update timestamp for daily leaderboard
-                await updatePlayerTimestamp(name);
-                return res.status(200).json({ updated: true, newHighScore: false, reason: 'Timestamp updated for daily leaderboard' });
-            }
+            // Update scores (handles both all-time and daily)
+            const result = await updatePlayerScore(name, diff, score, kills || 0, bestStreak || 0, existing);
+            return res.status(200).json(result);
         } else {
             console.log('New player - creating account');
 

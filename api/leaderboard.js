@@ -25,30 +25,35 @@ function getDifficultyColumns(difficulty) {
     return {
         score: `${diff}_score`,
         kills: `${diff}_kills`,
-        streak: `${diff}_streak`
+        streak: `${diff}_streak`,
+        dailyScore: `${diff}_daily_score`,
+        dailyDate: `${diff}_daily_date`
     };
 }
 
-// Get start of today in UTC
-function getTodayStart() {
+// Get today's date in YYYY-MM-DD format (UTC)
+function getTodayDate() {
     const now = new Date();
-    const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
-    return todayStart.toISOString();
+    return now.toISOString().split('T')[0];
 }
 
 async function getLeaderboard(difficulty, limit = 10, offset = 0, dailyOnly = false) {
     const cols = getDifficultyColumns(difficulty);
 
+    // Use daily score columns if daily filter, otherwise all-time
+    const scoreCol = dailyOnly ? cols.dailyScore : cols.score;
+    const dateCol = cols.dailyDate;
+
     // Select columns we need
-    const selectCols = `player_name,${cols.score},${cols.kills},${cols.streak},updated_at`;
+    const selectCols = `player_name,${cols.score},${cols.kills},${cols.streak},${cols.dailyScore},${cols.dailyDate},updated_at`;
 
     // Build URL with filters
-    let url = `${SUPABASE_URL}/rest/v1/leaderboard?select=${selectCols}&${cols.score}=gt.0&order=${cols.score}.desc&limit=${limit}&offset=${offset}`;
+    let url = `${SUPABASE_URL}/rest/v1/leaderboard?select=${selectCols}&${scoreCol}=gt.0&order=${scoreCol}.desc&limit=${limit}&offset=${offset}`;
 
-    // Add daily filter if requested
+    // Add daily filter if requested - only show entries from today
     if (dailyOnly) {
-        const todayStart = getTodayStart();
-        url += `&updated_at=gte.${todayStart}`;
+        const today = getTodayDate();
+        url += `&${dateCol}=eq.${today}`;
     }
 
     const response = await fetch(url, {
@@ -72,7 +77,7 @@ async function getLeaderboard(difficulty, limit = 10, offset = 0, dailyOnly = fa
     }
 
     const data = await response.json();
-    return { data, totalCount };
+    return { data, totalCount, dailyOnly };
 }
 
 export default async function handler(req, res) {
@@ -117,13 +122,14 @@ export default async function handler(req, res) {
         const offset = (pageNum - 1) * maxLimit;
         const dailyOnly = daily === 'true' || daily === '1';
 
-        const { data, totalCount } = await getLeaderboard(diff, maxLimit, offset, dailyOnly);
+        const result = await getLeaderboard(diff, maxLimit, offset, dailyOnly);
+        const { data, totalCount } = result;
         const cols = getDifficultyColumns(diff);
 
-        // Transform to expected format
+        // Transform to expected format - use daily score if daily filter
         const safeData = data.map(entry => ({
             player_name: entry.player_name,
-            score: entry[cols.score] || 0,
+            score: dailyOnly ? (entry[cols.dailyScore] || 0) : (entry[cols.score] || 0),
             kills: entry[cols.kills] || 0,
             best_streak: entry[cols.streak] || 0,
             difficulty: diff
