@@ -21,6 +21,7 @@ export class Menu{
         this.difficultyButton = new Button(btnX, 80 + btnSpacing, btnW, btnH, "Difficulty: EASY", 28, 0, 0, false, true, 'white', 'white');
         this.startButton = new Button(btnX, 80 + btnSpacing * 2, btnW, btnH, "New Game", 32, 0, 0, false, true, 'white', 'white');
         this.leaderboardButton = new Button(btnX, 80 + btnSpacing * 3, btnW, btnH, "Leaderboard", 32, 0, 0, false, true, 'white', 'white');
+        this.loginButton = new Button(btnX, 80 + btnSpacing * 4, btnW, btnH, "Login", 32, 0, 0, false, true, 'white', 'white');
         this.logoutButton = new Button(btnX + btnW + 20, 80 + btnSpacing * 4, 120, 50, "Logout", 24, 0, 0, false, true, 'white', 'white');
     }
     updateMain(game){
@@ -81,6 +82,26 @@ export class Menu{
             }
         }
 
+        // Login button - only show when not logged in
+        if(!game.playerName && !game.leaderboardMenu.isVisible && !game.awaitingNameInput) {
+            this.loginButton.update(inX, inY);
+            if(this.loginButton.isHovered == true && game.input.buttons.indexOf(0) > -1 && this.clicked == false){
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                // Show login/register menu
+                game.awaitingNameInput = true;
+                game.nameInputMenu.show((result) => {
+                    if (result) {
+                        game.playerName = result.name;
+                        game.playerPassword = result.password;
+                        localStorage.setItem('playerName', result.name);
+                        localStorage.setItem('playerPassword', result.password);
+                    }
+                    game.awaitingNameInput = false;
+                });
+            }
+        }
+
         // Logout button - only show when logged in
         if(game.playerName && !game.leaderboardMenu.isVisible) {
             this.logoutButton.update(inX, inY);
@@ -119,12 +140,12 @@ export class Menu{
         this.startButton.draw(context);
         this.leaderboardButton.draw(context);
 
-        // Show player name and logout button if logged in
+        // Show login button or player name based on login state
         if(game.playerName) {
             this.super.drawGlowText(context, 80, 475, "Playing as: " + game.playerName, 26, '#00ff88', '#00ff00', 5);
             this.logoutButton.draw(context);
         } else {
-            this.super.drawGlowText(context, 80, 475, "Not logged in", 26, '#666666', '#444444', 3);
+            this.loginButton.draw(context);
         }
 
         // Draw ability info on the right side
