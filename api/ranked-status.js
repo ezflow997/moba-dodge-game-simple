@@ -110,6 +110,7 @@ export default async function handler(req, res) {
         const allEntries = await getAllQueueEntries();
         const queues = groupByQueue(allEntries);
         const totalQueues = Object.keys(queues).length;
+        const totalPlayersAllQueues = allEntries.length;
 
         // Basic response without player info - show first queue (available or full)
         if (!playerName) {
@@ -147,6 +148,7 @@ export default async function handler(req, res) {
                 playersReady,
                 totalQueuedPlayers: uniquePlayers,
                 totalQueues,
+                totalPlayersAllQueues,
                 timeRemaining,
                 maxPlayers: MIN_PLAYERS_FOR_TOURNAMENT
             });
@@ -223,6 +225,7 @@ export default async function handler(req, res) {
             totalQueuedPlayers: uniquePlayers,
             queueId,
             totalQueues,
+            totalPlayersAllQueues,
             timeRemaining,
             maxPlayers: MIN_PLAYERS_FOR_TOURNAMENT
         });

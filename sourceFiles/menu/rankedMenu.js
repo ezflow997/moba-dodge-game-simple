@@ -10,7 +10,10 @@ export class RankedMenu {
         // Queue status
         this.queueSize = 0;
         this.queuePosition = 0;
-        this.playersNeeded = 10;
+        this.playersNeeded = 2;
+        this.maxPlayers = 2;
+        this.totalQueues = 0;
+        this.totalPlayersAllQueues = 0;
 
         // Player info
         this.playerElo = 1000;
@@ -65,7 +68,10 @@ export class RankedMenu {
 
     setQueueStatus(status) {
         this.queueSize = status.queueSize || 0;
-        this.playersNeeded = status.playersNeeded || 10;
+        this.playersNeeded = status.playersNeeded || 0;
+        this.maxPlayers = status.maxPlayers || 2;
+        this.totalQueues = status.totalQueues || 0;
+        this.totalPlayersAllQueues = status.totalPlayersAllQueues || 0;
         if (status.player) {
             this.playerElo = status.player.elo || 1000;
             this.playerRank = status.player.rank;
@@ -291,40 +297,50 @@ export class RankedMenu {
             context.fillText(`Rank #${this.playerRank} | ${this.gamesPlayed} games played`, centerX, panelY + 175 * rY);
         }
 
-        // Queue info
+        // Queue info - show total players across all queues
         context.font = `${26 * rX}px Arial`;
         context.fillStyle = '#aaaaaa';
-        context.fillText(`Players in queue: ${this.queueSize}/10`, centerX, panelY + 240 * rY);
+        const queueText = this.totalQueues > 0
+            ? `${this.totalPlayersAllQueues} players in ${this.totalQueues} queue${this.totalQueues !== 1 ? 's' : ''}`
+            : 'No active queues';
+        context.fillText(queueText, centerX, panelY + 240 * rY);
+
+        // Current queue status (your queue)
+        if (this.queueSize > 0) {
+            context.font = `${22 * rX}px Arial`;
+            context.fillStyle = '#88ffff';
+            context.fillText(`Your queue: ${this.queueSize}/${this.maxPlayers} players`, centerX, panelY + 270 * rY);
+        }
 
         // Tournament status
-        if (this.queueSize >= 10) {
+        if (this.queueSize >= this.maxPlayers) {
             context.font = `${22 * rX}px Arial`;
             context.fillStyle = '#00ff88';
-            context.fillText(`${this.playersReady}/${this.totalQueuedPlayers} players completed all attempts`, centerX, panelY + 275 * rY);
+            context.fillText(`${this.playersReady}/${this.totalQueuedPlayers} completed all attempts`, centerX, panelY + 300 * rY);
         }
 
         // Attempts info (if already in queue)
-        let infoEndY = 275;
+        let infoEndY = 300;
         if (this.attemptsUsed > 0) {
             context.font = `${24 * rX}px Arial`;
             context.fillStyle = this.attemptsRemaining > 0 ? '#00ff88' : '#ff4444';
-            context.fillText(`Your Attempts: ${this.attemptsUsed}/${this.maxAttempts}`, centerX, panelY + 320 * rY);
+            context.fillText(`Your Attempts: ${this.attemptsUsed}/${this.maxAttempts}`, centerX, panelY + 340 * rY);
             if (this.bestScore !== null) {
                 context.fillStyle = '#ffaa00';
-                context.fillText(`Your Best Score: ${this.bestScore.toLocaleString()}`, centerX, panelY + 355 * rY);
+                context.fillText(`Your Best Score: ${this.bestScore.toLocaleString()}`, centerX, panelY + 375 * rY);
             }
-            infoEndY = 355;
+            infoEndY = 375;
         }
 
         // Rules
         context.font = `${20 * rX}px Arial`;
         context.fillStyle = '#888888';
-        const rulesStartY = infoEndY + 50;
+        const rulesStartY = infoEndY + 45;
         const rules = [
             'EASY difficulty only',
             `${this.maxAttempts} attempts per tournament`,
             'Best score counts for placement',
-            'Resolves when all players complete attempts',
+            'Resolves when complete or after 1 hour',
             'Top 25% gain ELO, Bottom 25% lose ELO'
         ];
         rules.forEach((rule, i) => {
