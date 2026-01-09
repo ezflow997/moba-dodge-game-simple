@@ -448,8 +448,8 @@ window.addEventListener('load', function () {
 				window.gameSound.playMenuMusic();
 			}
 
-			// Check for pause menu toggle in main menu
-			if(game.input.escapePressed && !game.pauseMenu.isPaused) {
+			// Check for pause menu toggle in main menu (not when leaderboard is open)
+			if(game.input.escapePressed && !game.pauseMenu.isPaused && !game.leaderboardMenu.isVisible) {
 				game.pauseMenu.toggle(true); // Pass true to indicate we're in main menu
 				game.input.escapePressed = false;
 			}

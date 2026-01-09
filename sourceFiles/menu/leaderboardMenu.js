@@ -88,17 +88,9 @@ export class LeaderboardMenu {
     }
 
     handleKeyPress(e) {
-        if (!this.isVisible) return;
-
-        // Handle Escape to close leaderboard
-        if (e.key === 'Escape') {
-            this.hide();
-            e.preventDefault();
-            return;
-        }
-
-        // Search input only when search is active
-        if (!this.searchActive) return;
+        // ESC is handled in update() method to properly consume the game input flag
+        // This handler is only for search input when search is active
+        if (!this.isVisible || !this.searchActive) return;
 
         // Handle backspace
         if (e.key === 'Backspace') {
@@ -221,6 +213,13 @@ export class LeaderboardMenu {
 
     update(game) {
         if (!this.isVisible) return false;
+
+        // Handle ESC to close leaderboard (and consume the escape flag)
+        if (game.input.escapePressed) {
+            this.hide();
+            game.input.escapePressed = false;  // Consume the flag so pause menu doesn't open
+            return false;
+        }
 
         const inX = game.input.mouseX;
         const inY = game.input.mouseY;
