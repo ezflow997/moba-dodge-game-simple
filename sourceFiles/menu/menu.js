@@ -341,9 +341,9 @@ export class Menu{
      */
     drawHelpPanel(context, rX, rY) {
         const panelX = 1750;
-        const panelY = 80;
+        const panelY = 50;
         const panelW = 720;
-        const panelH = 900;
+        const panelH = 1340;
 
         context.save();
 
@@ -363,44 +363,44 @@ export class Menu{
         context.fillStyle = '#00ffff';
         context.font = `bold ${36 * rX}px Arial`;
         context.textAlign = 'center';
-        context.fillText('HOW TO PLAY', (panelX + panelW / 2) * rX, (panelY + 50) * rY);
+        context.fillText('HOW TO PLAY', (panelX + panelW / 2) * rX, (panelY + 45) * rY);
 
         // Divider
         context.strokeStyle = 'rgba(0, 255, 255, 0.3)';
         context.lineWidth = 2 * rX;
         context.beginPath();
-        context.moveTo((panelX + 30) * rX, (panelY + 70) * rY);
-        context.lineTo((panelX + panelW - 30) * rX, (panelY + 70) * rY);
+        context.moveTo((panelX + 30) * rX, (panelY + 65) * rY);
+        context.lineTo((panelX + panelW - 30) * rX, (panelY + 65) * rY);
         context.stroke();
 
         const leftX = panelX + 40;
-        let y = panelY + 110;
-        const lineH = 36;
+        let y = panelY + 95;
+        const lineH = 32;
 
         // Objective section
         context.fillStyle = '#ffaa00';
-        context.font = `bold ${24 * rX}px Arial`;
+        context.font = `bold ${22 * rX}px Arial`;
         context.textAlign = 'left';
         context.fillText('OBJECTIVE', leftX * rX, y * rY);
         y += lineH;
 
         context.fillStyle = '#cccccc';
-        context.font = `${19 * rX}px Arial`;
+        context.font = `${17 * rX}px Arial`;
         context.fillText('Survive as long as possible!', leftX * rX, y * rY);
         y += lineH - 6;
         context.fillText('Dodge enemies and projectiles.', leftX * rX, y * rY);
         y += lineH - 6;
         context.fillText('Shoot enemies to gain points.', leftX * rX, y * rY);
-        y += lineH + 8;
+        y += lineH + 6;
 
         // Controls section - Mouse
         context.fillStyle = '#00ff88';
-        context.font = `bold ${24 * rX}px Arial`;
+        context.font = `bold ${22 * rX}px Arial`;
         context.fillText('MOUSE CONTROLS', leftX * rX, y * rY);
         y += lineH;
 
         context.fillStyle = '#cccccc';
-        context.font = `${19 * rX}px Arial`;
+        context.font = `${17 * rX}px Arial`;
         context.fillText('Right Click - Move to position', leftX * rX, y * rY);
         y += lineH - 6;
         context.fillText('Q - Shoot', leftX * rX, y * rY);
@@ -410,16 +410,16 @@ export class Menu{
         context.fillText('F - Ultimate (long dash)', leftX * rX, y * rY);
         y += lineH - 6;
         context.fillText('G - Stop moving', leftX * rX, y * rY);
-        y += lineH + 8;
+        y += lineH + 6;
 
         // Controls section - WASD
         context.fillStyle = '#ff8800';
-        context.font = `bold ${24 * rX}px Arial`;
+        context.font = `bold ${22 * rX}px Arial`;
         context.fillText('WASD CONTROLS', leftX * rX, y * rY);
         y += lineH;
 
         context.fillStyle = '#cccccc';
-        context.font = `${19 * rX}px Arial`;
+        context.font = `${17 * rX}px Arial`;
         context.fillText('WASD - Move directly', leftX * rX, y * rY);
         y += lineH - 6;
         context.fillText('Left Click - Shoot', leftX * rX, y * rY);
@@ -427,16 +427,67 @@ export class Menu{
         context.fillText('E - Dash toward mouse', leftX * rX, y * rY);
         y += lineH - 6;
         context.fillText('Q - Ultimate toward mouse', leftX * rX, y * rY);
-        y += lineH + 8;
+        y += lineH + 6;
+
+        // Shop section
+        context.fillStyle = '#ffdd00';
+        context.font = `bold ${22 * rX}px Arial`;
+        context.fillText('SHOP', leftX * rX, y * rY);
+        y += lineH;
+
+        context.fillStyle = '#cccccc';
+        context.font = `${17 * rX}px Arial`;
+        context.fillText('Earn points by completing games.', leftX * rX, y * rY);
+        y += lineH - 6;
+        context.fillText('Higher difficulty = more points.', leftX * rX, y * rY);
+        y += lineH - 6;
+        context.fillText('Buy single-use or permanent items.', leftX * rX, y * rY);
+        y += lineH - 6;
+        context.fillText('Permanent unlocks have unlimited uses.', leftX * rX, y * rY);
+        y += lineH + 6;
+
+        // Loadout section
+        context.fillStyle = '#00ddff';
+        context.font = `bold ${22 * rX}px Arial`;
+        context.fillText('LOADOUT', leftX * rX, y * rY);
+        y += lineH;
+
+        context.fillStyle = '#cccccc';
+        context.font = `${17 * rX}px Arial`;
+        context.fillText('Select owned items before starting.', leftX * rX, y * rY);
+        y += lineH - 6;
+        context.fillText('Start with weapons, shields, bonuses.', leftX * rX, y * rY);
+        y += lineH - 6;
+        context.fillText('Only one gun can be equipped.', leftX * rX, y * rY);
+        y += lineH - 6;
+        context.fillText('Only available in non-ranked games.', leftX * rX, y * rY);
+        y += lineH + 6;
+
+        // Ranked section
+        context.fillStyle = '#ff5555';
+        context.font = `bold ${22 * rX}px Arial`;
+        context.fillText('RANKED MODE', leftX * rX, y * rY);
+        y += lineH;
+
+        context.fillStyle = '#cccccc';
+        context.font = `${17 * rX}px Arial`;
+        context.fillText('Competitive mode - INSANE difficulty.', leftX * rX, y * rY);
+        y += lineH - 6;
+        context.fillText('No loadouts allowed - pure skill only.', leftX * rX, y * rY);
+        y += lineH - 6;
+        context.fillText('Compete for the highest score.', leftX * rX, y * rY);
+        y += lineH - 6;
+        context.fillText('Ranked games do not award shop points.', leftX * rX, y * rY);
+        y += lineH + 6;
 
         // Tips section
         context.fillStyle = '#ff44ff';
-        context.font = `bold ${24 * rX}px Arial`;
+        context.font = `bold ${22 * rX}px Arial`;
         context.fillText('TIPS', leftX * rX, y * rY);
         y += lineH;
 
         context.fillStyle = '#cccccc';
-        context.font = `${19 * rX}px Arial`;
+        context.font = `${17 * rX}px Arial`;
         context.fillText('Dashing costs points but saves lives!', leftX * rX, y * rY);
         y += lineH - 6;
         context.fillText('Kill streaks give bonus points.', leftX * rX, y * rY);
