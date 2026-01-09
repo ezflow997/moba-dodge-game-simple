@@ -24,6 +24,10 @@ export class Menu{
         this.loginButton = new Button(btnX, 80 + btnSpacing * 4, btnW, btnH, "Login", 32, 0, 0, false, true, 'white', 'white');
         this.logoutButton = new Button(btnX + btnW + 20, 80 + btnSpacing * 4, 120, 50, "Logout", 24, 0, 0, false, true, 'white', 'white');
 
+        // Help panel state
+        this.showHelp = false;
+        this.helpButton = new Button(btnX, 80 + btnSpacing * 5, btnW, btnH, "How to Play", 32, 0, 0, false, true, 'white', 'white');
+
         // Player leaderboard data cache
         this.playerLeaderboardData = null;
         this.lastFetchedPlayer = null;
@@ -181,6 +185,16 @@ export class Menu{
                 localStorage.removeItem('playerPassword');
             }
         }
+
+        // Help button
+        if(!game.leaderboardMenu.isVisible) {
+            this.helpButton.update(inX, inY);
+            if(this.helpButton.isHovered == true && game.input.buttons.indexOf(0) > -1 && this.clicked == false){
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.showHelp = !this.showHelp;
+            }
+        }
     }
     drawMain(context, game){
         const rX = window.innerWidth / 2560;
@@ -214,24 +228,130 @@ export class Menu{
             this.loginButton.draw(context);
         }
 
-        // Draw ability info on the right side
-        const infoX = 1750;
-        const infoY = 100;
-        const infoSep = 50;
-        const fontSize = 36;
+        // Draw Help button
+        this.helpButton.draw(context);
 
-        this.super.drawGlowText(context, infoX, infoY, "Abilities", 40, '#00ffff', '#00aaff', 8);
-        this.super.drawGlowText(context, infoX, infoY + infoSep * 1, "Dash (" + game.player.ePenalty + ") " + (game.player.eCoolDown/1000).toFixed(1) + "s", fontSize, '#ffff88', '#ffff00', 6);
-        this.super.drawGlowText(context, infoX, infoY + infoSep * 2, "Ultimate (" + game.player.fPenalty + ") " + (game.player.fCoolDown/1000).toFixed(1) + "s", fontSize, '#ffff88', '#ffff00', 6);
-
-        if(game.challenge_level == 0){
-            this.super.drawGlowText(context, infoX, infoY + infoSep * 3, "Shoot (+" + game.enemies.enemyScoreValue + ") " + (game.player.qCoolDown/1000).toFixed(1) + "s", fontSize, '#88ff88', '#00ff00', 6);
-        } else {
-            this.super.drawGlowText(context, infoX, infoY + infoSep * 3, "Shoot (+" + game.enemies.enemyScoreValue + "x" + game.voidBolts.splitScoreMultiplier + ") " + (game.player.qCoolDown/1000).toFixed(1) + "s", fontSize, '#88ff88', '#00ff00', 6);
+        // Draw help panel on the right side if toggled
+        if (this.showHelp) {
+            this.drawHelpPanel(context, rX, rY);
         }
 
         // Display player scores panel in center
         this.drawScoresPanel(context, game, titleX, rX, rY);
+    }
+
+    /**
+     * Draw the help/controls panel on the right side
+     */
+    drawHelpPanel(context, rX, rY) {
+        const panelX = 1580;
+        const panelY = 80;
+        const panelW = 620;
+        const panelH = 750;
+
+        context.save();
+
+        // Panel background
+        context.fillStyle = 'rgba(0, 20, 40, 0.92)';
+        context.strokeStyle = '#00ffff';
+        context.lineWidth = 3 * rX;
+        context.shadowColor = '#00ffff';
+        context.shadowBlur = 20 * rX;
+
+        this.drawRoundedRect(context, panelX * rX, panelY * rY, panelW * rX, panelH * rY, 15 * rX);
+        context.fill();
+        context.stroke();
+        context.shadowBlur = 0;
+
+        // Title
+        context.fillStyle = '#00ffff';
+        context.font = `bold ${36 * rX}px Arial`;
+        context.textAlign = 'center';
+        context.fillText('HOW TO PLAY', (panelX + panelW / 2) * rX, (panelY + 50) * rY);
+
+        // Divider
+        context.strokeStyle = 'rgba(0, 255, 255, 0.3)';
+        context.lineWidth = 2 * rX;
+        context.beginPath();
+        context.moveTo((panelX + 30) * rX, (panelY + 70) * rY);
+        context.lineTo((panelX + panelW - 30) * rX, (panelY + 70) * rY);
+        context.stroke();
+
+        const leftX = panelX + 40;
+        let y = panelY + 110;
+        const lineH = 38;
+
+        // Objective section
+        context.fillStyle = '#ffaa00';
+        context.font = `bold ${24 * rX}px Arial`;
+        context.textAlign = 'left';
+        context.fillText('OBJECTIVE', leftX * rX, y * rY);
+        y += lineH;
+
+        context.fillStyle = '#cccccc';
+        context.font = `${20 * rX}px Arial`;
+        context.fillText('Survive as long as possible!', leftX * rX, y * rY);
+        y += lineH - 8;
+        context.fillText('Dodge enemies and projectiles.', leftX * rX, y * rY);
+        y += lineH - 8;
+        context.fillText('Shoot enemies to gain points.', leftX * rX, y * rY);
+        y += lineH + 10;
+
+        // Controls section - Mouse
+        context.fillStyle = '#00ff88';
+        context.font = `bold ${24 * rX}px Arial`;
+        context.fillText('MOUSE CONTROLS', leftX * rX, y * rY);
+        y += lineH;
+
+        context.fillStyle = '#cccccc';
+        context.font = `${20 * rX}px Arial`;
+        context.fillText('Right Click - Move to position', leftX * rX, y * rY);
+        y += lineH - 8;
+        context.fillText('Q - Shoot', leftX * rX, y * rY);
+        y += lineH - 8;
+        context.fillText('E - Dash (short invincibility)', leftX * rX, y * rY);
+        y += lineH - 8;
+        context.fillText('F - Ultimate (long dash)', leftX * rX, y * rY);
+        y += lineH - 8;
+        context.fillText('G - Stop moving', leftX * rX, y * rY);
+        y += lineH + 10;
+
+        // Controls section - WASD
+        context.fillStyle = '#ff8800';
+        context.font = `bold ${24 * rX}px Arial`;
+        context.fillText('WASD CONTROLS', leftX * rX, y * rY);
+        y += lineH;
+
+        context.fillStyle = '#cccccc';
+        context.font = `${20 * rX}px Arial`;
+        context.fillText('WASD - Move directly', leftX * rX, y * rY);
+        y += lineH - 8;
+        context.fillText('Left Click - Shoot', leftX * rX, y * rY);
+        y += lineH - 8;
+        context.fillText('E - Dash toward mouse', leftX * rX, y * rY);
+        y += lineH - 8;
+        context.fillText('Q - Ultimate toward mouse', leftX * rX, y * rY);
+        y += lineH + 10;
+
+        // Tips section
+        context.fillStyle = '#ff44ff';
+        context.font = `bold ${24 * rX}px Arial`;
+        context.fillText('TIPS', leftX * rX, y * rY);
+        y += lineH;
+
+        context.fillStyle = '#cccccc';
+        context.font = `${20 * rX}px Arial`;
+        context.fillText('Dashing costs points but saves lives!', leftX * rX, y * rY);
+        y += lineH - 8;
+        context.fillText('Kill streaks give bonus points.', leftX * rX, y * rY);
+        y += lineH - 8;
+        context.fillText('Collect powerups from boss drops.', leftX * rX, y * rY);
+        y += lineH - 8;
+        context.fillText('TAB switches weapon slots.', leftX * rX, y * rY);
+        y += lineH - 8;
+        context.fillText('ESC opens settings menu.', leftX * rX, y * rY);
+
+        context.restore();
     }
 
     /**
