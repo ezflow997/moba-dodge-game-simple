@@ -51,6 +51,9 @@ export class LoadoutMenu {
         this.scrollbarDragStartY = 0;
         this.scrollbarDragStartOffset = 0;
 
+        // Collapsed groups (for gun types)
+        this.collapsedGroups = {}; // { gunType: true/false }
+
         // Buttons
         this.startButton = new Button(0, 0, 220, 70, "Start Game", 30, 0, 0, false, true, 'white', 'white');
         this.cancelButton = new Button(0, 0, 180, 70, "Cancel", 28, 0, 0, false, true, 'white', 'white');
@@ -120,13 +123,22 @@ export class LoadoutMenu {
 
             for (const gunType of sortedTypes) {
                 const typeName = GUN_TYPE_INFO[gunType]?.name || gunType;
-                // Add separator
+                const isCollapsed = this.collapsedGroups[gunType] === true;
+                const itemCount = groups[gunType].length;
+
+                // Add separator with collapse info
                 result.push({
                     isSeparator: true,
-                    separatorName: typeName
+                    separatorName: typeName,
+                    gunType: gunType,
+                    isCollapsed: isCollapsed,
+                    itemCount: itemCount
                 });
-                // Add items in this group
-                result.push(...groups[gunType]);
+
+                // Add items only if not collapsed
+                if (!isCollapsed) {
+                    result.push(...groups[gunType]);
+                }
             }
             return result;
         }
@@ -339,10 +351,13 @@ export class LoadoutMenu {
             // Find which item was clicked accounting for different heights
             let accumulatedHeight = 0;
             let clickedItem = null;
+            let clickedSeparator = null;
             for (const item of available) {
                 const thisHeight = item.isSeparator ? separatorHeight : itemHeight;
                 if (relY >= accumulatedHeight && relY < accumulatedHeight + thisHeight) {
-                    if (!item.isSeparator) {
+                    if (item.isSeparator) {
+                        clickedSeparator = item;
+                    } else {
                         clickedItem = item;
                     }
                     break;
@@ -350,7 +365,14 @@ export class LoadoutMenu {
                 accumulatedHeight += thisHeight;
             }
 
-            if (clickedItem) {
+            // Handle separator click - toggle collapse
+            if (clickedSeparator && clickedSeparator.gunType) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.collapsedGroups[clickedSeparator.gunType] = !this.collapsedGroups[clickedSeparator.gunType];
+            }
+            // Handle item click
+            else if (clickedItem) {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
 
@@ -539,18 +561,33 @@ export class LoadoutMenu {
             if (currentY > gridTop + listH) break;
 
             if (item.isSeparator) {
-                // Draw separator header
-                context.fillStyle = '#00ffaa';
-                context.font = `bold ${16 * rX}px Arial`;
-                context.textAlign = 'left';
-                context.fillText(item.separatorName, listX + 15 * rX, currentY + 24 * rY);
+                // Draw separator background (clickable area)
+                context.fillStyle = 'rgba(0, 255, 170, 0.08)';
+                context.fillRect(listX + 5 * rX, currentY + 2 * rY, listW - 10 * rX, separatorHeight - 4 * rY);
 
-                // Draw line
-                context.strokeStyle = 'rgba(0, 255, 170, 0.3)';
+                // Draw collapse arrow
+                context.fillStyle = '#00ffaa';
+                context.font = `${14 * rX}px Arial`;
+                context.textAlign = 'left';
+                const arrow = item.isCollapsed ? '▶' : '▼';
+                context.fillText(arrow, listX + 12 * rX, currentY + 23 * rY);
+
+                // Draw separator name
+                context.font = `bold ${15 * rX}px Arial`;
+                context.fillText(item.separatorName, listX + 32 * rX, currentY + 23 * rY);
+
+                // Draw item count
+                context.font = `${13 * rX}px Arial`;
+                context.textAlign = 'right';
+                context.fillStyle = '#888888';
+                context.fillText(`(${item.itemCount})`, listX + listW - 15 * rX, currentY + 23 * rY);
+
+                // Draw subtle line
+                context.strokeStyle = 'rgba(0, 255, 170, 0.2)';
                 context.lineWidth = 1 * rX;
                 context.beginPath();
-                context.moveTo(listX + 15 * rX, currentY + 30 * rY);
-                context.lineTo(listX + listW - 15 * rX, currentY + 30 * rY);
+                context.moveTo(listX + 15 * rX, currentY + 32 * rY);
+                context.lineTo(listX + listW - 15 * rX, currentY + 32 * rY);
                 context.stroke();
             } else {
                 // Draw regular item

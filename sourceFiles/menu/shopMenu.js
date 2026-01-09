@@ -29,6 +29,18 @@ const CATEGORY_INFO = {
     [CATEGORY.OFFENSE]: { name: 'Offense', icon: 'O' }
 };
 
+// Gun type display names and order
+const GUN_TYPE_INFO = {
+    'shotgun': { name: 'Shotguns', order: 0 },
+    'rapidfire': { name: 'Rapid Fire', order: 1 },
+    'piercing': { name: 'Piercing', order: 2 },
+    'ricochet': { name: 'Ricochet', order: 3 },
+    'homing': { name: 'Homing', order: 4 },
+    'twin': { name: 'Twin Shot', order: 5 },
+    'nova': { name: 'Nova', order: 6 },
+    'chain': { name: 'Chain Lightning', order: 7 }
+};
+
 export class ShopMenu {
     constructor() {
         this.super = new superFunctions();
@@ -49,6 +61,9 @@ export class ShopMenu {
         this.isDraggingScrollbar = false;
         this.scrollbarDragStartY = 0;
         this.scrollbarDragStartOffset = 0;
+
+        // Collapsed groups (for gun types)
+        this.collapsedGroups = {};
 
         // Selected item for purchase
         this.selectedReward = null;
@@ -112,6 +127,56 @@ export class ShopMenu {
     isPermanentlyUnlocked(rewardId) {
         const item = this.inventory[rewardId];
         return item ? item.permanentUnlock : false;
+    }
+
+    // Get display items for current category with gun type separators
+    getDisplayItems() {
+        const rewards = this.rewardsByCategory[this.selectedCategory] || [];
+
+        // For weapons category, group by gun type with separators
+        if (this.selectedCategory === CATEGORY.GUN && rewards.length > 0) {
+            // Group by gun type
+            const groups = {};
+            for (const reward of rewards) {
+                const gunType = reward.gunType || 'other';
+                if (!groups[gunType]) groups[gunType] = [];
+                groups[gunType].push(reward);
+            }
+
+            // Sort groups by order and build result with separators
+            const result = [];
+            const sortedTypes = Object.keys(groups).sort((a, b) => {
+                const orderA = GUN_TYPE_INFO[a]?.order ?? 99;
+                const orderB = GUN_TYPE_INFO[b]?.order ?? 99;
+                return orderA - orderB;
+            });
+
+            for (const gunType of sortedTypes) {
+                const typeName = GUN_TYPE_INFO[gunType]?.name || gunType;
+                const isCollapsed = this.collapsedGroups[gunType] === true;
+                const itemCount = groups[gunType].length;
+
+                // Add separator
+                result.push({
+                    isSeparator: true,
+                    separatorName: typeName,
+                    gunType: gunType,
+                    isCollapsed: isCollapsed,
+                    itemCount: itemCount
+                });
+
+                // Add items only if not collapsed
+                if (!isCollapsed) {
+                    for (const reward of groups[gunType]) {
+                        result.push({ isSeparator: false, reward });
+                    }
+                }
+            }
+            return result;
+        }
+
+        // For other categories, just wrap rewards
+        return rewards.map(reward => ({ isSeparator: false, reward }));
     }
 
     update(game) {
@@ -187,10 +252,14 @@ export class ShopMenu {
         const gridHeight = gridBottom - gridTop;
         const gridWidth = 950;
 
-        // Calculate content height for current category
-        const rewards = this.rewardsByCategory[this.selectedCategory] || [];
+        // Calculate content height for current category with separators
+        const displayItems = this.getDisplayItems();
         const itemHeight = 80;
-        const contentHeight = rewards.length * itemHeight;
+        const separatorHeight = 35;
+        let contentHeight = 0;
+        for (const item of displayItems) {
+            contentHeight += item.isSeparator ? separatorHeight : itemHeight;
+        }
         this.maxScrollOffset = Math.max(0, contentHeight - gridHeight);
 
         // Convert to screen pixels
@@ -245,14 +314,36 @@ export class ShopMenu {
         // Handle item selection (don't select when dragging scrollbar)
         if (clicking && !this.clicked && !this.isDraggingScrollbar &&
             inX >= gridLeftPx && inX <= gridRightPx && inY >= gridTopPx && inY <= gridBottomPx) {
-            // Find which item was clicked
-            const relY = inY - gridTopPx + this.scrollOffset * rY;
-            const itemIndex = Math.floor(relY / (itemHeight * rY));
+            // Find which item was clicked accounting for separators
+            const relY = (inY - gridTopPx) / rY + this.scrollOffset;
 
-            if (itemIndex >= 0 && itemIndex < rewards.length) {
+            let accumulatedHeight = 0;
+            let clickedItem = null;
+            let clickedSeparator = null;
+            for (const item of displayItems) {
+                const thisHeight = item.isSeparator ? separatorHeight : itemHeight;
+                if (relY >= accumulatedHeight && relY < accumulatedHeight + thisHeight) {
+                    if (item.isSeparator) {
+                        clickedSeparator = item;
+                    } else {
+                        clickedItem = item;
+                    }
+                    break;
+                }
+                accumulatedHeight += thisHeight;
+            }
+
+            // Handle separator click - toggle collapse
+            if (clickedSeparator && clickedSeparator.gunType) {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
-                this.selectedReward = rewards[itemIndex];
+                this.collapsedGroups[clickedSeparator.gunType] = !this.collapsedGroups[clickedSeparator.gunType];
+            }
+            // Handle item click
+            else if (clickedItem) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.selectedReward = clickedItem.reward;
             }
         }
 
@@ -418,70 +509,117 @@ export class ShopMenu {
         context.rect(gridLeft, gridTop, gridWidth, gridHeight);
         context.clip();
 
-        const rewards = this.rewardsByCategory[this.selectedCategory] || [];
+        const displayItems = this.getDisplayItems();
         const itemHeight = 80 * rY;
+        const separatorHeight = 35 * rY;
 
-        for (let i = 0; i < rewards.length; i++) {
-            const reward = rewards[i];
-            const itemY = gridTop + i * itemHeight - this.scrollOffset * rY;
+        // Calculate Y positions accounting for separators
+        let currentY = gridTop - this.scrollOffset * rY;
+
+        for (let i = 0; i < displayItems.length; i++) {
+            const item = displayItems[i];
+            const thisHeight = item.isSeparator ? separatorHeight : itemHeight;
 
             // Skip if outside visible area
-            if (itemY + itemHeight < gridTop || itemY > gridTop + gridHeight) continue;
+            if (currentY + thisHeight < gridTop) {
+                currentY += thisHeight;
+                continue;
+            }
+            if (currentY > gridTop + gridHeight) break;
 
-            const isSelected = this.selectedReward && this.selectedReward.id === reward.id;
-            const owned = this.getOwnedQuantity(reward.id);
-            const isPerm = this.isPermanentlyUnlocked(reward.id);
+            if (item.isSeparator) {
+                // Draw separator background (clickable area)
+                context.fillStyle = 'rgba(255, 204, 0, 0.08)';
+                context.fillRect(gridLeft + 5 * rX, currentY + 2 * rY, gridWidth - 10 * rX, separatorHeight - 4 * rY);
 
-            // Item background
-            context.beginPath();
-            context.roundRect(gridLeft + 5 * rX, itemY + 5 * rY, gridWidth - 10 * rX, itemHeight - 10 * rY, 8 * rX);
+                // Draw collapse arrow
+                context.fillStyle = '#ffcc00';
+                context.font = `${14 * rX}px Arial`;
+                context.textAlign = 'left';
+                const arrow = item.isCollapsed ? '▶' : '▼';
+                context.fillText(arrow, gridLeft + 12 * rX, currentY + 23 * rY);
 
-            if (isSelected) {
-                context.fillStyle = 'rgba(255, 204, 0, 0.2)';
-                context.strokeStyle = '#ffcc00';
-                context.lineWidth = 2 * rX;
-            } else {
-                context.fillStyle = 'rgba(30, 40, 60, 0.6)';
-                context.strokeStyle = reward.rarity.color;
+                // Draw separator name
+                context.font = `bold ${15 * rX}px Arial`;
+                context.fillText(item.separatorName, gridLeft + 32 * rX, currentY + 23 * rY);
+
+                // Draw item count
+                context.font = `${13 * rX}px Arial`;
+                context.textAlign = 'right';
+                context.fillStyle = '#888888';
+                context.fillText(`(${item.itemCount})`, gridLeft + gridWidth - 15 * rX, currentY + 23 * rY);
+
+                // Draw subtle line
+                context.strokeStyle = 'rgba(255, 204, 0, 0.2)';
                 context.lineWidth = 1 * rX;
+                context.beginPath();
+                context.moveTo(gridLeft + 15 * rX, currentY + 32 * rY);
+                context.lineTo(gridLeft + gridWidth - 15 * rX, currentY + 32 * rY);
+                context.stroke();
+            } else {
+                const reward = item.reward;
+                const isSelected = this.selectedReward && this.selectedReward.id === reward.id;
+                const owned = this.getOwnedQuantity(reward.id);
+                const isPerm = this.isPermanentlyUnlocked(reward.id);
+
+                // Item background
+                context.beginPath();
+                context.roundRect(gridLeft + 5 * rX, currentY + 5 * rY, gridWidth - 10 * rX, itemHeight - 10 * rY, 8 * rX);
+
+                if (isSelected) {
+                    context.fillStyle = 'rgba(255, 204, 0, 0.2)';
+                    context.strokeStyle = '#ffcc00';
+                    context.lineWidth = 2 * rX;
+                } else {
+                    context.fillStyle = 'rgba(30, 40, 60, 0.6)';
+                    context.strokeStyle = reward.rarity.color;
+                    context.lineWidth = 1 * rX;
+                }
+                context.fill();
+                context.stroke();
+
+                // Rarity color bar
+                context.fillStyle = reward.rarity.color;
+                context.fillRect(gridLeft + 5 * rX, currentY + 5 * rY, 6 * rX, itemHeight - 10 * rY);
+
+                // Item name
+                context.font = `bold ${18 * rX}px Arial`;
+                context.textAlign = 'left';
+                context.fillStyle = reward.rarity.color;
+                context.fillText(reward.name, gridLeft + 25 * rX, currentY + 28 * rY);
+
+                // Description (truncated)
+                context.font = `${14 * rX}px Arial`;
+                context.fillStyle = '#aaaaaa';
+                const desc = reward.description.length > 50
+                    ? reward.description.substring(0, 47) + '...'
+                    : reward.description;
+                context.fillText(desc, gridLeft + 25 * rX, currentY + 50 * rY);
+
+                // Right side info
+                context.textAlign = 'right';
+
+                // Price
+                const price = SINGLE_USE_PRICES[reward.rarity.name] || 0;
+                context.font = `${16 * rX}px Arial`;
+                context.fillStyle = '#ffcc00';
+                context.fillText(`${price} pts`, gridLeft + gridWidth - 20 * rX, currentY + 28 * rY);
+
+                // Owned/Rarity on second line
+                context.font = `${13 * rX}px Arial`;
+                if (isPerm) {
+                    context.fillStyle = '#00ff88';
+                    context.fillText('UNLOCKED', gridLeft + gridWidth - 20 * rX, currentY + 50 * rY);
+                } else if (owned > 0) {
+                    context.fillStyle = '#88ffff';
+                    context.fillText(`Owned: ${owned}`, gridLeft + gridWidth - 20 * rX, currentY + 50 * rY);
+                } else {
+                    context.fillStyle = reward.rarity.color;
+                    context.fillText(reward.rarity.name, gridLeft + gridWidth - 20 * rX, currentY + 50 * rY);
+                }
             }
-            context.fill();
-            context.stroke();
 
-            // Rarity color bar
-            context.fillStyle = reward.rarity.color;
-            context.fillRect(gridLeft + 5 * rX, itemY + 5 * rY, 6 * rX, itemHeight - 10 * rY);
-
-            // Item name
-            context.font = `bold ${20 * rX}px Arial`;
-            context.textAlign = 'left';
-            context.fillStyle = reward.rarity.color;
-            context.fillText(reward.name, gridLeft + 25 * rX, itemY + 30 * rY);
-
-            // Description
-            context.font = `${16 * rX}px Arial`;
-            context.fillStyle = '#aaaaaa';
-            context.fillText(reward.description, gridLeft + 25 * rX, itemY + 55 * rY);
-
-            // Rarity name
-            context.font = `${14 * rX}px Arial`;
-            context.fillStyle = reward.rarity.color;
-            context.fillText(reward.rarity.name, gridLeft + 400 * rX, itemY + 30 * rY);
-
-            // Price
-            const price = SINGLE_USE_PRICES[reward.rarity.name] || 0;
-            context.font = `${18 * rX}px Arial`;
-            context.fillStyle = '#ffcc00';
-            context.fillText(`${price} pts`, gridLeft + 550 * rX, itemY + 30 * rY);
-
-            // Owned count
-            if (isPerm) {
-                context.fillStyle = '#00ff88';
-                context.fillText('UNLOCKED', gridLeft + 700 * rX, itemY + 35 * rY);
-            } else if (owned > 0) {
-                context.fillStyle = '#88ffff';
-                context.fillText(`Owned: ${owned}`, gridLeft + 700 * rX, itemY + 35 * rY);
-            }
+            currentY += thisHeight;
         }
 
         context.restore();
