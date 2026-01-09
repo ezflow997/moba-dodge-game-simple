@@ -709,14 +709,32 @@ export class RankedMenu {
                 context.fillStyle = '#aaaaaa';
                 context.fillText(`${queue.playerCount}/${this.maxPlayers} | ${queue.playersReady} ready | ${qTimeStr}`, boxX + boxWidth - boxPadding, currentY + 25 * rY);
 
-                // Player names
-                context.font = `${20 * rX}px Arial`;
-                context.textAlign = 'left';
-                queue.players.forEach((playerName, pIndex) => {
+                // Player entries (sorted by score)
+                context.font = `${18 * rX}px Arial`;
+                queue.players.forEach((player, pIndex) => {
                     const playerY = currentY + headerHeight + boxPadding + pIndex * playerLineHeight;
-                    context.fillStyle = '#ffffff';
-                    const displayName = playerName.length > 25 ? playerName.substring(0, 25) + '...' : playerName;
-                    context.fillText(displayName, boxX + boxPadding + 10 * rX, playerY);
+                    const isReady = player.attempts >= this.maxAttempts;
+
+                    // Rank number
+                    context.textAlign = 'left';
+                    context.fillStyle = pIndex === 0 ? '#ffd700' : pIndex === 1 ? '#c0c0c0' : '#888888';
+                    context.fillText(`${pIndex + 1}.`, boxX + boxPadding + 5 * rX, playerY);
+
+                    // Player name
+                    const playerName = typeof player === 'string' ? player : player.name;
+                    const displayName = playerName.length > 14 ? playerName.substring(0, 14) + '..' : playerName;
+                    context.fillStyle = isReady ? '#00ff88' : '#ffffff';
+                    context.fillText(displayName, boxX + boxPadding + 35 * rX, playerY);
+
+                    // Score
+                    context.fillStyle = '#ffaa00';
+                    const score = typeof player === 'string' ? '---' : player.score.toLocaleString();
+                    context.fillText(score, boxX + boxPadding + 200 * rX, playerY);
+
+                    // Attempts
+                    const attempts = typeof player === 'string' ? 0 : player.attempts;
+                    context.fillStyle = isReady ? '#00ff88' : '#88ffff';
+                    context.fillText(`${attempts}/${this.maxAttempts}`, boxX + boxWidth - boxPadding - 60 * rX, playerY);
                 });
 
                 currentY += boxHeight + 15 * rY;

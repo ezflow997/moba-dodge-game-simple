@@ -123,7 +123,13 @@ export default async function handler(req, res) {
 
             return {
                 queueId,
-                players: entries.map(e => e.player_name).sort(),
+                players: entries
+                    .map(e => ({
+                        name: e.player_name,
+                        score: e.score,
+                        attempts: e.attempts || 1
+                    }))
+                    .sort((a, b) => b.score - a.score), // Sort by score descending
                 playerCount: entries.length,
                 playersReady: entries.filter(e => (e.attempts || 1) >= MAX_ATTEMPTS_PER_PLAYER).length,
                 timeRemaining
