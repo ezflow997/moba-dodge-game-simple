@@ -96,12 +96,17 @@ export class CommandRegistry {
         const parts = commandLine.trim().split(/\s+/);
         const commandName = parts[0].toLowerCase();
         const args = parts.slice(1);
-        
+
         const cmd = this.commands.get(commandName);
         if (!cmd) {
             return { success: false, message: `Unknown command: ${commandName}. Type 'help' for available commands.` };
         }
-        
+
+        // Check if user wants help for this specific command (e.g., "god help")
+        if (args.length === 1 && args[0].toLowerCase() === 'help') {
+            return this.getCommandHelp(cmd);
+        }
+
         try {
             const result = cmd.handler(args);
             // Handle async commands
@@ -112,6 +117,33 @@ export class CommandRegistry {
         } catch (error) {
             return { success: false, message: `Error executing ${commandName}: ${error.message}` };
         }
+    }
+
+    /**
+     * Get detailed help for a specific command
+     */
+    getCommandHelp(cmd) {
+        let help = `Command: ${cmd.name}\n`;
+        help += `Description: ${cmd.description}\n`;
+        if (cmd.aliases && cmd.aliases.length > 0) {
+            help += `Aliases: ${cmd.aliases.join(', ')}\n`;
+        }
+        help += `\nUsage: ${cmd.name}`;
+
+        // Add usage hints based on description
+        if (cmd.description.includes('<')) {
+            const match = cmd.description.match(/<[^>]+>/g);
+            if (match) {
+                help += ` ${match.join(' ')}`;
+            }
+        } else if (cmd.description.includes('[')) {
+            const match = cmd.description.match(/\[[^\]]+\]/g);
+            if (match) {
+                help += ` ${match.join(' ')}`;
+            }
+        }
+
+        return { success: true, message: help };
     }
     
     /**

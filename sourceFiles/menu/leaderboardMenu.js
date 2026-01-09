@@ -245,6 +245,9 @@ export class LeaderboardMenu {
                 this.searchActive = true;
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
+            } else {
+                // Clicked outside search box - deactivate it
+                this.searchActive = false;
             }
         }
 
