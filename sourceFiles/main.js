@@ -93,6 +93,7 @@ window.addEventListener('load', function () {
 				// Shop/Loadout system
 				this.pendingLoadoutRewards = []; // Rewards selected for next game
 				this.usedLoadoutRewardIds = []; // IDs of rewards to consume after game
+				this.pendingLoadoutWeapon = null; // Weapon with ownership info for reactivation
 
 				this.msDraw = window.performance.now();
 				this.msUpdate = window.performance.now();
@@ -216,6 +217,16 @@ window.addEventListener('load', function () {
 				if (this.input.tabPressed) {
 					this.rewardManager.cycleWeaponSlot();
 					this.input.tabPressed = false;
+				}
+
+				// Handle loadout weapon reactivation with R key
+				if (this.input.buttons.indexOf('r') > -1) {
+					if (this.rewardManager.hasLoadoutWeapon()) {
+						this.rewardManager.reactivateLoadoutWeapon();
+					}
+					// Remove 'r' from buttons to prevent repeated triggering
+					const rIndex = this.input.buttons.indexOf('r');
+					if (rIndex > -1) this.input.buttons.splice(rIndex, 1);
 				}
 
 				// Update reward manager
@@ -361,7 +372,21 @@ window.addEventListener('load', function () {
 
 						// Consume used loadout items (if any)
 						if (this.usedLoadoutRewardIds && this.usedLoadoutRewardIds.length > 0) {
-							this.supabase.consumeItems(this.playerName, this.playerPassword, this.usedLoadoutRewardIds).then(consumeResult => {
+							// Build consumption list - include weapon ID for each use
+							const consumeList = [...this.usedLoadoutRewardIds];
+
+							// Check for loadout weapon uses - need to add extra copies for reactivations
+							const weaponUsesConsumed = this.rewardManager.getLoadoutWeaponUsesConsumed();
+							if (this.pendingLoadoutWeapon && !this.pendingLoadoutWeapon.isPermanent && weaponUsesConsumed > 1) {
+								// First use is already in the list, add extra uses
+								const weaponId = this.pendingLoadoutWeapon.reward.id;
+								for (let i = 1; i < weaponUsesConsumed; i++) {
+									consumeList.push(weaponId);
+								}
+								console.log('[LOADOUT] Weapon uses consumed:', weaponUsesConsumed);
+							}
+
+							this.supabase.consumeItems(this.playerName, this.playerPassword, consumeList).then(consumeResult => {
 								console.log('[LOADOUT] Consumed items:', consumeResult);
 							}).catch(err => {
 								console.error('[LOADOUT] Failed to consume items:', err);
@@ -371,6 +396,7 @@ window.addEventListener('load', function () {
 					// Clear loadout tracking
 					this.pendingLoadoutRewards = [];
 					this.usedLoadoutRewardIds = [];
+					this.pendingLoadoutWeapon = null;
 				} catch (error) {
 					console.error('Failed to submit score:', error);
 				}
@@ -744,6 +770,7 @@ window.addEventListener('load', function () {
 					// Get selected rewards and start game
 					game.pendingLoadoutRewards = game.loadoutMenu.getSelectedRewards();
 					game.usedLoadoutRewardIds = game.loadoutMenu.getSelectedRewardIds();
+					game.pendingLoadoutWeapon = game.loadoutMenu.getSelectedWeaponWithOwnership();
 					game.loadoutMenu.hide();
 					game.gameOver = false;
 					game.menu.mainMenuShow = false;
@@ -768,6 +795,13 @@ window.addEventListener('load', function () {
 				if (!game.isRankedGame && game.pendingLoadoutRewards && game.pendingLoadoutRewards.length > 0) {
 					game.rewardManager.applyStarterRewards(game.pendingLoadoutRewards);
 					console.log('[LOADOUT] Applied', game.pendingLoadoutRewards.length, 'starter rewards');
+
+					// Set up loadout weapon for reactivation
+					if (game.pendingLoadoutWeapon) {
+						game.rewardManager.setLoadoutWeapon(game.pendingLoadoutWeapon);
+						console.log('[LOADOUT] Weapon set for reactivation:', game.pendingLoadoutWeapon.reward.name,
+							game.pendingLoadoutWeapon.isPermanent ? '(Permanent)' : `(${game.pendingLoadoutWeapon.quantity} uses)`);
+					}
 				}
 
 				// Switch to game music when starting game

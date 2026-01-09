@@ -55,6 +55,12 @@ export class RewardManager {
 
         // Notification queue for UI
         this.notifications = [];
+
+        // Loadout weapon system
+        this.loadoutWeapon = null;         // The weapon reward from loadout
+        this.loadoutWeaponIsPermanent = false;  // If true, unlimited reactivations
+        this.loadoutWeaponUsesRemaining = 0;    // For single-use, how many uses left
+        this.loadoutWeaponUsesConsumed = 0;     // Track how many were consumed this game
     }
 
     reset() {
@@ -82,6 +88,11 @@ export class RewardManager {
         this.rangeMod = 1.0;
         this.playerSizeMod = 1.0;
         this.notifications = [];
+        // Reset loadout weapon
+        this.loadoutWeapon = null;
+        this.loadoutWeaponIsPermanent = false;
+        this.loadoutWeaponUsesRemaining = 0;
+        this.loadoutWeaponUsesConsumed = 0;
     }
 
     // Cycle weapon slots with Tab key
@@ -248,6 +259,68 @@ export class RewardManager {
         if (rewards.length > 0) {
             this.addNotification(`${rewards.length} starter reward${rewards.length > 1 ? 's' : ''} applied!`, '#ffcc00');
         }
+    }
+
+    // Set up loadout weapon for reactivation during gameplay
+    setLoadoutWeapon(weaponData) {
+        if (!weaponData || !weaponData.reward) return;
+
+        this.loadoutWeapon = weaponData.reward;
+        this.loadoutWeaponIsPermanent = weaponData.isPermanent || false;
+        this.loadoutWeaponUsesRemaining = weaponData.isPermanent ? Infinity : (weaponData.quantity || 0);
+        this.loadoutWeaponUsesConsumed = 0;
+
+        // First use is already applied via applyStarterRewards, count it
+        if (!this.loadoutWeaponIsPermanent && this.loadoutWeaponUsesRemaining > 0) {
+            this.loadoutWeaponUsesRemaining--;
+            this.loadoutWeaponUsesConsumed++;
+        }
+    }
+
+    // Check if loadout weapon can be reactivated
+    canReactivateLoadoutWeapon() {
+        if (!this.loadoutWeapon) return false;
+
+        // Permanent unlock = always can reactivate
+        if (this.loadoutWeaponIsPermanent) return true;
+
+        // Single-use = need remaining uses
+        return this.loadoutWeaponUsesRemaining > 0;
+    }
+
+    // Reactivate the loadout weapon (replaces current weapon)
+    reactivateLoadoutWeapon() {
+        if (!this.canReactivateLoadoutWeapon()) {
+            this.addNotification('No loadout weapon uses remaining!', '#ff6666');
+            return false;
+        }
+
+        // Consume a use if not permanent
+        if (!this.loadoutWeaponIsPermanent) {
+            this.loadoutWeaponUsesRemaining--;
+            this.loadoutWeaponUsesConsumed++;
+        }
+
+        // Apply the weapon (this replaces any current weapon)
+        this.weaponSlots[1].gun = this.loadoutWeapon;
+        this.weaponSlots[1].durability = this.loadoutWeapon.durability;
+        this.currentSlot = 1;
+        this.updateActiveGun();
+
+        const usesText = this.loadoutWeaponIsPermanent ? 'Unlimited' : `${this.loadoutWeaponUsesRemaining} uses left`;
+        this.addNotification(`${this.loadoutWeapon.name} reactivated! (${usesText})`, this.loadoutWeapon.rarity.color);
+
+        return true;
+    }
+
+    // Get the number of loadout uses consumed this game (for API consumption)
+    getLoadoutWeaponUsesConsumed() {
+        return this.loadoutWeaponUsesConsumed;
+    }
+
+    // Check if loadout weapon exists
+    hasLoadoutWeapon() {
+        return this.loadoutWeapon !== null;
     }
 
     applyCooldownReward(reward, now) {
@@ -698,6 +771,56 @@ export class RewardManager {
         context.font = `${11 * rX}px Arial`;
         context.textAlign = 'center';
         context.fillText('TAB to switch', startX + slotWidth + slotGap / 2, startY - 8 * rX);
+
+        // Draw loadout weapon reactivation button if available
+        if (this.loadoutWeapon) {
+            const loadoutX = startX - 110 * rX;
+            const loadoutY = startY;
+            const loadoutW = 100 * rX;
+            const loadoutH = slotHeight;
+
+            // Background
+            const canReactivate = this.canReactivateLoadoutWeapon();
+            context.fillStyle = canReactivate ? 'rgba(0, 100, 50, 0.9)' : 'rgba(50, 50, 50, 0.8)';
+            context.fillRect(loadoutX, loadoutY, loadoutW, loadoutH);
+
+            // Border
+            context.strokeStyle = canReactivate ? '#00ff88' : '#555555';
+            context.lineWidth = 2 * rX;
+            if (canReactivate) {
+                context.shadowColor = '#00ff88';
+                context.shadowBlur = 8 * rX;
+            }
+            context.strokeRect(loadoutX, loadoutY, loadoutW, loadoutH);
+            context.shadowBlur = 0;
+
+            // Label
+            context.fillStyle = canReactivate ? '#00ff88' : '#666666';
+            context.font = `bold ${10 * rX}px Arial`;
+            context.textAlign = 'center';
+            context.fillText('LOADOUT', loadoutX + loadoutW / 2, loadoutY + 12 * rX);
+
+            // Weapon name
+            context.fillStyle = canReactivate ? this.loadoutWeapon.rarity.color : '#666666';
+            context.font = `${11 * rX}px Arial`;
+            const shortName = this.loadoutWeapon.name.length > 10 ? this.loadoutWeapon.name.slice(0, 9) + '…' : this.loadoutWeapon.name;
+            context.fillText(shortName, loadoutX + loadoutW / 2, loadoutY + 28 * rX);
+
+            // Uses remaining
+            context.font = `${10 * rX}px Arial`;
+            if (this.loadoutWeaponIsPermanent) {
+                context.fillStyle = '#00ff88';
+                context.fillText('∞ Uses', loadoutX + loadoutW / 2, loadoutY + 44 * rX);
+            } else {
+                context.fillStyle = this.loadoutWeaponUsesRemaining > 0 ? '#88ffff' : '#ff6666';
+                context.fillText(`${this.loadoutWeaponUsesRemaining} Uses`, loadoutX + loadoutW / 2, loadoutY + 44 * rX);
+            }
+
+            // Key hint
+            context.fillStyle = canReactivate ? '#ffffff' : '#555555';
+            context.font = `bold ${12 * rX}px Arial`;
+            context.fillText('[R]', loadoutX + loadoutW / 2, loadoutY + 60 * rX);
+        }
 
         context.restore();
     }

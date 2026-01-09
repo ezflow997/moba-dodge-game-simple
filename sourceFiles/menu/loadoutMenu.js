@@ -93,6 +93,31 @@ export class LoadoutMenu {
         return this.selectedRewards.map(r => r.id);
     }
 
+    // Get selected rewards with ownership info (for loadout weapon system)
+    getSelectedRewardsWithOwnership() {
+        return this.selectedRewards.map(reward => {
+            const data = this.inventory[reward.id] || {};
+            return {
+                reward: reward,
+                isPermanent: data.permanentUnlock || false,
+                quantity: data.quantity || 0
+            };
+        });
+    }
+
+    // Get the selected weapon with ownership info (if any)
+    getSelectedWeaponWithOwnership() {
+        const weaponReward = this.selectedRewards.find(r => r.category === CATEGORY.GUN);
+        if (!weaponReward) return null;
+
+        const data = this.inventory[weaponReward.id] || {};
+        return {
+            reward: weaponReward,
+            isPermanent: data.permanentUnlock || false,
+            quantity: data.quantity || 0
+        };
+    }
+
     // Get available items for current category (owned quantity > 0 or permanently unlocked)
     // For weapons, groups items by gun type with separators
     getAvailableItems() {
