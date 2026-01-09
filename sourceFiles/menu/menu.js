@@ -25,10 +25,14 @@ export class Menu{
         this.difficultyButton = new Button(btnX, 80 + btnSpacing * 2, btnW, btnH, "Difficulty: EASY", 28, 0, 0, false, true, 'white', 'white');
         this.startButton = new Button(btnX, 80 + btnSpacing * 3, btnW, btnH, "New Game", 32, 0, 0, false, true, 'white', 'white');
         this.rankedButton = new Button(btnX, 80 + btnSpacing * 4, btnW, btnH, "Ranked", 32, 0, 0, false, true, 'white', 'white');
-        this.leaderboardButton = new Button(btnX, 80 + btnSpacing * 5, btnW, btnH, "Leaderboard", 32, 0, 0, false, true, 'white', 'white');
-        this.loginButton = new Button(btnX, 80 + btnSpacing * 6, btnW, btnH, "Login", 32, 0, 0, false, true, 'white', 'white');
-        this.logoutButton = new Button(btnX + btnW + 20, 80 + btnSpacing * 6, 120, 50, "Logout", 24, 0, 0, false, true, 'white', 'white');
-        this.accountButton = new Button(btnX, 80 + btnSpacing * 7, btnW, btnH, "Account", 32, 0, 0, false, true, 'white', 'white');
+        this.shopButton = new Button(btnX, 80 + btnSpacing * 5, btnW, btnH, "Shop", 32, 0, 0, false, true, 'white', 'white');
+        this.leaderboardButton = new Button(btnX, 80 + btnSpacing * 6, btnW, btnH, "Leaderboard", 32, 0, 0, false, true, 'white', 'white');
+        this.loginButton = new Button(btnX, 80 + btnSpacing * 7, btnW, btnH, "Login", 32, 0, 0, false, true, 'white', 'white');
+        this.logoutButton = new Button(btnX + btnW + 20, 80 + btnSpacing * 7, 120, 50, "Logout", 24, 0, 0, false, true, 'white', 'white');
+        this.accountButton = new Button(btnX, 80 + btnSpacing * 8, btnW, btnH, "Account", 32, 0, 0, false, true, 'white', 'white');
+
+        // Shop points cache
+        this.shopPoints = 0;
 
         // Player leaderboard data cache
         this.playerLeaderboardData = null;
@@ -137,16 +141,27 @@ export class Menu{
                 window.gameSound.resume();
                 window.gameSound.playMenuClick();
             }
-            game.gameOver = false;
-            this.mainMenuShow = false;
-            // Reset dev mode session tracking for new game
-            if (game.devMode) {
-                game.devMode.resetSession();
+
+            // If player is logged in, show loadout menu to select starter rewards
+            if (game.playerName && game.playerPassword) {
+                // Fetch shop inventory and show loadout menu
+                game.supabase.getShopData(game.playerName).then(data => {
+                    game.loadoutMenu.setInventory(data.inventory || {});
+                    game.loadoutMenu.show();
+                });
+            } else {
+                // Not logged in - start game directly
+                game.gameOver = false;
+                this.mainMenuShow = false;
+                // Reset dev mode session tracking for new game
+                if (game.devMode) {
+                    game.devMode.resetSession();
+                }
             }
         }
 
         // Ranked button - only active when logged in and menus are not visible
-        if(game.playerName && !game.leaderboardMenu.isVisible && !game.rankedMenu.isVisible) {
+        if(game.playerName && !game.leaderboardMenu.isVisible && !game.rankedMenu.isVisible && !game.shopMenu.isVisible) {
             this.rankedButton.update(inX, inY);
             if(this.rankedButton.isHovered == true && game.input.buttons.indexOf(0) > -1 && this.clicked == false){
                 this.clicked = true;
@@ -155,6 +170,21 @@ export class Menu{
                 game.supabase.getRankedStatus(game.playerName).then(status => {
                     game.rankedMenu.setQueueStatus(status);
                     game.rankedMenu.show('confirm');
+                });
+            }
+        }
+
+        // Shop button - only active when logged in and menus are not visible
+        if(game.playerName && !game.leaderboardMenu.isVisible && !game.rankedMenu.isVisible && !game.shopMenu.isVisible) {
+            this.shopButton.update(inX, inY);
+            if(this.shopButton.isHovered == true && game.input.buttons.indexOf(0) > -1 && this.clicked == false){
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                // Fetch shop data and show shop menu
+                game.supabase.getShopData(game.playerName).then(data => {
+                    game.shopMenu.setShopData(data);
+                    this.shopPoints = data.points || 0;
+                    game.shopMenu.show();
                 });
             }
         }
@@ -276,13 +306,19 @@ export class Menu{
         // Draw ranked button (only if logged in)
         if (game.playerName) {
             this.rankedButton.draw(context);
+            this.shopButton.draw(context);
+
+            // Draw shop points next to shop button
+            if (this.shopPoints > 0) {
+                this.super.drawGlowText(context, 430, 540, `${this.shopPoints.toLocaleString()} pts`, 20, '#ffcc00', '#ff8800', 5);
+            }
         }
 
         this.leaderboardButton.draw(context);
 
         // Show login button or player name based on login state
         if(game.playerName) {
-            this.super.drawGlowText(context, 80, 655, "Playing as: " + game.playerName, 26, '#00ff88', '#00ff00', 5);
+            this.super.drawGlowText(context, 80, 745, "Playing as: " + game.playerName, 26, '#00ff88', '#00ff00', 5);
             this.logoutButton.draw(context);
         } else {
             this.loginButton.draw(context);

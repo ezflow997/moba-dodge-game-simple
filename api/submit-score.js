@@ -115,6 +115,23 @@ function getTodayDate() {
     return now.toISOString().split('T')[0];
 }
 
+// Difficulty multipliers for shop points
+const DIFFICULTY_POINT_MULTIPLIERS = {
+    'EASY': 0.5,
+    'MEDIUM': 1,
+    'HARD': 1.5,
+    'EXPERT': 2,
+    'INSANE': 3
+};
+
+// Calculate shop points earned from a game
+function calculateShopPoints(score, difficulty) {
+    const basePoints = 10; // Completion bonus
+    const scorePoints = Math.floor(score / 500); // 1 point per 500 score
+    const multiplier = DIFFICULTY_POINT_MULTIPLIERS[difficulty] || 1;
+    return Math.floor((basePoints + scorePoints) * multiplier);
+}
+
 async function getPlayer(playerName) {
     const url = `${SUPABASE_URL}/rest/v1/leaderboard?player_name=eq.${encodeURIComponent(playerName)}&limit=1`;
     const response = await fetch(url, {
@@ -134,6 +151,9 @@ async function insertPlayer(playerName, difficulty, score, kills, bestStreak, pa
     const cols = getDifficultyColumns(difficulty);
     const today = getTodayDate();
 
+    // Calculate initial shop points earned
+    const pointsEarned = calculateShopPoints(score, difficulty);
+
     const body = {
         player_name: playerName,
         password_hash: passwordHash,
@@ -143,7 +163,8 @@ async function insertPlayer(playerName, difficulty, score, kills, bestStreak, pa
         [cols.dailyScore]: score,
         [cols.dailyKills]: kills,
         [cols.dailyStreak]: bestStreak,
-        [cols.dailyDate]: today
+        [cols.dailyDate]: today,
+        shop_points: pointsEarned
     };
 
     // Add security question/answer if provided
@@ -163,7 +184,7 @@ async function insertPlayer(playerName, difficulty, score, kills, bestStreak, pa
     }
 
     const data = await response.json();
-    return { inserted: true, data: data };
+    return { inserted: true, data: data, pointsEarned, totalPoints: pointsEarned };
 }
 
 async function updatePlayerScore(playerName, difficulty, score, kills, bestStreak, existingPlayer) {
@@ -176,8 +197,14 @@ async function updatePlayerScore(playerName, difficulty, score, kills, bestStrea
     const existingDailyScore = isNewDay ? 0 : (existingPlayer[cols.dailyScore] || 0);
     const existingAllTimeScore = existingPlayer[cols.score] || 0;
 
+    // Calculate and add shop points
+    const pointsEarned = calculateShopPoints(score, difficulty);
+    const currentPoints = existingPlayer.shop_points || 0;
+    const newTotalPoints = currentPoints + pointsEarned;
+
     const updateData = {
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        shop_points: newTotalPoints
     };
 
     // Update all-time score if new score is higher
@@ -211,6 +238,8 @@ async function updatePlayerScore(playerName, difficulty, score, kills, bestStrea
         updated: true,
         newAllTimeHigh: score > existingAllTimeScore,
         newDailyHigh: score > existingDailyScore,
+        pointsEarned,
+        totalPoints: newTotalPoints,
         data: data
     };
 }

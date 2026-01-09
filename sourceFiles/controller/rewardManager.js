@@ -235,6 +235,21 @@ export class RewardManager {
         }
     }
 
+    // Apply multiple starter rewards at game start (from shop loadout)
+    applyStarterRewards(rewards) {
+        if (!rewards || rewards.length === 0) return;
+
+        // Apply each reward
+        for (const reward of rewards) {
+            this.applyReward(reward);
+        }
+
+        // Show notification about starter rewards
+        if (rewards.length > 0) {
+            this.addNotification(`${rewards.length} starter reward${rewards.length > 1 ? 's' : ''} applied!`, '#ffcc00');
+        }
+    }
+
     applyCooldownReward(reward, now) {
         const reduction = 1 - reward.reduction;
         switch (reward.ability) {

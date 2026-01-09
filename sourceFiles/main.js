@@ -16,6 +16,8 @@ import { LeaderboardMenu } from "./menu/leaderboardMenu.js";
 import { NameInputMenu } from "./menu/nameInputMenu.js";
 import { RankedMenu } from "./menu/rankedMenu.js";
 import { AccountMenu } from "./menu/accountMenu.js";
+import { ShopMenu } from "./menu/shopMenu.js";
+import { LoadoutMenu } from "./menu/loadoutMenu.js";
 import { RewardManager } from "./controller/rewardManager.js";
 import { DevMode } from "./dev/DevMode.js";
 import { CommandRegistry } from "./dev/CommandRegistry.js";
@@ -72,6 +74,8 @@ window.addEventListener('load', function () {
 				this.nameInputMenu = new NameInputMenu();
 				this.rankedMenu = new RankedMenu();
 				this.accountMenu = new AccountMenu();
+				this.shopMenu = new ShopMenu();
+				this.loadoutMenu = new LoadoutMenu();
 				this.playerName = localStorage.getItem('playerName') || '';
 				this.playerPassword = localStorage.getItem('playerPassword') || '';
 				this.sessionAccountCreated = sessionStorage.getItem('sessionAccountCreated') === 'true'; // Track if account was created this session
@@ -85,6 +89,10 @@ window.addEventListener('load', function () {
 				// Ranked system
 				this.isRankedGame = false;
 				this.pendingRankedScore = null;
+
+				// Shop/Loadout system
+				this.pendingLoadoutRewards = []; // Rewards selected for next game
+				this.usedLoadoutRewardIds = []; // IDs of rewards to consume after game
 
 				this.msDraw = window.performance.now();
 				this.msUpdate = window.performance.now();
@@ -296,6 +304,10 @@ window.addEventListener('load', function () {
 				this.world.reset();
 				this.voidBolts.reset();
 				this.rewardManager.reset();
+
+				// Clear loadout tracking
+				this.pendingLoadoutRewards = [];
+				this.usedLoadoutRewardIds = [];
 			}
 
 			// Submit score to Supabase leaderboard
@@ -332,8 +344,24 @@ window.addEventListener('load', function () {
 						if (this.menu) {
 							this.menu.forceRefreshScores();
 							this.menu.fetchPlayerScores(this);
+							// Update shop points display
+							if (result.totalPoints !== undefined) {
+								this.menu.shopPoints = result.totalPoints;
+							}
+						}
+
+						// Consume used loadout items (if any)
+						if (this.usedLoadoutRewardIds && this.usedLoadoutRewardIds.length > 0) {
+							this.supabase.consumeItems(this.playerName, this.playerPassword, this.usedLoadoutRewardIds).then(consumeResult => {
+								console.log('[LOADOUT] Consumed items:', consumeResult);
+							}).catch(err => {
+								console.error('[LOADOUT] Failed to consume items:', err);
+							});
 						}
 					}
+					// Clear loadout tracking
+					this.pendingLoadoutRewards = [];
+					this.usedLoadoutRewardIds = [];
 				} catch (error) {
 					console.error('Failed to submit score:', error);
 				}
@@ -650,6 +678,58 @@ window.addEventListener('load', function () {
 				game.accountMenu.draw(ctx, game);
 			}
 
+			// Draw and update shop menu if visible
+			if(game.shopMenu.isVisible) {
+				const shopResult = game.shopMenu.update(game);
+				game.shopMenu.draw(ctx, game);
+				game.input.resetWheelDelta();
+
+				// Handle purchase action
+				if (shopResult && shopResult.action === 'purchase') {
+					game.supabase.purchaseItem(
+						game.playerName,
+						game.playerPassword,
+						shopResult.rewardId,
+						shopResult.rarityName,
+						shopResult.isPermanent
+					).then(result => {
+						if (result.success) {
+							game.shopMenu.setMessage(result.message, false);
+							// Refresh shop data
+							game.supabase.getShopData(game.playerName).then(data => {
+								game.shopMenu.setShopData(data);
+								game.menu.shopPoints = data.points || 0;
+							});
+						} else {
+							game.shopMenu.setMessage(result.error || 'Purchase failed', true);
+						}
+					}).catch(err => {
+						game.shopMenu.setMessage(err.message, true);
+					});
+				}
+			}
+
+			// Draw and update loadout menu if visible
+			if(game.loadoutMenu.isVisible) {
+				const loadoutResult = game.loadoutMenu.update(game);
+				game.loadoutMenu.draw(ctx, game);
+				game.input.resetWheelDelta();
+
+				if (loadoutResult === 'start') {
+					// Get selected rewards and start game
+					game.pendingLoadoutRewards = game.loadoutMenu.getSelectedRewards();
+					game.usedLoadoutRewardIds = game.loadoutMenu.getSelectedRewardIds();
+					game.loadoutMenu.hide();
+					game.gameOver = false;
+					game.menu.mainMenuShow = false;
+					if (game.devMode) {
+						game.devMode.resetSession();
+					}
+				} else if (loadoutResult === 'cancel') {
+					game.loadoutMenu.hide();
+				}
+			}
+
 			game.pauseMenu.draw(ctx, game, true);
 
 			if(game.gameOver == true) {
@@ -658,6 +738,12 @@ window.addEventListener('load', function () {
 			else{
 				game.game_time = window.performance.now();
 				game.set_difficulty();
+
+				// Apply starter rewards if any (non-ranked games only)
+				if (!game.isRankedGame && game.pendingLoadoutRewards && game.pendingLoadoutRewards.length > 0) {
+					game.rewardManager.applyStarterRewards(game.pendingLoadoutRewards);
+					console.log('[LOADOUT] Applied', game.pendingLoadoutRewards.length, 'starter rewards');
+				}
 
 				// Switch to game music when starting game
 				if (window.gameSound) {

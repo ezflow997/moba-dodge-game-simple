@@ -375,4 +375,82 @@ export class SupabaseLeaderboard {
             return { error: error.message };
         }
     }
+
+    // =====================================================
+    // SHOP SYSTEM
+    // =====================================================
+
+    // Get shop data (points and inventory)
+    async getShopData(playerName) {
+        try {
+            const url = `${this.apiBase}/shop?playerName=${encodeURIComponent(playerName)}`;
+            const response = await fetch(url, { method: 'GET' });
+
+            if (!response.ok) {
+                const data = await response.json();
+                return { error: data.error || `HTTP ${response.status}` };
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('getShopData error:', error);
+            return { error: error.message, points: 0, inventory: {} };
+        }
+    }
+
+    // Purchase an item from the shop
+    async purchaseItem(playerName, password, rewardId, rarityName, isPermanent) {
+        try {
+            const response = await fetch(`${this.apiBase}/shop`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    playerName,
+                    password,
+                    action: 'purchase',
+                    rewardId,
+                    rarityName,
+                    isPermanent
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                return { error: data.error || `HTTP ${response.status}` };
+            }
+
+            return data;
+        } catch (error) {
+            console.error('purchaseItem error:', error);
+            return { error: error.message };
+        }
+    }
+
+    // Consume single-use items after a game
+    async consumeItems(playerName, password, rewardIds) {
+        try {
+            const response = await fetch(`${this.apiBase}/shop`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    playerName,
+                    password,
+                    action: 'consume',
+                    rewardIds
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                return { error: data.error || `HTTP ${response.status}` };
+            }
+
+            return data;
+        } catch (error) {
+            console.error('consumeItems error:', error);
+            return { error: error.message };
+        }
+    }
 }
