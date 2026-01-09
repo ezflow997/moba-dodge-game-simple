@@ -472,39 +472,6 @@ export class RankedMenu {
         this.prevPageButton.draw(context);
         this.nextPageButton.draw(context);
 
-        // Draw page indicator dots
-        const dotY = panelY + 105 * rY;
-        const dotRadius = 5 * rX;
-        const dotSpacing = 20 * rX;
-
-        // Left dot (My Queue)
-        context.beginPath();
-        context.arc(centerX - dotSpacing / 2, dotY, dotRadius, 0, Math.PI * 2);
-        if (this.queueViewPage === 0) {
-            context.fillStyle = '#ffaa00';
-            context.shadowColor = '#ffaa00';
-            context.shadowBlur = 8 * rX;
-        } else {
-            context.fillStyle = '#444444';
-            context.shadowBlur = 0;
-        }
-        context.fill();
-        context.shadowBlur = 0;
-
-        // Right dot (All Queues)
-        context.beginPath();
-        context.arc(centerX + dotSpacing / 2, dotY, dotRadius, 0, Math.PI * 2);
-        if (this.queueViewPage === 1) {
-            context.fillStyle = '#ffaa00';
-            context.shadowColor = '#ffaa00';
-            context.shadowBlur = 8 * rX;
-        } else {
-            context.fillStyle = '#444444';
-            context.shadowBlur = 0;
-        }
-        context.fill();
-        context.shadowBlur = 0;
-
         if (this.queueViewPage === 0) {
             this.drawMyQueuePage(context, centerX, panelY, rX, rY);
         } else {
