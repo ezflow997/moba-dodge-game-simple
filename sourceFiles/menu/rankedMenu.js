@@ -474,8 +474,7 @@ export class RankedMenu {
             'HARD difficulty only',
             `${this.maxAttempts} attempts per tournament`,
             'Best score counts for placement',
-            'Resolves when complete or after 1 hour',
-            'Top 25% gain ELO, Bottom 25% lose ELO'
+            'Resolves when complete or after 1 hour'
         ];
         rules.forEach((rule, i) => {
             context.fillText(rule, centerX, panelY + rulesStartY * rY + i * 28 * rY);
