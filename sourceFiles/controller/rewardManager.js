@@ -769,24 +769,19 @@ export class RewardManager {
             }
         }
 
-        // Tab key hint
-        context.fillStyle = '#aaaaaa';
-        context.font = `${11 * rX}px Arial`;
-        context.textAlign = 'center';
-        context.fillText('TAB to switch', startX + slotWidth + slotGap / 2, startY - 8 * rX);
-
-        // Draw loadout weapon reactivation button if available
+        // Draw loadout weapon reactivation button if available (above weapon slots)
         if (this.loadoutWeapon) {
-            // Position to the left of permanent upgrades panel (which is at ~220 from right edge)
-            const loadoutX = startX - 320 * rX;
-            const loadoutY = startY;
-            const loadoutW = 100 * rX;
-            const loadoutH = slotHeight;
+            const loadoutW = slotWidth * 2 + slotGap;  // Same width as both weapon slots
+            const loadoutH = 50 * rX;
+            const loadoutX = startX;
+            const loadoutY = startY - loadoutH - 10 * rX;  // Above weapon slots with small gap
 
             // Background
             const canReactivate = this.canReactivateLoadoutWeapon();
             context.fillStyle = canReactivate ? 'rgba(0, 100, 50, 0.9)' : 'rgba(50, 50, 50, 0.8)';
-            context.fillRect(loadoutX, loadoutY, loadoutW, loadoutH);
+            context.beginPath();
+            context.roundRect(loadoutX, loadoutY, loadoutW, loadoutH, 6 * rX);
+            context.fill();
 
             // Border
             context.strokeStyle = canReactivate ? '#00ff88' : '#555555';
@@ -795,35 +790,29 @@ export class RewardManager {
                 context.shadowColor = '#00ff88';
                 context.shadowBlur = 8 * rX;
             }
-            context.strokeRect(loadoutX, loadoutY, loadoutW, loadoutH);
+            context.stroke();
             context.shadowBlur = 0;
 
-            // Label
+            // Left side: Label and weapon name
+            context.textAlign = 'left';
             context.fillStyle = canReactivate ? '#00ff88' : '#666666';
             context.font = `bold ${10 * rX}px Arial`;
-            context.textAlign = 'center';
-            context.fillText('LOADOUT', loadoutX + loadoutW / 2, loadoutY + 12 * rX);
+            context.fillText('LOADOUT [R]', loadoutX + 10 * rX, loadoutY + 18 * rX);
 
-            // Weapon name
             context.fillStyle = canReactivate ? this.loadoutWeapon.rarity.color : '#666666';
-            context.font = `${11 * rX}px Arial`;
-            const shortName = this.loadoutWeapon.name.length > 10 ? this.loadoutWeapon.name.slice(0, 9) + '…' : this.loadoutWeapon.name;
-            context.fillText(shortName, loadoutX + loadoutW / 2, loadoutY + 28 * rX);
+            context.font = `${12 * rX}px Arial`;
+            context.fillText(this.loadoutWeapon.name, loadoutX + 10 * rX, loadoutY + 36 * rX);
 
-            // Uses remaining
-            context.font = `${10 * rX}px Arial`;
+            // Right side: Uses remaining
+            context.textAlign = 'right';
+            context.font = `bold ${14 * rX}px Arial`;
             if (this.loadoutWeaponIsPermanent) {
                 context.fillStyle = '#00ff88';
-                context.fillText('∞ Uses', loadoutX + loadoutW / 2, loadoutY + 44 * rX);
+                context.fillText('∞', loadoutX + loadoutW - 10 * rX, loadoutY + 32 * rX);
             } else {
                 context.fillStyle = this.loadoutWeaponUsesRemaining > 0 ? '#88ffff' : '#ff6666';
-                context.fillText(`${this.loadoutWeaponUsesRemaining} Uses`, loadoutX + loadoutW / 2, loadoutY + 44 * rX);
+                context.fillText(`x${this.loadoutWeaponUsesRemaining}`, loadoutX + loadoutW - 10 * rX, loadoutY + 32 * rX);
             }
-
-            // Key hint
-            context.fillStyle = canReactivate ? '#ffffff' : '#555555';
-            context.font = `bold ${12 * rX}px Arial`;
-            context.fillText('[R]', loadoutX + loadoutW / 2, loadoutY + 60 * rX);
         }
 
         context.restore();
