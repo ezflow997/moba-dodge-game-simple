@@ -109,16 +109,11 @@ export default async function handler(req, res) {
         const queues = groupByQueue(allEntries);
         const totalQueues = Object.keys(queues).length;
 
-        // Basic response without player info - show first available queue
+        // Basic response without player info - show first queue (available or full)
         if (!playerName) {
-            // Find first available queue or show empty
-            let targetQueue = [];
-            for (const entries of Object.values(queues)) {
-                if (entries.length < 10) {
-                    targetQueue = entries;
-                    break;
-                }
-            }
+            // Get first queue (prefer available, but show full if none available)
+            const queueList = Object.values(queues);
+            let targetQueue = queueList.find(entries => entries.length < 10) || queueList[0] || [];
 
             const queueStandings = targetQueue
                 .map(entry => ({
