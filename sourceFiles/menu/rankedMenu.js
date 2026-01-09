@@ -437,16 +437,73 @@ export class RankedMenu {
         context.fillText(title, centerX, panelY + 60 * rY);
         context.shadowBlur = 0;
 
-        // Draw page navigation buttons
+        // Draw page navigation buttons with active highlight
+        const btn1X = this.prevPageButton.x * rX;
+        const btn1Y = this.prevPageButton.y * rY;
+        const btn2X = this.nextPageButton.x * rX;
+        const btn2Y = this.nextPageButton.y * rY;
+        const btnW = this.prevPageButton.w * rX;
+        const btnH = this.prevPageButton.h * rY;
+
+        // Draw highlight background for active tab
+        context.beginPath();
+        if (this.queueViewPage === 0) {
+            context.roundRect(btn1X - 4 * rX, btn1Y - 4 * rY, btnW + 8 * rX, btnH + 8 * rY, 12 * rX);
+            context.fillStyle = 'rgba(255, 170, 0, 0.2)';
+            context.fill();
+            context.strokeStyle = '#ffaa00';
+            context.lineWidth = 2 * rX;
+            context.shadowColor = '#ffaa00';
+            context.shadowBlur = 10 * rX;
+            context.stroke();
+            context.shadowBlur = 0;
+        } else {
+            context.roundRect(btn2X - 4 * rX, btn2Y - 4 * rY, btnW + 8 * rX, btnH + 8 * rY, 12 * rX);
+            context.fillStyle = 'rgba(255, 170, 0, 0.2)';
+            context.fill();
+            context.strokeStyle = '#ffaa00';
+            context.lineWidth = 2 * rX;
+            context.shadowColor = '#ffaa00';
+            context.shadowBlur = 10 * rX;
+            context.stroke();
+            context.shadowBlur = 0;
+        }
+
         this.prevPageButton.draw(context);
         this.nextPageButton.draw(context);
 
-        // Draw indicator for current page
-        context.font = `${16 * rX}px Arial`;
-        context.fillStyle = this.queueViewPage === 0 ? '#ffaa00' : '#666666';
-        context.fillText('_____', centerX - 85 * rX, panelY + 100 * rY);
-        context.fillStyle = this.queueViewPage === 1 ? '#ffaa00' : '#666666';
-        context.fillText('_____', centerX + 85 * rX, panelY + 100 * rY);
+        // Draw page indicator dots
+        const dotY = panelY + 105 * rY;
+        const dotRadius = 5 * rX;
+        const dotSpacing = 20 * rX;
+
+        // Left dot (My Queue)
+        context.beginPath();
+        context.arc(centerX - dotSpacing / 2, dotY, dotRadius, 0, Math.PI * 2);
+        if (this.queueViewPage === 0) {
+            context.fillStyle = '#ffaa00';
+            context.shadowColor = '#ffaa00';
+            context.shadowBlur = 8 * rX;
+        } else {
+            context.fillStyle = '#444444';
+            context.shadowBlur = 0;
+        }
+        context.fill();
+        context.shadowBlur = 0;
+
+        // Right dot (All Queues)
+        context.beginPath();
+        context.arc(centerX + dotSpacing / 2, dotY, dotRadius, 0, Math.PI * 2);
+        if (this.queueViewPage === 1) {
+            context.fillStyle = '#ffaa00';
+            context.shadowColor = '#ffaa00';
+            context.shadowBlur = 8 * rX;
+        } else {
+            context.fillStyle = '#444444';
+            context.shadowBlur = 0;
+        }
+        context.fill();
+        context.shadowBlur = 0;
 
         if (this.queueViewPage === 0) {
             this.drawMyQueuePage(context, centerX, panelY, rX, rY);
