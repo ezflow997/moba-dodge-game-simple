@@ -32,6 +32,7 @@ export class RankedMenu {
         this.totalQueuedPlayers = 0;
         this.timeRemaining = null;
         this.allQueuesSummary = [];
+        this.dataFetchTime = null; // Timestamp when queue data was fetched
 
         // Queue view pagination
         this.queueViewPage = 0; // 0 = current queue, 1 = all queues
@@ -111,6 +112,8 @@ export class RankedMenu {
         if (status.allQueuesSummary) {
             this.allQueuesSummary = status.allQueuesSummary;
         }
+        // Store fetch time for live countdown calculation
+        this.dataFetchTime = Date.now();
     }
 
     setTournamentResults(results) {
@@ -455,11 +458,19 @@ export class RankedMenu {
         this.backButton.draw(context);
     }
 
+    // Calculate live time remaining based on fetch time
+    getLiveTimeRemaining(originalTime) {
+        if (originalTime === null || this.dataFetchTime === null) return null;
+        const elapsed = Date.now() - this.dataFetchTime;
+        return Math.max(0, originalTime - elapsed);
+    }
+
     drawMyQueuePage(context, centerX, panelY, rX, rY) {
-        // Time remaining display
-        if (this.timeRemaining !== null) {
-            const minutes = Math.floor(this.timeRemaining / 60000);
-            const seconds = Math.floor((this.timeRemaining % 60000) / 1000);
+        // Time remaining display (live countdown)
+        const liveTimeRemaining = this.getLiveTimeRemaining(this.timeRemaining);
+        if (liveTimeRemaining !== null) {
+            const minutes = Math.floor(liveTimeRemaining / 60000);
+            const seconds = Math.floor((liveTimeRemaining % 60000) / 1000);
             const timeStr = `${minutes}m ${seconds}s remaining`;
 
             context.font = `${22 * rX}px Arial`;
@@ -603,9 +614,10 @@ export class RankedMenu {
                 context.lineWidth = 2 * rX;
                 context.stroke();
 
-                // Time remaining for this queue
-                const qMinutes = Math.floor(queue.timeRemaining / 60000);
-                const qSeconds = Math.floor((queue.timeRemaining % 60000) / 1000);
+                // Time remaining for this queue (live countdown)
+                const liveQueueTime = this.getLiveTimeRemaining(queue.timeRemaining);
+                const qMinutes = Math.floor(liveQueueTime / 60000);
+                const qSeconds = Math.floor((liveQueueTime % 60000) / 1000);
                 const qTimeStr = `${qMinutes}m ${qSeconds}s`;
 
                 // Queue header
