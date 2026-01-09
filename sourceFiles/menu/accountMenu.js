@@ -272,6 +272,15 @@ export class AccountMenu {
         this.isLoading = false;
     }
 
+    // Helper to check if click is within an input field
+    isClickInField(mouseX, mouseY, fieldX, fieldY, fieldW, fieldH, rX, rY) {
+        const x = fieldX * rX;
+        const y = fieldY * rY;
+        const w = fieldW * rX;
+        const h = fieldH * rY;
+        return mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
+    }
+
     update(game) {
         if (!this.isVisible) return;
 
@@ -330,8 +339,25 @@ export class AccountMenu {
             }
         }
 
-        // Change password submit
+        // Change password - click to select fields
         if (this.mode === 'changePassword') {
+            const rX = window.innerWidth / 2560;
+            const rY = window.innerHeight / 1440;
+
+            // Check clicks on input fields
+            if (game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                if (this.isClickInField(inX, inY, 650, 420, 560, 50, rX, rY)) {
+                    this.clicked = true;
+                    this.activeField = 'currentPassword';
+                } else if (this.isClickInField(inX, inY, 650, 510, 560, 50, rX, rY)) {
+                    this.clicked = true;
+                    this.activeField = 'newPassword';
+                } else if (this.isClickInField(inX, inY, 650, 600, 560, 50, rX, rY)) {
+                    this.clicked = true;
+                    this.activeField = 'confirmPassword';
+                }
+            }
+
             this.submitButton.update(inX, inY);
             if (this.submitButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
                 this.clicked = true;
@@ -360,8 +386,22 @@ export class AccountMenu {
             }
         }
 
-        // Set new password submit
+        // Set new password - click to select fields
         if (this.mode === 'setNewPassword') {
+            const rX = window.innerWidth / 2560;
+            const rY = window.innerHeight / 1440;
+
+            // Check clicks on input fields
+            if (game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                if (this.isClickInField(inX, inY, 650, 450, 560, 50, rX, rY)) {
+                    this.clicked = true;
+                    this.activeField = 'newPassword';
+                } else if (this.isClickInField(inX, inY, 650, 540, 560, 50, rX, rY)) {
+                    this.clicked = true;
+                    this.activeField = 'confirmPassword';
+                }
+            }
+
             this.submitButton.update(inX, inY);
             if (this.submitButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
                 this.clicked = true;
