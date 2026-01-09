@@ -537,6 +537,7 @@ export class LoadoutMenu {
         const available = this.getAvailableItems();
         const itemHeight = 70 * rY;
         const separatorHeight = 35 * rY;
+        const categoryName = CATEGORY_INFO[this.selectedCategory]?.name || 'items';
 
         if (available.length === 0) {
             context.font = `${18 * rX}px Arial`;
