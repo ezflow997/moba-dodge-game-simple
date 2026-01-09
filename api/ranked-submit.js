@@ -391,16 +391,27 @@ export default async function handler(req, res) {
         const uniquePlayers = queue.length;
         const playersReady = queue.filter(p => (p.attempts || 1) >= MAX_ATTEMPTS_PER_PLAYER).length;
 
-        // Check if queue has timed out (1 hour since first entry)
-        const oldestEntry = queue.reduce((oldest, entry) => {
-            const entryTime = new Date(entry.submitted_at).getTime();
-            return entryTime < oldest ? entryTime : oldest;
-        }, Date.now());
-        const queueAge = Date.now() - oldestEntry;
-        const isTimedOut = queueAge >= QUEUE_TIMEOUT_MS;
+        // Sort queue by submission time for timeout calculations
+        const sortedByTime = [...queue].sort((a, b) =>
+            new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime()
+        );
+
+        // For cancellation check (insufficient players), use oldest entry
+        const oldestEntryTime = new Date(sortedByTime[0].submitted_at).getTime();
+        const oldestQueueAge = Date.now() - oldestEntryTime;
+        const shouldCancelEmpty = oldestQueueAge >= QUEUE_TIMEOUT_MS && uniquePlayers < MIN_PLAYERS_FOR_TOURNAMENT;
+
+        // For resolution timeout (minimum players reached), use the entry that triggered minimum
+        let isTimedOut = false;
+        if (uniquePlayers >= MIN_PLAYERS_FOR_TOURNAMENT) {
+            const triggerEntry = sortedByTime[MIN_PLAYERS_FOR_TOURNAMENT - 1];
+            const triggerTime = new Date(triggerEntry.submitted_at).getTime();
+            const queueAge = Date.now() - triggerTime;
+            isTimedOut = queueAge >= QUEUE_TIMEOUT_MS;
+        }
 
         // Handle timed out queue with insufficient players - cancel without resolving
-        if (isTimedOut && uniquePlayers < MIN_PLAYERS_FOR_TOURNAMENT) {
+        if (shouldCancelEmpty) {
             // Delete all entries in this queue without resolving
             for (const entry of queue) {
                 await fetch(`${SUPABASE_URL}/rest/v1/ranked_queue?id=eq.${entry.id}`, {
