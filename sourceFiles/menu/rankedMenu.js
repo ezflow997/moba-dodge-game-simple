@@ -668,8 +668,8 @@ export class RankedMenu {
                 const playerLineHeight = 28 * rY;
                 const headerHeight = 35 * rY;
                 const boxHeight = headerHeight + queue.players.length * playerLineHeight + boxPadding * 2;
-                const boxWidth = panelW - 80 * rX;
-                const boxX = centerX - boxWidth / 2;
+                const boxWidth = panelW - 180 * rX;
+                const boxX = centerX - boxWidth / 2 - 30 * rX;
 
                 // Skip drawing if completely outside visible area
                 if (currentY + boxHeight < clipY - 50 || currentY > clipY + clipH + 50) {
