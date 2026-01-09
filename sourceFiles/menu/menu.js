@@ -32,29 +32,19 @@ export class Menu{
 
         // Player leaderboard data cache
         this.playerLeaderboardData = null;
-        this.lastFetchedPlayer = null;
         this.lastFetchedDifficulty = null;
         this.fetchingScores = false;
-        this.lastFetchTime = 0;
-        this.fetchCooldown = 10000; // 10 seconds between fetches
+        this.initialFetchDone = false;
     }
 
     /**
      * Fetch player's leaderboard scores from the API
+     * Only called on: login, opening leaderboard, after score submit, difficulty change
      */
     async fetchPlayerScores(game) {
         if (!game.playerName || this.fetchingScores) return;
 
-        const now = Date.now();
         const difficulty = game.difficulties[game.difficulty_level];
-
-        // Check if we need to fetch (player changed, difficulty changed, or cooldown passed)
-        if (this.lastFetchedPlayer === game.playerName &&
-            this.lastFetchedDifficulty === difficulty &&
-            now - this.lastFetchTime < this.fetchCooldown) {
-            return;
-        }
-
         this.fetchingScores = true;
 
         try {
@@ -77,9 +67,7 @@ export class Menu{
                 daily: dailyMatch || null
             };
 
-            this.lastFetchedPlayer = game.playerName;
             this.lastFetchedDifficulty = difficulty;
-            this.lastFetchTime = now;
         } catch (error) {
             console.error('Failed to fetch player scores:', error);
             this.playerLeaderboardData = null;
@@ -89,23 +77,24 @@ export class Menu{
     }
 
     /**
-     * Force refresh of player scores on next update (bypasses cooldown)
+     * Force refresh of player scores (called externally after score submit)
      */
     forceRefreshScores() {
-        this.lastFetchTime = 0;
+        this.lastFetchedDifficulty = null;
     }
 
     updateMain(game){
         var inX = game.input.mouseX;
         var inY = game.input.mouseY;
 
-        // Fetch player's leaderboard scores if logged in
-        if (game.playerName) {
-            this.fetchPlayerScores(game);
-        } else {
-            // Clear cached data when logged out
+        // Clear cached data when logged out
+        if (!game.playerName) {
             this.playerLeaderboardData = null;
-            this.lastFetchedPlayer = null;
+            this.initialFetchDone = false;
+        } else if (!this.initialFetchDone) {
+            // Initial fetch for users logged in from localStorage
+            this.initialFetchDone = true;
+            this.fetchPlayerScores(game);
         }
 
         if(this.clicked == true && game.input.buttons.indexOf(0) == -1){
@@ -133,6 +122,10 @@ export class Menu{
             }
             else{
                 game.difficulty_level = 0;
+            }
+            // Refresh scores for new difficulty
+            if (game.playerName) {
+                this.fetchPlayerScores(game);
             }
         }
 
@@ -173,6 +166,11 @@ export class Menu{
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
                 game.leaderboardMenu.show(game.difficulty_level);
+                // Refresh player scores when opening leaderboard
+                if (game.playerName) {
+                    this.forceRefreshScores();
+                    this.fetchPlayerScores(game);
+                }
             }
         }
 
@@ -209,6 +207,8 @@ export class Menu{
                         }
                         localStorage.setItem('playerName', result.name);
                         localStorage.setItem('playerPassword', result.password);
+                        // Fetch player's leaderboard scores on login
+                        this.fetchPlayerScores(game);
                     }
                     game.awaitingNameInput = false;
                 }, allowRegistration);

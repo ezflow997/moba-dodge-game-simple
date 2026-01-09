@@ -327,6 +327,12 @@ window.addEventListener('load', function () {
 						localStorage.removeItem('playerPassword');
 						this.playerPassword = '';
 						// Will prompt for credentials again next game
+					} else {
+						// Refresh player scores display after successful submission
+						if (this.menu) {
+							this.menu.forceRefreshScores();
+							this.menu.fetchPlayerScores(this);
+						}
 					}
 				} catch (error) {
 					console.error('Failed to submit score:', error);
