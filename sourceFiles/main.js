@@ -475,6 +475,12 @@ window.addEventListener('load', function () {
 				game.leaderboardMenu.draw(ctx, game);
 			}
 
+			// Draw and update name input menu if visible
+			if(game.awaitingNameInput) {
+				game.nameInputMenu.update(game);
+				game.nameInputMenu.draw(ctx, game);
+			}
+
 			game.pauseMenu.draw(ctx, game, true);
 
 			if(game.gameOver == true) {
