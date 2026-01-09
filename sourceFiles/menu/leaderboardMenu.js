@@ -252,9 +252,13 @@ export class LeaderboardMenu {
             context.restore();
         }
 
+        // Total entries count (above pagination buttons)
+        const totalText = `${this.totalEntries} total entries`;
+        this.super.drawGlowText(context, 1200, 920, totalText, 24, '#888888', '#666666', 4);
+
         // Page indicator
         const pageText = `Page ${this.currentPage} of ${this.totalPages}`;
-        this.super.drawGlowText(context, 1180, 970, pageText, 32, '#ffffff', '#00ffff', 6);
+        this.super.drawGlowText(context, 1180, 980, pageText, 32, '#ffffff', '#00ffff', 6);
 
         // Next page button (gray out if on last page)
         if (this.currentPage < this.totalPages) {
@@ -265,10 +269,6 @@ export class LeaderboardMenu {
             this.nextPageButton.draw(context);
             context.restore();
         }
-
-        // Total entries count
-        const totalText = `${this.totalEntries} total entries`;
-        this.super.drawGlowText(context, 1200, 905, totalText, 24, '#888888', '#666666', 4);
     }
 
     drawLeaderboardEntries(context, rX, rY) {
