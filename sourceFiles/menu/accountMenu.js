@@ -77,6 +77,27 @@ export class AccountMenu {
         this.selectedQuestionIndex = 0;
 
         document.addEventListener('keydown', this.keyHandler);
+
+        // If logged in, fetch current security question status from server
+        if (isLoggedIn && playerName) {
+            this.checkSecurityQuestionStatus(playerName);
+        }
+    }
+
+    async checkSecurityQuestionStatus(playerName) {
+        try {
+            const result = await this.supabase.checkPlayerExists(playerName);
+            if (result) {
+                this.hasSecurityQuestion = !!result.hasSecurityQuestion;
+                // Also update game state
+                if (window.game) {
+                    window.game.hasSecurityQuestion = this.hasSecurityQuestion;
+                }
+                console.log('[AccountMenu] Security question status:', this.hasSecurityQuestion);
+            }
+        } catch (error) {
+            console.error('[AccountMenu] Failed to check security question status:', error);
+        }
     }
 
     hide() {
