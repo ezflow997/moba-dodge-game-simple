@@ -143,7 +143,7 @@ export class RankedMenu {
 
         if (this.state === 'confirm') {
             // Top row: Rankings and View Queue buttons
-            const topBtnY = 720 - refPanelH / 2 + 520; // Position in upper area
+            const topBtnY = 720 - refPanelH / 2 + 570; // Position below rules text
             const btnW = 200;
             const gap = 20;
 
