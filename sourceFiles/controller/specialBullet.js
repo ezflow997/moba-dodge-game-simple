@@ -3,7 +3,7 @@ import { makeMovements } from "./makeMovement.js";
 var move = new makeMovements();
 
 export class SpecialBullet {
-    constructor(x, y, endX, endY, size, speed, gunType, gunData) {
+    constructor(x, y, endX, endY, size, speed, gunType, gunData, playerRef = null) {
         this.x = x;
         this.y = y;
         this.endX = endX;
@@ -18,6 +18,10 @@ export class SpecialBullet {
 
         this.gunType = gunType;
         this.gunData = gunData;
+
+        // Player reference for nova bullets (to follow player position)
+        this.playerRef = playerRef;
+        this.isNova = gunType === 'nova';
 
         // Calculate direction for various effects
         const dx = endX - x;
@@ -118,6 +122,28 @@ export class SpecialBullet {
             this.prevWindowH = window.innerHeight;
         }
 
+        // Nova bullets: follow player position (bullets move with player)
+        if (this.isNova && this.playerRef) {
+            const playerDeltaX = this.playerRef.x - this.startX;
+            const playerDeltaY = this.playerRef.y - this.startY;
+
+            // Move bullet with player
+            this.x += playerDeltaX;
+            this.y += playerDeltaY;
+            this.endX += playerDeltaX;
+            this.endY += playerDeltaY;
+
+            // Update start position
+            this.startX = this.playerRef.x;
+            this.startY = this.playerRef.y;
+
+            // Also move trail points
+            for (const t of this.trail) {
+                t.x += playerDeltaX;
+                t.y += playerDeltaY;
+            }
+        }
+
         // Store trail
         this.trail.push({ x: this.x, y: this.y });
         if (this.trail.length > this.maxTrailLength) {
@@ -133,8 +159,8 @@ export class SpecialBullet {
         const prevX = this.x;
         const prevY = this.y;
 
-        if (this.isHoming) {
-            // Move in current direction
+        if (this.isHoming || this.bouncesRemaining > 0 || this.bounceCount > 0) {
+            // Use directional movement for homing and ricochet bullets
             this.x += this.dirX * this.speed;
             this.y += this.dirY * this.speed;
         } else if (this.x !== this.endX || this.y !== this.endY) {
@@ -235,6 +261,9 @@ export class SpecialBullet {
         if (bounced) {
             this.bouncesRemaining--;
             this.angle = Math.atan2(this.dirY, this.dirX);
+
+            // Extend range on each bounce (add 30% more range)
+            this.maxTravel += this.maxTravel * 0.3;
 
             // Update end position for non-homing
             const remaining = this.maxTravel - this.distanceTraveled;
@@ -397,12 +426,23 @@ export class SpecialBullet {
 
 // Chain bolt - spawned when chain lightning triggers
 export class ChainBolt {
-    constructor(fromX, fromY, toEnemy, gunData) {
+    constructor(fromX, fromY, toEnemy, gunData, recursiveDepth = 0, hitEnemies = null) {
         this.fromX = fromX;
         this.fromY = fromY;
         this.toX = toEnemy.x;
         this.toY = toEnemy.y;
         this.targetEnemy = toEnemy;
+        this.gunData = gunData;
+
+        // Recursive bouncing properties
+        this.recursiveDepth = recursiveDepth;
+        this.maxRecursiveBounces = gunData.recursiveBounces || 0;
+        this.hitEnemies = hitEnemies || new Set();
+        this.hitEnemies.add(toEnemy); // Mark this enemy as hit
+
+        // Track if we need to trigger recursive chains
+        this.needsRecursiveChain = false;
+        this.recursiveChainTriggered = false;
 
         this.duration = 150; // ms
         this.startTime = performance.now();
@@ -435,14 +475,73 @@ export class ChainBolt {
     }
 
     update() {
-        if (performance.now() - this.startTime > this.duration) {
+        const elapsed = performance.now() - this.startTime;
+
+        if (elapsed > this.duration) {
             this.expired = true;
+        }
+
+        // Trigger recursive chains at halfway point (so visual chains appear sequentially)
+        if (!this.recursiveChainTriggered && elapsed > this.duration * 0.5) {
+            if (this.recursiveDepth < this.maxRecursiveBounces) {
+                this.needsRecursiveChain = true;
+            }
+            this.recursiveChainTriggered = true;
         }
 
         // Regenerate segments for flickering effect
         if (Math.random() < 0.3) {
             this.generateSegments();
         }
+    }
+
+    // Get enemies that can be recursively chained to from this bolt's target
+    getRecursiveTargets(enemies) {
+        if (this.recursiveDepth >= this.maxRecursiveBounces) {
+            return [];
+        }
+
+        const chainRange = (this.gunData.chainRange || 150) * window.innerWidth / 2560;
+        const targets = [];
+
+        for (const enemy of enemies) {
+            // Skip already-hit enemies
+            if (this.hitEnemies.has(enemy)) continue;
+
+            const dx = enemy.x - this.targetEnemy.x;
+            const dy = enemy.y - this.targetEnemy.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist <= chainRange) {
+                targets.push({ enemy, dist });
+            }
+        }
+
+        // Sort by distance and return up to chainCount targets
+        targets.sort((a, b) => a.dist - b.dist);
+        const chainCount = this.gunData.chainCount || 1;
+        return targets.slice(0, chainCount);
+    }
+
+    // Create new chain bolts for recursive bounce
+    createRecursiveChains(enemies) {
+        const targets = this.getRecursiveTargets(enemies);
+        const newBolts = [];
+
+        for (const target of targets) {
+            const newBolt = new ChainBolt(
+                this.targetEnemy.x,
+                this.targetEnemy.y,
+                target.enemy,
+                this.gunData,
+                this.recursiveDepth + 1,
+                this.hitEnemies
+            );
+            newBolts.push(newBolt);
+        }
+
+        this.needsRecursiveChain = false;
+        return newBolts;
     }
 
     draw(context) {

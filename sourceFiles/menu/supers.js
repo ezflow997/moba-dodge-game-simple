@@ -4,16 +4,22 @@ export class superFunctions {
     }
 
     // Enhanced text with glow effect
-    drawGlowText(context, x, y, text, size, color, glowColor, glowSize = 10) {
+    drawGlowText(context, x, y, text, size, color, glowColor, glowSize = 10, centered = false) {
         let rX = window.innerWidth / 2560;
         let rY = window.innerHeight / 1440;
 
         context.save();
         context.shadowColor = glowColor;
         context.shadowBlur = glowSize * rX;
-        context.font = size * rX + "px Arial Black";
+        // Use a cleaner, more modern font
+        context.font = `bold ${size * rX}px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif`;
         context.fillStyle = color;
-        context.fillText("" + text, x * rX, y * rY);
+        if (centered) {
+            context.textAlign = 'center';
+            context.fillText("" + text, x * rX, y * rY);
+        } else {
+            context.fillText("" + text, x * rX, y * rY);
+        }
         context.restore();
     }
 
@@ -435,16 +441,16 @@ export class superFunctions {
     }
 
     getOffset(bullets, x, y, aR, C){
-        bullets.offY = y + ((Math.sin(aR) * C) * bullets.dirY);
-        bullets.offX = x + ((Math.cos(aR) * C) * bullets.dirX);
+        bullets.offY = y + (Math.sin(aR) * C);
+        bullets.offX = x + (Math.cos(aR) * C);
 
         //console.log(bullets.offX, x);
         //console.log(bullets.offY, y);
     }
     
     getTravel(bullets, x, y, aR, C){
-        bullets.endY = y + ((Math.sin(aR) * C) * bullets.dirY);
-        bullets.endX = x + ((Math.cos(aR) * C) * bullets.dirX);
+        bullets.endY = y + (Math.sin(aR) * C);
+        bullets.endX = x + (Math.cos(aR) * C);
 
         //console.log(bullets.endX, x);
         //console.log(bullets.endY, y);
@@ -461,12 +467,8 @@ export class superFunctions {
             bullets.dirY = -1;
         }
     
-        let dx = Math.abs(sX - eX);
-        let dy = Math.abs(sY - eY);
-    
-        let c = Math.sqrt(Math.pow(dx,2) + Math.pow(dy,2));
-    
-        bullets.angle = Math.acos(dx/c);
+        // FIX: Use atan2 for proper full-angle calculation
+        bullets.angle = Math.atan2(eY - sY, eX - sX);
 
         //console.log(bullets.angle, sX, sY, eX, eY, bullets.dirX, bullets.dirY, c);
     }
@@ -584,69 +586,116 @@ function drawButton(ctx, btnX, btnY, btnW, btnH, hovered, text, textSize, textX,
 function drawButtonEnhanced(ctx, btnX, btnY, btnW, btnH, hovered, text, textSize, textX, textY, has_border, text_color, border_color, hoverProgress, pulsePhase, glowIntensity) {
     let rY = window.innerHeight / 1440;
     let rX = window.innerWidth / 2560;
+    const radius = 8 * rX; // Rounded corner radius
 
     ctx.save();
 
-    // Pulsing glow effect (subtle when not hovered, stronger when hovered)
-    const basePulse = 0.3 + Math.sin(pulsePhase) * 0.15;
-    const pulseAlpha = basePulse + hoverProgress * 0.5;
-
-    // Outer glow when hovered or pulsing
-    if (glowIntensity > 0 || hoverProgress > 0) {
-        ctx.shadowColor = '#00ffff';
-        ctx.shadowBlur = (8 + glowIntensity) * rX;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
+    // Helper to draw rounded rectangle
+    function roundedRect(x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
     }
 
-    // Background - dark when not hovered, gradient when hovered
+    // Outer glow when hovered
     if (hoverProgress > 0) {
-        const gradient = ctx.createLinearGradient(btnX, btnY, btnX, btnY + btnH);
-        const alpha = hoverProgress * 0.8;
-        gradient.addColorStop(0, `rgba(0, 255, 255, ${alpha * 0.6})`);
-        gradient.addColorStop(0.5, `rgba(0, 200, 255, ${alpha * 0.9})`);
-        gradient.addColorStop(1, `rgba(0, 150, 255, ${alpha * 0.6})`);
+        ctx.shadowColor = '#00ffff';
+        ctx.shadowBlur = (15 + hoverProgress * 20) * rX;
+    }
 
-        ctx.fillStyle = gradient;
-        ctx.fillRect(btnX, btnY, btnW, btnH);
+    // Background gradient - dark glass effect
+    const bgGradient = ctx.createLinearGradient(btnX, btnY, btnX, btnY + btnH);
+    if (hoverProgress > 0) {
+        // Hovered: cyan glow fill
+        bgGradient.addColorStop(0, `rgba(0, 80, 100, ${0.7 + hoverProgress * 0.2})`);
+        bgGradient.addColorStop(0.4, `rgba(0, 60, 80, ${0.85 + hoverProgress * 0.1})`);
+        bgGradient.addColorStop(1, `rgba(0, 40, 60, ${0.9})`);
     } else {
-        // Dark semi-transparent background when not hovered
-        ctx.fillStyle = 'rgba(10, 20, 40, 0.85)';
-        ctx.fillRect(btnX, btnY, btnW, btnH);
+        // Normal: dark semi-transparent
+        bgGradient.addColorStop(0, 'rgba(20, 30, 50, 0.85)');
+        bgGradient.addColorStop(0.5, 'rgba(15, 25, 45, 0.9)');
+        bgGradient.addColorStop(1, 'rgba(10, 20, 40, 0.95)');
     }
 
-    // Subtle animated border pulse
-    const borderPulse = 0.6 + Math.sin(pulsePhase * 0.8) * 0.4;
+    ctx.fillStyle = bgGradient;
+    roundedRect(btnX, btnY, btnW, btnH, radius);
+    ctx.fill();
 
-    if (has_border == true) {
-        // Gradient border
-        const borderGrad = ctx.createLinearGradient(btnX, btnY, btnX + btnW, btnY + btnH);
-        if (hoverProgress > 0) {
-            borderGrad.addColorStop(0, '#00ffff');
-            borderGrad.addColorStop(0.5, '#00ff88');
-            borderGrad.addColorStop(1, '#00ffff');
-        } else {
-            borderGrad.addColorStop(0, `rgba(100, 100, 100, ${borderPulse})`);
-            borderGrad.addColorStop(0.5, `rgba(150, 150, 150, ${borderPulse})`);
-            borderGrad.addColorStop(1, `rgba(100, 100, 100, ${borderPulse})`);
-        }
-
-        ctx.strokeStyle = borderGrad;
-        ctx.lineWidth = (4 + hoverProgress * 2) * rY;
-        ctx.strokeRect(btnX, btnY, btnW, btnH);
-    }
+    // Inner highlight at top (glass effect)
+    ctx.save();
+    const highlightGradient = ctx.createLinearGradient(btnX, btnY, btnX, btnY + btnH * 0.5);
+    highlightGradient.addColorStop(0, `rgba(255, 255, 255, ${0.08 + hoverProgress * 0.12})`);
+    highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = highlightGradient;
+    roundedRect(btnX + 2 * rX, btnY + 2 * rX, btnW - 4 * rX, btnH * 0.5, radius - 2 * rX);
+    ctx.fill();
+    ctx.restore();
 
     ctx.restore();
 
-    // Text with glow when hovered
-    ctx.save();
-    if (hoverProgress > 0.3) {
-        ctx.shadowColor = text_color === 'black' ? '#00ffff' : text_color;
-        ctx.shadowBlur = (5 + hoverProgress * 8) * rX;
+    // Border
+    if (has_border) {
+        ctx.save();
+        const borderPulse = 0.7 + Math.sin(pulsePhase * 0.5) * 0.3;
+
+        if (hoverProgress > 0) {
+            // Glowing cyan border when hovered
+            ctx.shadowColor = '#00ffff';
+            ctx.shadowBlur = 10 * rX * hoverProgress;
+            ctx.strokeStyle = `rgba(0, 255, 255, ${0.8 + hoverProgress * 0.2})`;
+            ctx.lineWidth = (2 + hoverProgress * 1.5) * rX;
+        } else {
+            // Subtle pulsing border
+            ctx.strokeStyle = `rgba(80, 120, 160, ${borderPulse})`;
+            ctx.lineWidth = 1.5 * rX;
+        }
+
+        roundedRect(btnX, btnY, btnW, btnH, radius);
+        ctx.stroke();
+
+        // Inner border line for depth
+        if (hoverProgress > 0.2) {
+            ctx.strokeStyle = `rgba(0, 200, 255, ${hoverProgress * 0.3})`;
+            ctx.lineWidth = 1 * rX;
+            roundedRect(btnX + 3 * rX, btnY + 3 * rX, btnW - 6 * rX, btnH - 6 * rX, radius - 2 * rX);
+            ctx.stroke();
+        }
+
+        ctx.restore();
     }
 
-    ctx.font = textSize + "px Arial Black";
-    ctx.fillStyle = hoverProgress > 0.5 ? '#ffffff' : text_color;
-    ctx.fillText("" + text, btnX + textX, btnY + textY);
+    // Text - centered and with better font
+    ctx.save();
+
+    // Text glow when hovered
+    if (hoverProgress > 0.2) {
+        ctx.shadowColor = '#00ffff';
+        ctx.shadowBlur = (3 + hoverProgress * 10) * rX;
+    }
+
+    // Use a cleaner font, properly scaled
+    const fontSize = Math.max(12, textSize);
+    ctx.font = `600 ${fontSize}px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Text color transitions from normal to white when hovered
+    if (hoverProgress > 0.3) {
+        ctx.fillStyle = '#ffffff';
+    } else {
+        ctx.fillStyle = text_color;
+    }
+
+    // Draw text centered in button
+    ctx.fillText(text, btnX + btnW / 2, btnY + btnH / 2);
+
     ctx.restore();
 }

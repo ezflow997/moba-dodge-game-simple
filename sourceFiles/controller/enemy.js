@@ -129,12 +129,15 @@ export class Enemy {
         
         context.restore();
     }
-    checkCollision(player, bullets){
+    checkCollision(player, bullets, rewardManager = null){
         var distX = Math.abs(this.x - player.x);
         var distY = Math.abs(this.y - player.y);
         var distC = Math.sqrt(Math.pow(distX,2) + Math.pow(distY,2));
 
-        if(distC < (this.size + player.size)){
+        // Ghost mode - ignore player collision entirely
+        if (rewardManager && rewardManager.ghostMode) {
+            this.playerCollision = false;
+        } else if(distC < (this.size + player.size)){
             this.playerCollision = true;
         }
         else{

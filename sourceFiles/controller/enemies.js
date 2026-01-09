@@ -86,8 +86,10 @@ export class Enemies {
             const collision = this.boss.checkCollision(player, bullets);
             if (collision) {
                 if (collision.type === 'player') {
-                    // Check if player can survive (extra life / ghost mode)
-                    if (game.rewardManager && game.rewardManager.canSurviveHit(false)) {
+                    // Check if god mode is enabled
+                    if (game.devMode && game.devMode.isEnabled() && game.devMode.godMode) {
+                        // God mode - ignore collision
+                    } else if (game.rewardManager && game.rewardManager.canSurviveHit(false)) {
                         // Player survived! Flash effect
                         if (game.effects) {
                             game.effects.addScreenFlash('#ff0000', 300, 0.5);
@@ -196,6 +198,14 @@ export class Enemies {
             for(let i = 0; i < this.enemiesList.length; i++){
                 let p = this.enemiesList[i];
                 if(p.playerCollision == true){
+                    // Check if god mode is enabled
+                    if (game.devMode && game.devMode.isEnabled() && game.devMode.godMode) {
+                        // God mode - ignore collision, but still remove enemy
+                        this.enemiesList.splice(i, 1);
+                        i--;
+                        continue;
+                    }
+                    
                     // Check if player can survive (extra life / ghost mode)
                     if (game.rewardManager && game.rewardManager.canSurviveHit(false)) {
                         // Player survived! Flash effect and remove enemy
@@ -251,10 +261,10 @@ export class Enemies {
                 else{
                     p.update(player);
                     if(game.challenge_level == 0){
-                        p.checkCollision(player, bulletArray);
+                        p.checkCollision(player, bulletArray, game.rewardManager);
                     }
                     else if(game.challenge_level == 1){
-                        p.checkCollision(player, bulletArray);
+                        p.checkCollision(player, bulletArray, game.rewardManager);
                     }
                 }
             }

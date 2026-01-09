@@ -11,17 +11,17 @@ export class Menu{
 
         this.mainMenuShow = false;
 
-        this.challengeButton = new Button(150, 50, 500, 125, "Skill Mode:", 50, 70, 50, false, true, 'white', 'white');
-        this.challengeButtonRow2_Text = '';
+        // Cleaner button layout with proper spacing
+        const btnX = 80;
+        const btnW = 340;
+        const btnH = 70;
+        const btnSpacing = 90;
 
-        this.difficultyButton = new Button(150, 200, 500, 100, "Difficulty:", 43, 15, 65, false, true, 'white', 'white');
-        this.difficultyButtonRow2_Text = '';
-
-        this.startButton = new Button(150, 325, 500, 100, "New Game", 50, 100, 65, false, true, 'white', 'white');
-
-        this.leaderboardButton = new Button(150, 450, 500, 100, "Leaderboard", 50, 70, 65, false, true, 'white', 'white');
-
-        this.logoutButton = new Button(520, 555, 150, 50, "Logout", 30, 22, 36, false, true, 'white', 'white');
+        this.challengeButton = new Button(btnX, 80, btnW, btnH, "Skill Mode: NORMAL", 28, 0, 0, false, true, 'white', 'white');
+        this.difficultyButton = new Button(btnX, 80 + btnSpacing, btnW, btnH, "Difficulty: EASY", 28, 0, 0, false, true, 'white', 'white');
+        this.startButton = new Button(btnX, 80 + btnSpacing * 2, btnW, btnH, "New Game", 32, 0, 0, false, true, 'white', 'white');
+        this.leaderboardButton = new Button(btnX, 80 + btnSpacing * 3, btnW, btnH, "Leaderboard", 32, 0, 0, false, true, 'white', 'white');
+        this.logoutButton = new Button(btnX + btnW + 20, 80 + btnSpacing * 4, 120, 50, "Logout", 24, 0, 0, false, true, 'white', 'white');
     }
     updateMain(game){
         var inX = game.input.mouseX;
@@ -92,62 +92,57 @@ export class Menu{
         }
     }
     drawMain(context, game){
+        const rX = window.innerWidth / 2560;
+        const rY = window.innerHeight / 1440;
+
         // Draw animated background and floating particles
         this.menuEffects.update(game.width, game.height);
         this.menuEffects.drawAnimatedBackground(context, game.width, game.height);
         this.menuEffects.drawFloatingParticles(context);
 
-        // Draw game title with glow effect
-        this.menuEffects.drawTitle(context, "MOBA DODGE", 800, 80, 80);
-        this.menuEffects.drawTitle(context, "SIMPLE", 950, 150, 50);
+        // Draw game title centered at top
+        const titleX = game.width / 2 / rX;  // Center of screen
+        this.menuEffects.drawTitleCentered(context, "MOBA DODGE", titleX, 80, 70);
+        this.menuEffects.drawTitleCentered(context, "SIMPLE", titleX, 145, 40);
 
-        // Draw the three main buttons
+        // Update button text with current values
+        this.challengeButton.text = "Mode: " + game.challenges[game.challenge_level];
+        this.difficultyButton.text = "Difficulty: " + game.difficulties[game.difficulty_level];
+
+        // Draw buttons
         this.challengeButton.draw(context);
-        this.challengeButtonRow2_Text = game.challenges[game.challenge_level];
-        let challenge_spacer = (this.challengeButtonRow2_Text.length)/2;
-        this.super.drawGlowText(context, 335 - (challenge_spacer*25), 150, this.challengeButtonRow2_Text, 50, '#ff00ff', '#ff00ff', 10);
-
         this.difficultyButton.draw(context);
-        let difficulty_spacer = (this.difficultyButtonRow2_Text.length)/2;
-        this.difficultyButtonRow2_Text = game.difficulties[game.difficulty_level];
-        this.super.drawGlowText(context, 475 - (difficulty_spacer*25), 270, this.difficultyButtonRow2_Text, 50, '#ff00ff', '#ff00ff', 10);
-
         this.startButton.draw(context);
-
         this.leaderboardButton.draw(context);
 
         // Show player name and logout button if logged in
         if(game.playerName) {
-            this.super.drawGlowText(context, 150, 580, "Playing as: " + game.playerName, 30, '#00ff88', '#00ff00', 5);
+            this.super.drawGlowText(context, 80, 475, "Playing as: " + game.playerName, 26, '#00ff88', '#00ff00', 5);
             this.logoutButton.draw(context);
         } else {
-            this.super.drawGlowText(context, 150, 580, "Not logged in", 30, '#888888', '#666666', 5);
+            this.super.drawGlowText(context, 80, 475, "Not logged in", 26, '#666666', '#444444', 3);
         }
 
-        // Draw ability info
-        let info_sep = 60;
-        let info_x_off = 1600;
-        let info_y_off = 140;
-        let font_size = 45;
-        this.super.drawGlowText(context, info_x_off, info_y_off+(info_sep*0), "(" + game.player.ePenalty + ") Dash " + (game.player.eCoolDown/1000).toFixed(1) + "s", font_size, '#ffff88', '#ffff00', 8);
-        this.super.drawGlowText(context, info_x_off, info_y_off+(info_sep*1),  "(" + game.player.fPenalty + ") Ultimate " + (game.player.fCoolDown/1000).toFixed(1) + "s", font_size, '#ffff88', '#ffff00', 8);
+        // Draw ability info on the right side
+        const infoX = 1750;
+        const infoY = 100;
+        const infoSep = 50;
+        const fontSize = 36;
+
+        this.super.drawGlowText(context, infoX, infoY, "Abilities", 40, '#00ffff', '#00aaff', 8);
+        this.super.drawGlowText(context, infoX, infoY + infoSep * 1, "Dash (" + game.player.ePenalty + ") " + (game.player.eCoolDown/1000).toFixed(1) + "s", fontSize, '#ffff88', '#ffff00', 6);
+        this.super.drawGlowText(context, infoX, infoY + infoSep * 2, "Ultimate (" + game.player.fPenalty + ") " + (game.player.fCoolDown/1000).toFixed(1) + "s", fontSize, '#ffff88', '#ffff00', 6);
+
         if(game.challenge_level == 0){
-            this.super.drawGlowText(context, info_x_off, info_y_off+(info_sep*2), "(+" + game.enemies.enemyScoreValue + ") Shoot " + (game.player.qCoolDown/1000).toFixed(1) + "s", font_size, '#88ff88', '#00ff00', 8);
-        }
-        else if(game.challenge_level == 1){
-            this.super.drawGlowText(context, info_x_off, info_y_off+(info_sep*2), "(+" + game.enemies.enemyScoreValue + "x" + game.voidBolts.splitScoreMultiplier + ") Recast Shoot " + (game.player.qCoolDown/1000).toFixed(1) + "s", font_size, '#88ff88', '#00ff00', 8);
+            this.super.drawGlowText(context, infoX, infoY + infoSep * 3, "Shoot (+" + game.enemies.enemyScoreValue + ") " + (game.player.qCoolDown/1000).toFixed(1) + "s", fontSize, '#88ff88', '#00ff00', 6);
+        } else {
+            this.super.drawGlowText(context, infoX, infoY + infoSep * 3, "Shoot (+" + game.enemies.enemyScoreValue + "x" + game.voidBolts.splitScoreMultiplier + ") " + (game.player.qCoolDown/1000).toFixed(1) + "s", fontSize, '#88ff88', '#00ff00', 6);
         }
 
-        // Display local high score if exists
+        // Display high score in center
         if(game.player_data.high_score[game.difficulty_level].value > 0){
-            let acc_x_off = 940;
-            let acc_y_off = 270;
-            let acc_sep = 60;
-            let score_centered = 130;
-            let letter_spacing = 25;
-            let score_center_offset = ('' + game.player_data.high_score[game.difficulty_level].value).length/2;
-            this.super.drawGlowText(context, acc_x_off, acc_y_off, "High Score: ", 50, '#ffffff', '#00ffff', 6);
-            this.super.drawGlowText(context, acc_x_off + score_centered - (letter_spacing*score_center_offset), acc_y_off + acc_sep, "" + game.player_data.high_score[game.difficulty_level].value, 50, '#00ff88', '#00ff00', 10);
+            this.super.drawGlowText(context, titleX - 80, 220, "High Score", 36, '#ffffff', '#00ffff', 6, true);
+            this.super.drawGlowText(context, titleX - 80, 270, "" + game.player_data.high_score[game.difficulty_level].value, 50, '#00ff88', '#00ff00', 10, true);
         }
     }
 }

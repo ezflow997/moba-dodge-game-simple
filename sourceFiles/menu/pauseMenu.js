@@ -10,12 +10,26 @@ export class PauseMenu {
         this.keybindWaitStart = 0; // Timestamp when keybind wait started
         this.keybindWaitDelay = 300; // Delay in ms before accepting input
 
-        // Main pause menu buttons
-        this.resumeButton = new Button(880, 290, 800, 90, "Resume (ESC)", 55, 200, 65, false, true, 'white', 'white');
-        this.keybindsButton = new Button(880, 400, 800, 90, "Keybinds", 55, 260, 65, false, true, 'white', 'white');
-        this.volumeButton = new Button(880, 510, 800, 90, "Volume", 55, 280, 65, false, true, 'white', 'white');
-        this.controlSchemeButton = new Button(880, 620, 800, 90, "Controls: Mouse", 55, 140, 65, false, true, 'white', 'white');
-        this.quitButton = new Button(880, 730, 800, 90, "Quit to Menu", 55, 180, 65, false, true, 'white', 'white');
+        // Main pause menu buttons - centered text, clean sizing
+        const btnX = 930;
+        const btnW = 700;
+        const btnH = 70;
+        const btnSpace = 85;
+        const fontSize = 32;
+
+        this.resumeButton = new Button(btnX, 280, btnW, btnH, "Resume (ESC)", fontSize, 0, 0, false, true, 'white', 'white');
+        this.keybindsButton = new Button(btnX, 280 + btnSpace, btnW, btnH, "Keybinds", fontSize, 0, 0, false, true, 'white', 'white');
+        this.volumeButton = new Button(btnX, 280 + btnSpace * 2, btnW, btnH, "Volume", fontSize, 0, 0, false, true, 'white', 'white');
+        this.controlSchemeButton = new Button(btnX, 280 + btnSpace * 3, btnW, btnH, "Controls: Mouse", fontSize, 0, 0, false, true, 'white', 'white');
+        this.devModeButton = new Button(btnX, 280 + btnSpace * 4, btnW, btnH, "Dev Mode: OFF", fontSize, 0, 0, false, true, 'white', 'white');
+        this.exitTestRoomButton = new Button(btnX, 280 + btnSpace * 5, btnW, btnH, "Exit Test Room", fontSize, 0, 0, false, true, 'white', 'white');
+        this.quitButton = new Button(btnX, 280 + btnSpace * 6, btnW, btnH, "Quit to Menu", fontSize, 0, 0, false, true, 'white', 'white');
+
+        // Dev mode visibility - hidden by default, revealed with konami code
+        this.devModeVisible = false;
+        this.konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowLeft', 'ArrowRight', 'ArrowRight'];
+        this.konamiProgress = 0;
+        this.lastKonamiTime = 0;
 
         // Submenu states
         this.showKeybinds = false;
@@ -29,12 +43,13 @@ export class PauseMenu {
         this.waitingForKey = null; // 'q', 'e', or 'f'
         this.customKeys = { q: 'q', e: 'e', f: 'f' };
 
-        // Control scheme: 'mouse' or 'wasd'
-        this.controlScheme = 'mouse';
+        // Control scheme: 'mouse' or 'wasd' - load from localStorage
+        this.controlScheme = localStorage.getItem('controlScheme') || 'mouse';
+        this.controlSchemeButton.text = `Controls: ${this.controlScheme === 'mouse' ? 'Mouse' : 'WASD'}`;
 
         // WASD mode keybinds (shoot=right-click, dash=e, ult=q)
         this.wasdKeys = {
-            shoot: 0,  // Right click (mouse button 2)
+            shoot: 0,  // Left click (mouse button 0)
             dash: 'e',
             ult: 'q'
         };
@@ -49,6 +64,11 @@ export class PauseMenu {
             if (this.waitingForKey) {
                 ev.preventDefault();
                 this.capturedKey = ev.key;
+            }
+
+            // Konami code detection (only when pause menu is open and not in submenu)
+            if (this.isPaused && !this.showKeybinds && !this.showVolume && !this.waitingForKey) {
+                this.checkKonamiCode(ev.key);
             }
         };
         window.addEventListener('keydown', this.keydownHandler);
@@ -70,6 +90,8 @@ export class PauseMenu {
             if (window.gameSound && !inMainMenu) {
                 window.gameSound.pauseMusic();
             }
+            // Reset konami progress when opening menu
+            this.konamiProgress = 0;
         } else {
             // Only resume music when in gameplay, not in main menu
             if (window.gameSound && !inMainMenu) {
@@ -79,6 +101,36 @@ export class PauseMenu {
             this.showKeybinds = false;
             this.showVolume = false;
             this.waitingForKey = null;
+            // Reset konami progress
+            this.konamiProgress = 0;
+        }
+    }
+
+    /**
+     * Check for konami code input to reveal dev mode
+     */
+    checkKonamiCode(key) {
+        const now = performance.now();
+
+        // Reset if too much time passed (2 seconds)
+        if (now - this.lastKonamiTime > 2000) {
+            this.konamiProgress = 0;
+        }
+        this.lastKonamiTime = now;
+
+        // Check if key matches next in sequence
+        if (key === this.konamiCode[this.konamiProgress]) {
+            this.konamiProgress++;
+
+            // Complete code entered
+            if (this.konamiProgress === this.konamiCode.length) {
+                this.devModeVisible = true;
+                this.konamiProgress = 0;
+                if (window.gameSound) window.gameSound.playMenuClick();
+            }
+        } else {
+            // Wrong key, reset
+            this.konamiProgress = 0;
         }
     }
 
@@ -251,13 +303,38 @@ export class PauseMenu {
                 }
             }
 
+            // Exit Test Room button (only when in test room)
+            const inTestRoom = game.testRoom && game.testRoom.active;
+            if (inTestRoom) {
+                this.exitTestRoomButton.update(inX, inY);
+                if (this.exitTestRoomButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                    this.clicked = true;
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    // Just exit test room, return to game
+                    game.testRoom.exit();
+                    this.isPaused = false;
+                    this.showKeybinds = false;
+                    this.showVolume = false;
+                }
+                this.quitButton.y = 280 + 85 * 6;  // Below exit test room button
+            } else {
+                this.quitButton.y = 280 + 85 * 5;  // Normal position (where exit test room button would be)
+            }
+
             this.quitButton.update(inX, inY);
             if (this.quitButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
-                // Quit to main menu
+                // Quit to main menu - clear test room without restoring state
+                if (game.testRoom && game.testRoom.active) {
+                    game.testRoom.active = false;
+                    game.testRoom.dummies = [];
+                    game.testRoom.pickupGrid = [];
+                    game.testRoom.savedState = null;
+                }
                 game.gameOver = true;
                 game.score = 0;
+                game.showMessage = 'None';  // Trigger menu transition
                 game.player.reset(game);
                 game.projectiles.reset();
                 game.display.reset();
@@ -266,6 +343,7 @@ export class PauseMenu {
                 game.enemies.reset();
                 game.effects.reset();
                 game.world.reset();
+                game.rewardManager.reset();
                 this.isPaused = false;
                 this.showKeybinds = false;
                 this.showVolume = false;
@@ -275,11 +353,14 @@ export class PauseMenu {
             if (this.controlSchemeButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
-                
+
                 // Toggle control scheme
                 this.controlScheme = this.controlScheme === 'mouse' ? 'wasd' : 'mouse';
                 this.controlSchemeButton.text = `Controls: ${this.controlScheme === 'mouse' ? 'Mouse' : 'WASD'}`;
-                
+
+                // Save to localStorage
+                localStorage.setItem('controlScheme', this.controlScheme);
+
                 // Reset keybinds to defaults when switching
                 if (this.controlScheme === 'mouse') {
                     // Reset to mouse mode defaults
@@ -292,8 +373,32 @@ export class PauseMenu {
                         ult: 'q'
                     };
                 }
-                
+
                 this.updateKeybindButtons();
+            }
+
+            // Dev Mode button (only visible if konami code entered or dev mode is ON)
+            if (game.devMode) {
+                // Keep visible if dev mode is ON, otherwise need konami code
+                const shouldShow = this.devModeVisible || game.devMode.isEnabled();
+
+                if (shouldShow) {
+                    this.devModeButton.text = `Dev Mode: ${game.devMode.isEnabled() ? 'ON' : 'OFF'}`;
+                    this.devModeButton.update(inX, inY);
+                    if (this.devModeButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                        this.clicked = true;
+                        if (window.gameSound) window.gameSound.playMenuClick();
+
+                        // Toggle dev mode
+                        game.devMode.setEnabled(!game.devMode.isEnabled());
+                        this.devModeButton.text = `Dev Mode: ${game.devMode.isEnabled() ? 'ON' : 'OFF'}`;
+
+                        // If turning OFF, hide the button again
+                        if (!game.devMode.isEnabled()) {
+                            this.devModeVisible = false;
+                        }
+                    }
+                }
             }
         }
         // Keybinds submenu
@@ -425,33 +530,54 @@ export class PauseMenu {
 
         // Main pause menu
         if (!this.showKeybinds && !this.showVolume) {
+            // Check if in test room for extra button
+            const inTestRoom = game.testRoom && game.testRoom.active;
+            const panelHeight = inTestRoom ? 700 : 610;
+
             // Draw pause menu background
             context.save();
             context.fillStyle = 'rgba(10, 20, 40, 0.95)';
-            context.fillRect(830 * rX, 200 * rY, 900 * rX, 780 * rY);
+            context.fillRect(880 * rX, 200 * rY, 800 * rX, panelHeight * rY);
             context.strokeStyle = '#00ffff';
             context.shadowColor = '#00ffff';
             context.shadowBlur = 15 * rX;
             context.lineWidth = 3 * rY;
-            context.strokeRect(830 * rX, 200 * rY, 900 * rX, 780 * rY);
+            context.strokeRect(880 * rX, 200 * rY, 800 * rX, panelHeight * rY);
             context.restore();
 
-            // Draw title
+            // Draw title centered in panel
             if(!inMainMenu){
-                this.super.drawGlowText(context, 1000, 250, "PAUSED", 70, '#ffffff', '#00ffff', 15);
+                if (inTestRoom) {
+                    this.super.drawGlowText(context, 1280, 250, "TEST ROOM", 55, '#ffaa00', '#ff6600', 15, true);
+                } else {
+                    this.super.drawGlowText(context, 1280, 250, "PAUSED", 55, '#ffffff', '#00ffff', 15, true);
+                }
             }
             else{
-                this.super.drawGlowText(context, 1000, 250, "SETTINGS", 70, '#ffffff', '#00ffff', 15);
+                this.super.drawGlowText(context, 1280, 250, "SETTINGS", 55, '#ffffff', '#00ffff', 15, true);
             }
 
             // Draw buttons
             this.resumeButton.draw(context);
             this.keybindsButton.draw(context);
             this.volumeButton.draw(context);
+            this.controlSchemeButton.draw(context);
+            // Only draw dev mode button if visible (konami code entered or dev mode ON)
+            if (game.devMode && (this.devModeVisible || game.devMode.isEnabled())) {
+                this.devModeButton.draw(context);
+            }
             if (!inMainMenu) {
+                // Draw Exit Test Room button when in test room
+                if (inTestRoom) {
+                    this.exitTestRoomButton.draw(context);
+                    // Move quit button down when exit test room button is visible
+                    this.quitButton.y = 280 + 85 * 6;  // Below exit test room button
+                } else {
+                    // Normal position when not in test room
+                    this.quitButton.y = 280 + 85 * 5;  // Normal position (where exit test room button would be)
+                }
                 this.quitButton.draw(context);
             }
-            this.controlSchemeButton.draw(context);
         }
         // Keybinds submenu
         else if (this.showKeybinds) {

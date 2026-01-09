@@ -12,6 +12,7 @@ export class InputHandler {
         this.q_key = 0;
 
         this.escapePressed = false;
+        this.tabPressed = false;
 
         this.keysList = [
             'Shift',
@@ -59,6 +60,10 @@ export class InputHandler {
             if(ev.key == 'Escape'){
                 this.escapePressed = true;
             }
+            if(ev.key == 'Tab'){
+                ev.preventDefault(); // Prevent Tab from switching focus
+                this.tabPressed = true;
+            }
             if(ev.key == 'q'){
                 this.q_key++;
             }
@@ -93,6 +98,9 @@ export class InputHandler {
         window.addEventListener('keyup', ev => {
             if(ev.key == 'Escape'){
                 this.escapePressed = false;
+            }
+            if(ev.key == 'Tab'){
+                this.tabPressed = false;
             }
             if(ev.key == 'q'){
                 this.q_key = 0;

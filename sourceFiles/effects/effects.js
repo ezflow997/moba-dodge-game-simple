@@ -11,8 +11,14 @@ export class EffectsManager {
     }
 
     spawnBurst(x, y, preset, customConfig = {}) {
-        const config = { ...PARTICLE_PRESETS[preset], ...customConfig };
+        const baseConfig = PARTICLE_PRESETS[preset] || PARTICLE_PRESETS.default || {};
+        const config = { ...baseConfig, ...customConfig };
         const count = config.count || 10;
+
+        // Safety check for colors
+        if (!config.colors || config.colors.length === 0) {
+            config.colors = ['#ffffff', '#ffff00', '#ff8800'];
+        }
 
         for (let i = 0; i < count; i++) {
             if (this.particles.length >= this.maxParticles) {

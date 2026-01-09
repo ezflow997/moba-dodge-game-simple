@@ -214,80 +214,461 @@ export class BossReward {
 
     drawCategoryIcon(context, rX) {
         const iconSize = this.size * 0.4;
+        const id = this.reward.id || '';
 
         switch (this.reward.category) {
             case CATEGORY.GUN:
-                // Bullet/projectile icon
+                this.drawWeaponIcon(context, rX, iconSize);
+                break;
+
+            case CATEGORY.COOLDOWN:
+                this.drawCooldownIcon(context, rX, iconSize, id);
+                break;
+
+            case CATEGORY.SURVIVABILITY:
+                this.drawSurvivabilityIcon(context, rX, iconSize, id);
+                break;
+
+            case CATEGORY.MOVEMENT:
+                this.drawMovementIcon(context, rX, iconSize, id);
+                break;
+
+            case CATEGORY.OFFENSE:
+                this.drawOffenseIcon(context, rX, iconSize, id);
+                break;
+        }
+    }
+
+    drawCooldownIcon(context, rX, iconSize, id) {
+        context.strokeStyle = '#ffffff';
+        context.fillStyle = '#ffffff';
+        context.lineWidth = 2 * rX;
+
+        if (id.startsWith('q_cd')) {
+            // Q ability - Bullet/shooting icon
+            context.beginPath();
+            context.arc(0, 0, iconSize * 0.5, 0, Math.PI * 2);
+            context.stroke();
+            context.beginPath();
+            context.arc(0, 0, iconSize * 0.2, 0, Math.PI * 2);
+            context.fill();
+            // "Q" letter
+            context.font = `bold ${iconSize * 0.8}px Arial`;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText('Q', 0, iconSize * 0.05);
+        } else if (id.startsWith('e_cd')) {
+            // E ability - Dash icon
+            context.beginPath();
+            context.moveTo(-iconSize * 0.6, 0);
+            context.lineTo(iconSize * 0.4, 0);
+            context.lineTo(iconSize * 0.1, -iconSize * 0.3);
+            context.moveTo(iconSize * 0.4, 0);
+            context.lineTo(iconSize * 0.1, iconSize * 0.3);
+            context.stroke();
+            // "E" letter
+            context.font = `bold ${iconSize * 0.6}px Arial`;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText('E', -iconSize * 0.3, 0);
+        } else if (id.startsWith('f_cd')) {
+            // F ability - Ultimate icon (star burst)
+            for (let i = 0; i < 6; i++) {
+                const angle = (Math.PI * 2 / 6) * i;
+                context.beginPath();
+                context.moveTo(0, 0);
+                context.lineTo(Math.cos(angle) * iconSize * 0.6, Math.sin(angle) * iconSize * 0.6);
+                context.stroke();
+            }
+            // "F" letter
+            context.font = `bold ${iconSize * 0.5}px Arial`;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText('F', 0, 0);
+        } else {
+            // Generic clock icon
+            context.beginPath();
+            context.arc(0, 0, iconSize * 0.7, 0, Math.PI * 2);
+            context.stroke();
+            context.beginPath();
+            context.moveTo(0, 0);
+            context.lineTo(0, -iconSize * 0.5);
+            context.moveTo(0, 0);
+            context.lineTo(iconSize * 0.3, 0);
+            context.stroke();
+        }
+    }
+
+    drawSurvivabilityIcon(context, rX, iconSize, id) {
+        context.strokeStyle = '#ffffff';
+        context.fillStyle = '#ffffff';
+        context.lineWidth = 2 * rX;
+
+        if (id.startsWith('extra_life')) {
+            // Heart icon
+            context.beginPath();
+            context.moveTo(0, iconSize * 0.4);
+            context.bezierCurveTo(-iconSize * 0.6, -iconSize * 0.1, -iconSize * 0.6, -iconSize * 0.5, 0, -iconSize * 0.2);
+            context.bezierCurveTo(iconSize * 0.6, -iconSize * 0.5, iconSize * 0.6, -iconSize * 0.1, 0, iconSize * 0.4);
+            context.fill();
+        } else if (id.startsWith('shield')) {
+            // Shield icon
+            context.beginPath();
+            context.moveTo(0, -iconSize * 0.6);
+            context.lineTo(-iconSize * 0.5, -iconSize * 0.3);
+            context.lineTo(-iconSize * 0.5, iconSize * 0.2);
+            context.lineTo(0, iconSize * 0.5);
+            context.lineTo(iconSize * 0.5, iconSize * 0.2);
+            context.lineTo(iconSize * 0.5, -iconSize * 0.3);
+            context.closePath();
+            context.stroke();
+            // Inner shield
+            context.beginPath();
+            context.moveTo(0, -iconSize * 0.35);
+            context.lineTo(-iconSize * 0.25, -iconSize * 0.15);
+            context.lineTo(-iconSize * 0.25, iconSize * 0.1);
+            context.lineTo(0, iconSize * 0.25);
+            context.lineTo(iconSize * 0.25, iconSize * 0.1);
+            context.lineTo(iconSize * 0.25, -iconSize * 0.15);
+            context.closePath();
+            context.fill();
+        } else if (id.startsWith('shrink')) {
+            // Shrink icon - arrows pointing inward
+            const arrows = [
+                { angle: 0 }, { angle: Math.PI / 2 }, { angle: Math.PI }, { angle: -Math.PI / 2 }
+            ];
+            for (const a of arrows) {
+                context.save();
+                context.rotate(a.angle);
+                context.beginPath();
+                context.moveTo(iconSize * 0.6, 0);
+                context.lineTo(iconSize * 0.2, 0);
+                context.lineTo(iconSize * 0.35, -iconSize * 0.15);
+                context.moveTo(iconSize * 0.2, 0);
+                context.lineTo(iconSize * 0.35, iconSize * 0.15);
+                context.stroke();
+                context.restore();
+            }
+        } else {
+            // Generic diamond
+            context.beginPath();
+            context.moveTo(0, -iconSize * 0.6);
+            context.lineTo(-iconSize * 0.5, 0);
+            context.lineTo(0, iconSize * 0.6);
+            context.lineTo(iconSize * 0.5, 0);
+            context.closePath();
+            context.fill();
+        }
+    }
+
+    drawMovementIcon(context, rX, iconSize, id) {
+        context.strokeStyle = '#ffffff';
+        context.fillStyle = '#ffffff';
+        context.lineWidth = 2 * rX;
+
+        if (id.startsWith('speed')) {
+            // Speed lines with shoe
+            context.beginPath();
+            context.moveTo(-iconSize * 0.5, -iconSize * 0.3);
+            context.lineTo(iconSize * 0.5, -iconSize * 0.3);
+            context.moveTo(-iconSize * 0.3, 0);
+            context.lineTo(iconSize * 0.5, 0);
+            context.moveTo(-iconSize * 0.5, iconSize * 0.3);
+            context.lineTo(iconSize * 0.5, iconSize * 0.3);
+            context.stroke();
+            // Arrow
+            context.beginPath();
+            context.moveTo(iconSize * 0.5, 0);
+            context.lineTo(iconSize * 0.2, -iconSize * 0.2);
+            context.moveTo(iconSize * 0.5, 0);
+            context.lineTo(iconSize * 0.2, iconSize * 0.2);
+            context.stroke();
+        } else if (id.startsWith('dash_distance')) {
+            // Dash trail icon
+            context.beginPath();
+            context.arc(-iconSize * 0.4, 0, iconSize * 0.15, 0, Math.PI * 2);
+            context.globalAlpha = 0.4;
+            context.fill();
+            context.globalAlpha = 0.7;
+            context.beginPath();
+            context.arc(0, 0, iconSize * 0.2, 0, Math.PI * 2);
+            context.fill();
+            context.globalAlpha = 1;
+            context.beginPath();
+            context.arc(iconSize * 0.4, 0, iconSize * 0.25, 0, Math.PI * 2);
+            context.fill();
+            // Motion lines
+            context.beginPath();
+            context.moveTo(-iconSize * 0.7, -iconSize * 0.2);
+            context.lineTo(-iconSize * 0.4, -iconSize * 0.2);
+            context.moveTo(-iconSize * 0.7, iconSize * 0.2);
+            context.lineTo(-iconSize * 0.4, iconSize * 0.2);
+            context.stroke();
+        } else if (id.startsWith('ghost')) {
+            // Ghost icon
+            context.beginPath();
+            context.arc(0, -iconSize * 0.1, iconSize * 0.4, Math.PI, 0);
+            context.lineTo(iconSize * 0.4, iconSize * 0.4);
+            // Wavy bottom
+            context.quadraticCurveTo(iconSize * 0.2, iconSize * 0.2, 0, iconSize * 0.4);
+            context.quadraticCurveTo(-iconSize * 0.2, iconSize * 0.2, -iconSize * 0.4, iconSize * 0.4);
+            context.closePath();
+            context.globalAlpha = 0.7;
+            context.fill();
+            context.globalAlpha = 1;
+            // Eyes
+            context.fillStyle = '#000000';
+            context.beginPath();
+            context.arc(-iconSize * 0.15, -iconSize * 0.1, iconSize * 0.08, 0, Math.PI * 2);
+            context.arc(iconSize * 0.15, -iconSize * 0.1, iconSize * 0.08, 0, Math.PI * 2);
+            context.fill();
+            context.fillStyle = '#ffffff';
+        } else {
+            // Generic arrow
+            context.beginPath();
+            context.moveTo(-iconSize * 0.6, 0);
+            context.lineTo(iconSize * 0.6, 0);
+            context.lineTo(iconSize * 0.2, -iconSize * 0.4);
+            context.moveTo(iconSize * 0.6, 0);
+            context.lineTo(iconSize * 0.2, iconSize * 0.4);
+            context.lineWidth = 3 * rX;
+            context.stroke();
+        }
+    }
+
+    drawOffenseIcon(context, rX, iconSize, id) {
+        context.strokeStyle = '#ffffff';
+        context.fillStyle = '#ffffff';
+        context.lineWidth = 2 * rX;
+
+        if (id.startsWith('score_mult')) {
+            // Coin/money icon
+            context.beginPath();
+            context.arc(0, 0, iconSize * 0.5, 0, Math.PI * 2);
+            context.stroke();
+            context.font = `bold ${iconSize * 0.7}px Arial`;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText('$', 0, iconSize * 0.05);
+        } else if (id.startsWith('bullet_size')) {
+            // Big bullet icon
+            context.beginPath();
+            context.arc(0, 0, iconSize * 0.5, 0, Math.PI * 2);
+            context.fill();
+            context.beginPath();
+            context.arc(0, 0, iconSize * 0.3, 0, Math.PI * 2);
+            context.strokeStyle = '#000000';
+            context.stroke();
+            context.strokeStyle = '#ffffff';
+        } else if (id.startsWith('range')) {
+            // Crosshair with extended lines
+            context.beginPath();
+            context.arc(0, 0, iconSize * 0.3, 0, Math.PI * 2);
+            context.stroke();
+            context.beginPath();
+            context.moveTo(-iconSize * 0.7, 0);
+            context.lineTo(-iconSize * 0.15, 0);
+            context.moveTo(iconSize * 0.15, 0);
+            context.lineTo(iconSize * 0.7, 0);
+            context.moveTo(0, -iconSize * 0.7);
+            context.lineTo(0, -iconSize * 0.15);
+            context.moveTo(0, iconSize * 0.15);
+            context.lineTo(0, iconSize * 0.7);
+            context.stroke();
+        } else if (id.startsWith('damage_aura')) {
+            // Radiating damage icon
+            context.beginPath();
+            context.arc(0, 0, iconSize * 0.25, 0, Math.PI * 2);
+            context.fill();
+            // Outer waves
+            context.beginPath();
+            context.arc(0, 0, iconSize * 0.45, 0, Math.PI * 2);
+            context.stroke();
+            context.beginPath();
+            context.arc(0, 0, iconSize * 0.65, 0, Math.PI * 2);
+            context.globalAlpha = 0.5;
+            context.stroke();
+            context.globalAlpha = 1;
+        } else {
+            // Generic star
+            context.beginPath();
+            for (let i = 0; i < 5; i++) {
+                const angle = (Math.PI * 2 / 5) * i - Math.PI / 2;
+                const outerX = Math.cos(angle) * iconSize * 0.6;
+                const outerY = Math.sin(angle) * iconSize * 0.6;
+                const innerAngle = angle + Math.PI / 5;
+                const innerX = Math.cos(innerAngle) * iconSize * 0.25;
+                const innerY = Math.sin(innerAngle) * iconSize * 0.25;
+                if (i === 0) context.moveTo(outerX, outerY);
+                else context.lineTo(outerX, outerY);
+                context.lineTo(innerX, innerY);
+            }
+            context.closePath();
+            context.fill();
+        }
+    }
+
+    drawWeaponIcon(context, rX, iconSize) {
+        // Get gun type from reward id (e.g., 'shotgun_common' -> 'shotgun')
+        const gunType = this.reward.id ? this.reward.id.split('_')[0] : 'default';
+
+        context.strokeStyle = '#ffffff';
+        context.fillStyle = '#ffffff';
+        context.lineWidth = 2 * rX;
+
+        switch (gunType) {
+            case 'shotgun':
+                // Three spread lines
+                for (let i = -1; i <= 1; i++) {
+                    const angle = i * 0.4;
+                    context.beginPath();
+                    context.moveTo(0, 0);
+                    context.lineTo(Math.cos(angle) * iconSize, Math.sin(angle) * iconSize);
+                    context.stroke();
+                }
+                // Base circle
+                context.beginPath();
+                context.arc(0, 0, iconSize * 0.2, 0, Math.PI * 2);
+                context.fill();
+                break;
+
+            case 'rapidfire':
+                // Multiple small bullets in a line
+                for (let i = 0; i < 3; i++) {
+                    context.beginPath();
+                    context.arc(iconSize * 0.3 * i - iconSize * 0.3, 0, iconSize * 0.15, 0, Math.PI * 2);
+                    context.fill();
+                }
+                // Speed lines
+                for (let i = 0; i < 2; i++) {
+                    context.beginPath();
+                    context.moveTo(-iconSize * 0.6, iconSize * 0.3 * (i - 0.5));
+                    context.lineTo(-iconSize * 0.3, iconSize * 0.3 * (i - 0.5));
+                    context.stroke();
+                }
+                break;
+
+            case 'piercing':
+                // Arrow piercing through
+                context.beginPath();
+                context.moveTo(-iconSize * 0.8, 0);
+                context.lineTo(iconSize * 0.8, 0);
+                context.stroke();
+                // Arrow head
+                context.beginPath();
+                context.moveTo(iconSize * 0.8, 0);
+                context.lineTo(iconSize * 0.4, -iconSize * 0.3);
+                context.moveTo(iconSize * 0.8, 0);
+                context.lineTo(iconSize * 0.4, iconSize * 0.3);
+                context.stroke();
+                // Through rings
+                context.beginPath();
+                context.arc(-iconSize * 0.2, 0, iconSize * 0.25, 0, Math.PI * 2);
+                context.stroke();
+                context.beginPath();
+                context.arc(iconSize * 0.2, 0, iconSize * 0.25, 0, Math.PI * 2);
+                context.stroke();
+                break;
+
+            case 'ricochet':
+                // Bouncing path
+                context.beginPath();
+                context.moveTo(-iconSize * 0.7, iconSize * 0.4);
+                context.lineTo(-iconSize * 0.2, -iconSize * 0.4);
+                context.lineTo(iconSize * 0.3, iconSize * 0.4);
+                context.lineTo(iconSize * 0.7, -iconSize * 0.2);
+                context.stroke();
+                // Bounce markers
+                context.beginPath();
+                context.arc(-iconSize * 0.2, -iconSize * 0.4, iconSize * 0.1, 0, Math.PI * 2);
+                context.fill();
+                context.beginPath();
+                context.arc(iconSize * 0.3, iconSize * 0.4, iconSize * 0.1, 0, Math.PI * 2);
+                context.fill();
+                break;
+
+            case 'homing':
+                // Target crosshair
+                context.beginPath();
+                context.arc(0, 0, iconSize * 0.5, 0, Math.PI * 2);
+                context.stroke();
+                context.beginPath();
+                context.moveTo(-iconSize * 0.7, 0);
+                context.lineTo(-iconSize * 0.3, 0);
+                context.moveTo(iconSize * 0.3, 0);
+                context.lineTo(iconSize * 0.7, 0);
+                context.moveTo(0, -iconSize * 0.7);
+                context.lineTo(0, -iconSize * 0.3);
+                context.moveTo(0, iconSize * 0.3);
+                context.lineTo(0, iconSize * 0.7);
+                context.stroke();
+                // Center dot
+                context.beginPath();
+                context.arc(0, 0, iconSize * 0.1, 0, Math.PI * 2);
+                context.fill();
+                break;
+
+            case 'twin':
+                // Two parallel bullets
+                context.beginPath();
+                context.arc(0, -iconSize * 0.3, iconSize * 0.2, 0, Math.PI * 2);
+                context.fill();
+                context.beginPath();
+                context.arc(0, iconSize * 0.3, iconSize * 0.2, 0, Math.PI * 2);
+                context.fill();
+                // Trail lines
+                context.beginPath();
+                context.moveTo(-iconSize * 0.5, -iconSize * 0.3);
+                context.lineTo(-iconSize * 0.2, -iconSize * 0.3);
+                context.moveTo(-iconSize * 0.5, iconSize * 0.3);
+                context.lineTo(-iconSize * 0.2, iconSize * 0.3);
+                context.stroke();
+                break;
+
+            case 'nova':
+                // Starburst pattern
+                for (let i = 0; i < 8; i++) {
+                    const angle = (Math.PI * 2 / 8) * i;
+                    context.beginPath();
+                    context.moveTo(0, 0);
+                    context.lineTo(Math.cos(angle) * iconSize * 0.7, Math.sin(angle) * iconSize * 0.7);
+                    context.stroke();
+                }
+                // Center
+                context.beginPath();
+                context.arc(0, 0, iconSize * 0.15, 0, Math.PI * 2);
+                context.fill();
+                break;
+
+            case 'chain':
+                // Lightning bolt
+                context.beginPath();
+                context.moveTo(-iconSize * 0.5, -iconSize * 0.6);
+                context.lineTo(-iconSize * 0.1, -iconSize * 0.1);
+                context.lineTo(iconSize * 0.2, -iconSize * 0.2);
+                context.lineTo(-iconSize * 0.1, iconSize * 0.3);
+                context.lineTo(iconSize * 0.3, iconSize * 0.1);
+                context.lineTo(iconSize * 0.5, iconSize * 0.6);
+                context.stroke();
+                // Electric sparks
+                context.beginPath();
+                context.arc(iconSize * 0.4, -iconSize * 0.3, iconSize * 0.08, 0, Math.PI * 2);
+                context.fill();
+                context.beginPath();
+                context.arc(-iconSize * 0.3, iconSize * 0.4, iconSize * 0.08, 0, Math.PI * 2);
+                context.fill();
+                break;
+
+            default:
+                // Default bullet/projectile icon
                 context.beginPath();
                 context.moveTo(-iconSize, 0);
                 context.lineTo(iconSize, 0);
                 context.lineTo(iconSize * 0.5, -iconSize * 0.5);
                 context.moveTo(iconSize, 0);
                 context.lineTo(iconSize * 0.5, iconSize * 0.5);
-                context.strokeStyle = '#ffffff';
                 context.lineWidth = 3 * rX;
                 context.stroke();
-                break;
-
-            case CATEGORY.COOLDOWN:
-                // Clock icon
-                context.beginPath();
-                context.arc(0, 0, iconSize * 0.7, 0, Math.PI * 2);
-                context.strokeStyle = '#ffffff';
-                context.lineWidth = 2 * rX;
-                context.stroke();
-                context.beginPath();
-                context.moveTo(0, 0);
-                context.lineTo(0, -iconSize * 0.5);
-                context.moveTo(0, 0);
-                context.lineTo(iconSize * 0.3, 0);
-                context.stroke();
-                break;
-
-            case CATEGORY.SURVIVABILITY:
-                // Heart/shield icon
-                context.beginPath();
-                context.moveTo(0, iconSize * 0.5);
-                context.lineTo(-iconSize * 0.6, -iconSize * 0.2);
-                context.lineTo(0, -iconSize * 0.6);
-                context.lineTo(iconSize * 0.6, -iconSize * 0.2);
-                context.closePath();
-                context.fill();
-                break;
-
-            case CATEGORY.MOVEMENT:
-                // Arrow/speed icon
-                context.beginPath();
-                context.moveTo(-iconSize * 0.6, 0);
-                context.lineTo(iconSize * 0.6, 0);
-                context.lineTo(iconSize * 0.2, -iconSize * 0.4);
-                context.moveTo(iconSize * 0.6, 0);
-                context.lineTo(iconSize * 0.2, iconSize * 0.4);
-                context.strokeStyle = '#ffffff';
-                context.lineWidth = 3 * rX;
-                context.stroke();
-                break;
-
-            case CATEGORY.OFFENSE:
-                // Star/damage icon
-                context.beginPath();
-                for (let i = 0; i < 5; i++) {
-                    const angle = (Math.PI * 2 / 5) * i - Math.PI / 2;
-                    const outerX = Math.cos(angle) * iconSize * 0.6;
-                    const outerY = Math.sin(angle) * iconSize * 0.6;
-                    const innerAngle = angle + Math.PI / 5;
-                    const innerX = Math.cos(innerAngle) * iconSize * 0.25;
-                    const innerY = Math.sin(innerAngle) * iconSize * 0.25;
-
-                    if (i === 0) {
-                        context.moveTo(outerX, outerY);
-                    } else {
-                        context.lineTo(outerX, outerY);
-                    }
-                    context.lineTo(innerX, innerY);
-                }
-                context.closePath();
-                context.fill();
                 break;
         }
     }
