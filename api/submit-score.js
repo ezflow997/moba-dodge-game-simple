@@ -161,6 +161,23 @@ async function updatePlayerScore(playerName, difficulty, score, kills, bestStrea
     return { updated: true, data: data };
 }
 
+async function updatePlayerTimestamp(playerName) {
+    const url = `${SUPABASE_URL}/rest/v1/leaderboard?player_name=eq.${encodeURIComponent(playerName)}`;
+    const response = await fetch(url, {
+        method: 'PATCH',
+        headers: getHeaders(),
+        body: JSON.stringify({
+            updated_at: new Date().toISOString()
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+    }
+
+    return { timestampUpdated: true };
+}
+
 export default async function handler(req, res) {
     // Always set CORS headers first
     setCorsHeaders(res);
@@ -235,13 +252,16 @@ export default async function handler(req, res) {
             // Get current score for this difficulty
             const currentScore = existing[cols.score] || 0;
 
-            // Only update if new score is higher
+            // Check if new score is higher
             if (score > currentScore) {
+                // Update score, kills, streak, and timestamp
                 const result = await updatePlayerScore(name, diff, score, kills || 0, bestStreak || 0);
-                return res.status(200).json({ updated: true, ...result });
+                return res.status(200).json({ updated: true, newHighScore: true, ...result });
+            } else {
+                // Score not higher, but still update timestamp for daily leaderboard
+                await updatePlayerTimestamp(name);
+                return res.status(200).json({ updated: true, newHighScore: false, reason: 'Timestamp updated for daily leaderboard' });
             }
-
-            return res.status(200).json({ updated: false, reason: 'Existing score is higher' });
         } else {
             console.log('New player - creating account');
 
