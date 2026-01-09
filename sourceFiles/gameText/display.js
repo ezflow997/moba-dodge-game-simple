@@ -16,6 +16,13 @@ export class Display{
         // Animation state
         this.streakPulse = 0;
         this.killFlash = 0;
+
+        // Boss progress tracking
+        this.bossProgress = 0;
+        this.bossThreshold = 50;
+        this.bossDefeated = 0;
+        this.bossActive = false;
+        this.bossPulse = 0;
     }
     reset(){
         this.scoreText = 0;
@@ -27,6 +34,13 @@ export class Display{
 
         this.streakPulse = 0;
         this.killFlash = 0;
+
+        // Reset boss progress
+        this.bossProgress = 0;
+        this.bossThreshold = 50;
+        this.bossDefeated = 0;
+        this.bossActive = false;
+        this.bossPulse = 0;
     }
     update(game){
         const prevKills = this.enemyTakeDowns;
@@ -48,6 +62,13 @@ export class Display{
 
         // Pulse animation for streak
         this.streakPulse += 0.15;
+
+        // Update boss progress from enemies controller
+        this.bossProgress = game.enemies.bossTowardsScore;
+        this.bossThreshold = game.enemies.bossScoreThreshold * (game.enemies.bossDefeated + 1);
+        this.bossDefeated = game.enemies.bossDefeated;
+        this.bossActive = game.enemies.bossActive;
+        this.bossPulse += 0.1;
 
         this.eCoolDownTime = (game.player.eCoolDown - game.player.eCoolDownElapsed);
         this.fCoolDownTime = (game.player.fCoolDown - game.player.fCoolDownElapsed);
@@ -131,7 +152,151 @@ export class Display{
             context.shadowBlur = 0;
         }
 
+        // === BOSS PROGRESS BAR (Below score) ===
+        this.drawBossProgress(context, centerX, topY + 40 * rY, rX, rY);
+
         context.restore();
+    }
+
+    /**
+     * Draw boss progress indicator
+     */
+    drawBossProgress(context, centerX, y, rX, rY) {
+        const barWidth = 200 * rX;
+        const barHeight = 12 * rY;
+        const barX = centerX - barWidth / 2;
+
+        context.save();
+
+        if (this.bossActive) {
+            // Boss is active - show "BOSS FIGHT" indicator
+            const pulse = 1 + Math.sin(this.bossPulse * 2) * 0.1;
+            const fontSize = 18 * rX * pulse;
+
+            context.font = `bold ${fontSize}px Arial`;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+
+            // Pulsing red glow
+            context.shadowColor = '#ff0000';
+            context.shadowBlur = 15 * rX + Math.sin(this.bossPulse * 2) * 5;
+            context.fillStyle = '#ff4444';
+
+            const bossNum = this.bossDefeated + 1;
+            context.fillText(`BOSS ${bossNum}`, centerX, y);
+        } else {
+            // Show progress bar towards next boss
+            const progress = Math.min(this.bossProgress / this.bossThreshold, 1);
+            const killsNeeded = Math.ceil(this.bossThreshold / 10); // Each kill = 10 score
+            const currentKills = Math.floor(this.bossProgress / 10);
+
+            // Background bar
+            context.fillStyle = 'rgba(40, 40, 60, 0.7)';
+            context.strokeStyle = 'rgba(100, 100, 150, 0.5)';
+            context.lineWidth = 1;
+            this.roundRect(context, barX, y - barHeight / 2, barWidth, barHeight, 4);
+            context.fill();
+            context.stroke();
+
+            // Progress fill with gradient
+            if (progress > 0) {
+                const fillWidth = barWidth * progress;
+                const gradient = context.createLinearGradient(barX, 0, barX + barWidth, 0);
+
+                // Color shifts from cyan to red as progress increases
+                if (progress < 0.5) {
+                    gradient.addColorStop(0, '#00aaff');
+                    gradient.addColorStop(1, '#00ffaa');
+                } else if (progress < 0.8) {
+                    gradient.addColorStop(0, '#ffaa00');
+                    gradient.addColorStop(1, '#ff6600');
+                } else {
+                    // Near boss spawn - pulsing effect
+                    const pulseIntensity = 0.3 + Math.sin(this.bossPulse * 3) * 0.2;
+                    gradient.addColorStop(0, '#ff4400');
+                    gradient.addColorStop(1, `rgba(255, 0, 0, ${0.8 + pulseIntensity})`);
+                }
+
+                context.fillStyle = gradient;
+                this.roundRect(context, barX, y - barHeight / 2, fillWidth, barHeight, 4);
+                context.fill();
+
+                // Glow effect when near full
+                if (progress >= 0.8) {
+                    context.shadowColor = '#ff0000';
+                    context.shadowBlur = 10 * rX * (1 + Math.sin(this.bossPulse * 3) * 0.3);
+                }
+            }
+
+            // Boss icon on the right side of bar
+            this.drawBossIcon(context, barX + barWidth + 15 * rX, y, 10 * rX, progress);
+
+            // Progress text
+            const textSize = 11 * rX;
+            context.font = `bold ${textSize}px Arial`;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.shadowColor = '#000000';
+            context.shadowBlur = 3;
+            context.fillStyle = '#ffffff';
+            context.fillText(`${currentKills}/${killsNeeded}`, centerX, y);
+        }
+
+        context.restore();
+    }
+
+    /**
+     * Draw a small boss skull icon
+     */
+    drawBossIcon(context, x, y, size, progress) {
+        context.save();
+
+        // Color based on progress
+        let color = '#666688';
+        if (progress >= 0.8) {
+            const pulse = 0.7 + Math.sin(this.bossPulse * 3) * 0.3;
+            color = `rgba(255, ${Math.floor(80 * (1 - pulse))}, ${Math.floor(80 * (1 - pulse))}, 1)`;
+        } else if (progress >= 0.5) {
+            color = '#ffaa44';
+        }
+
+        context.fillStyle = color;
+
+        // Simple skull shape
+        context.beginPath();
+        context.arc(x, y - size * 0.2, size * 0.8, Math.PI, 0, false);
+        context.lineTo(x + size * 0.8, y + size * 0.3);
+        context.lineTo(x + size * 0.4, y + size * 0.5);
+        context.lineTo(x - size * 0.4, y + size * 0.5);
+        context.lineTo(x - size * 0.8, y + size * 0.3);
+        context.closePath();
+        context.fill();
+
+        // Eyes
+        context.fillStyle = '#000';
+        context.beginPath();
+        context.arc(x - size * 0.3, y, size * 0.15, 0, Math.PI * 2);
+        context.arc(x + size * 0.3, y, size * 0.15, 0, Math.PI * 2);
+        context.fill();
+
+        context.restore();
+    }
+
+    /**
+     * Helper to draw rounded rectangles
+     */
+    roundRect(context, x, y, width, height, radius) {
+        context.beginPath();
+        context.moveTo(x + radius, y);
+        context.lineTo(x + width - radius, y);
+        context.quadraticCurveTo(x + width, y, x + width, y + radius);
+        context.lineTo(x + width, y + height - radius);
+        context.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        context.lineTo(x + radius, y + height);
+        context.quadraticCurveTo(x, y + height, x, y + height - radius);
+        context.lineTo(x, y + radius);
+        context.quadraticCurveTo(x, y, x + radius, y);
+        context.closePath();
     }
 
     /**

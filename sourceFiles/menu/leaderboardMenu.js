@@ -8,7 +8,7 @@ export class LeaderboardMenu {
 
         this.isVisible = false;
         this.currentDifficulty = 0;
-        this.difficulties = ['EASY', 'MEDIUM', 'HARD', 'EXPERT', 'INSANE'];
+        this.difficulties = ['EASY', 'MEDIUM', 'HARD', 'EXPERT', 'INSANE', 'RANKED'];
 
         this.leaderboardData = [];
         this.isLoading = false;
@@ -185,6 +185,10 @@ export class LeaderboardMenu {
         this.goToResult(prevIndex);
     }
 
+    isRankedMode() {
+        return this.difficulties[this.currentDifficulty] === 'RANKED';
+    }
+
     async loadLeaderboard() {
         this.isLoading = true;
         this.loadError = null;
@@ -194,12 +198,24 @@ export class LeaderboardMenu {
                 page: this.currentPage,
                 isDaily: this.isDaily
             });
-            const result = await this.supabase.getLeaderboard(
-                this.difficulties[this.currentDifficulty],
-                this.entriesPerPage,
-                this.currentPage,
-                this.isDaily
-            );
+
+            let result;
+            if (this.isRankedMode()) {
+                // Fetch ranked ELO leaderboard
+                result = await this.supabase.getRankedLeaderboard(
+                    this.entriesPerPage,
+                    this.currentPage
+                );
+            } else {
+                // Fetch regular score leaderboard
+                result = await this.supabase.getLeaderboard(
+                    this.difficulties[this.currentDifficulty],
+                    this.entriesPerPage,
+                    this.currentPage,
+                    this.isDaily
+                );
+            }
+
             console.log('[Leaderboard] Result:', result);
             this.leaderboardData = result.entries || [];
             this.totalPages = result.pagination?.totalPages || 1;
@@ -235,52 +251,58 @@ export class LeaderboardMenu {
         const rX = window.innerWidth / 2560;
         const rY = window.innerHeight / 1440;
 
-        // Search field click detection (positioned at 730, 325, width 750, height 45)
-        const searchX = 730 * rX;
-        const searchY = 325 * rY;
-        const searchW = 750 * rX;
-        const searchH = 45 * rY;
-        const inSearchBox = inX >= searchX && inX <= searchX + searchW && inY >= searchY && inY <= searchY + searchH;
+        // Search functionality - only for non-ranked modes
+        if (!this.isRankedMode()) {
+            // Search field click detection (positioned at 730, 325, width 750, height 45)
+            const searchX = 730 * rX;
+            const searchY = 325 * rY;
+            const searchW = 750 * rX;
+            const searchH = 45 * rY;
+            const inSearchBox = inX >= searchX && inX <= searchX + searchW && inY >= searchY && inY <= searchY + searchH;
 
-        if (game.input.buttons.indexOf(0) > -1 && !this.clicked) {
-            if (inSearchBox) {
-                this.searchActive = true;
-                this.clicked = true;
-                if (window.gameSound) window.gameSound.playMenuClick();
-            } else {
-                // Clicked outside search box - deactivate it
-                this.searchActive = false;
-            }
-        }
-
-        // Search result navigation buttons
-        if (this.searchResults.length > 1) {
-            this.prevResultButton.update(inX, inY);
-            if (this.prevResultButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
-                this.clicked = true;
-                if (window.gameSound) window.gameSound.playMenuClick();
-                this.prevSearchResult();
+            if (game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                if (inSearchBox) {
+                    this.searchActive = true;
+                    this.clicked = true;
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                } else {
+                    // Clicked outside search box - deactivate it
+                    this.searchActive = false;
+                }
             }
 
-            this.nextResultButton.update(inX, inY);
-            if (this.nextResultButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
-                this.clicked = true;
-                if (window.gameSound) window.gameSound.playMenuClick();
-                this.nextSearchResult();
-            }
-        }
+            // Search result navigation buttons
+            if (this.searchResults.length > 1) {
+                this.prevResultButton.update(inX, inY);
+                if (this.prevResultButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                    this.clicked = true;
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    this.prevSearchResult();
+                }
 
-        // Clear search button
-        if (this.searchQuery.length > 0) {
-            this.clearSearchButton.update(inX, inY);
-            if (this.clearSearchButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
-                this.clicked = true;
-                if (window.gameSound) window.gameSound.playMenuClick();
-                this.searchQuery = '';
-                this.searchResults = [];
-                this.currentResultIndex = 0;
-                this.highlightedPlayer = null;
+                this.nextResultButton.update(inX, inY);
+                if (this.nextResultButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                    this.clicked = true;
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    this.nextSearchResult();
+                }
             }
+
+            // Clear search button
+            if (this.searchQuery.length > 0) {
+                this.clearSearchButton.update(inX, inY);
+                if (this.clearSearchButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                    this.clicked = true;
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    this.searchQuery = '';
+                    this.searchResults = [];
+                    this.currentResultIndex = 0;
+                    this.highlightedPlayer = null;
+                }
+            }
+        } else {
+            // Deactivate search when switching to ranked mode
+            this.searchActive = false;
         }
 
         // Previous difficulty
@@ -288,12 +310,12 @@ export class LeaderboardMenu {
         if (this.prevDiffButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
             this.clicked = true;
             if (window.gameSound) window.gameSound.playMenuClick();
-            this.currentDifficulty = (this.currentDifficulty - 1 + 5) % 5;
+            this.currentDifficulty = (this.currentDifficulty - 1 + this.difficulties.length) % this.difficulties.length;
             this.currentPage = 1;
             this.searchResults = [];
             this.highlightedPlayer = null;
             this.loadLeaderboard();
-            if (this.searchQuery.length > 0) this.performSearch();
+            if (this.searchQuery.length > 0 && !this.isRankedMode()) this.performSearch();
         }
 
         // Next difficulty
@@ -301,26 +323,28 @@ export class LeaderboardMenu {
         if (this.nextDiffButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
             this.clicked = true;
             if (window.gameSound) window.gameSound.playMenuClick();
-            this.currentDifficulty = (this.currentDifficulty + 1) % 5;
+            this.currentDifficulty = (this.currentDifficulty + 1) % this.difficulties.length;
             this.currentPage = 1;
             this.searchResults = [];
             this.highlightedPlayer = null;
             this.loadLeaderboard();
-            if (this.searchQuery.length > 0) this.performSearch();
+            if (this.searchQuery.length > 0 && !this.isRankedMode()) this.performSearch();
         }
 
-        // Daily toggle
-        this.dailyToggleButton.update(inX, inY);
-        if (this.dailyToggleButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
-            this.clicked = true;
-            if (window.gameSound) window.gameSound.playMenuClick();
-            this.isDaily = !this.isDaily;
-            this.dailyToggleButton.text = this.isDaily ? "Today" : "All Time";
-            this.currentPage = 1;
-            this.searchResults = [];
-            this.highlightedPlayer = null;
-            this.loadLeaderboard();
-            if (this.searchQuery.length > 0) this.performSearch();
+        // Daily toggle - only for non-ranked modes
+        if (!this.isRankedMode()) {
+            this.dailyToggleButton.update(inX, inY);
+            if (this.dailyToggleButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.isDaily = !this.isDaily;
+                this.dailyToggleButton.text = this.isDaily ? "Today" : "All Time";
+                this.currentPage = 1;
+                this.searchResults = [];
+                this.highlightedPlayer = null;
+                this.loadLeaderboard();
+                if (this.searchQuery.length > 0) this.performSearch();
+            }
         }
 
         // First page
@@ -441,14 +465,20 @@ export class LeaderboardMenu {
         this.prevDiffButton.draw(context);
         const diffText = this.difficulties[this.currentDifficulty];
         const diffOffset = (diffText.length * 28) / 2;
-        this.super.drawGlowText(context, 1280 - diffOffset, 275, diffText, 60, '#ff00ff', '#ff00ff', 12);
+        // Use gold color for RANKED, magenta for others
+        const diffColor = this.isRankedMode() ? '#ffaa00' : '#ff00ff';
+        this.super.drawGlowText(context, 1280 - diffOffset, 275, diffText, 60, diffColor, diffColor, 12);
         this.nextDiffButton.draw(context);
 
-        // Daily toggle button
-        this.dailyToggleButton.draw(context);
+        // Daily toggle button - hide for ranked mode
+        if (!this.isRankedMode()) {
+            this.dailyToggleButton.draw(context);
+        }
 
-        // Search input field
-        this.drawSearchField(context, rX, rY);
+        // Search input field - hide for ranked mode (no search support yet)
+        if (!this.isRankedMode()) {
+            this.drawSearchField(context, rX, rY);
+        }
 
         // Loading/error state
         if (this.isLoading) {
@@ -543,7 +573,8 @@ export class LeaderboardMenu {
         }
 
         // Total entries count (above pagination buttons)
-        const totalText = `${this.totalEntries} total entries`;
+        const totalLabel = this.isRankedMode() ? 'players' : 'entries';
+        const totalText = `${this.totalEntries} total ${totalLabel}`;
         this.super.drawGlowText(context, 1240, 955, totalText, 24, '#888888', '#666666', 4);
 
         // Page indicator
@@ -574,20 +605,26 @@ export class LeaderboardMenu {
     drawLeaderboardEntries(context, rX, rY) {
         const startY = 420;
         const rowHeight = 50;
+        const isRanked = this.isRankedMode();
 
         // Column positions - spread across the wider panel
         const colRank = 730;
         const colName = 820;
-        const colScore = 1200;
-        const colKills = 1450;
-        const colStreak = 1680;
+        const colScore = 1200;  // ELO for ranked
+        const colKills = 1450;  // Games for ranked
+        const colStreak = 1680; // Not used for ranked
 
         // Header row
         this.super.drawGlowText(context, colRank, startY, "#", 38, '#888888', '#666666', 6);
         this.super.drawGlowText(context, colName, startY, "NAME", 38, '#888888', '#666666', 6);
-        this.super.drawGlowText(context, colScore, startY, "SCORE", 38, '#888888', '#666666', 6);
-        this.super.drawGlowText(context, colKills, startY, "KILLS", 38, '#888888', '#666666', 6);
-        this.super.drawGlowText(context, colStreak, startY, "STREAK", 38, '#888888', '#666666', 6);
+        if (isRanked) {
+            this.super.drawGlowText(context, colScore, startY, "ELO", 38, '#888888', '#666666', 6);
+            this.super.drawGlowText(context, colKills, startY, "GAMES", 38, '#888888', '#666666', 6);
+        } else {
+            this.super.drawGlowText(context, colScore, startY, "SCORE", 38, '#888888', '#666666', 6);
+            this.super.drawGlowText(context, colKills, startY, "KILLS", 38, '#888888', '#666666', 6);
+            this.super.drawGlowText(context, colStreak, startY, "STREAK", 38, '#888888', '#666666', 6);
+        }
 
         // Separator line
         context.save();
@@ -601,10 +638,20 @@ export class LeaderboardMenu {
 
         // Data rows
         if (this.leaderboardData.length === 0) {
-            const noDataMsg = this.isDaily ? "No scores today!" : "No scores yet!";
+            let noDataMsg, subMsg;
+            if (isRanked) {
+                noDataMsg = "No ranked players yet!";
+                subMsg = "Play ranked to get on the leaderboard!";
+            } else if (this.isDaily) {
+                noDataMsg = "No scores today!";
+                subMsg = null;
+            } else {
+                noDataMsg = "No scores yet!";
+                subMsg = "Be the first to play!";
+            }
             this.super.drawGlowText(context, 1100, 600, noDataMsg, 50, '#888888', '#666666', 10);
-            if (!this.isDaily) {
-                this.super.drawGlowText(context, 1030, 680, "Be the first to play!", 40, '#666666', '#444444', 6);
+            if (subMsg) {
+                this.super.drawGlowText(context, 1030, 680, subMsg, 40, '#666666', '#444444', 6);
             }
             return;
         }
@@ -659,22 +706,35 @@ export class LeaderboardMenu {
             this.super.drawGlowText(context, colRank, y, actualRank.toString(), 34, rankColor, glowColor, 8);
 
             // Name (truncate to 12 chars) - brighter if highlighted
-            const displayName = entry.player_name.length > 12
-                ? entry.player_name.substring(0, 12) + '...'
-                : entry.player_name;
+            const playerName = entry.player_name || entry.playerName || 'Unknown';
+            const displayName = playerName.length > 12
+                ? playerName.substring(0, 12) + '...'
+                : playerName;
             const nameColor = isHighlighted ? '#00ffff' : '#ffffff';
             const nameGlow = isHighlighted ? '#00ffff' : '#00ffff';
             const nameGlowSize = isHighlighted ? 15 : 8;
             this.super.drawGlowText(context, colName, y, displayName, 34, nameColor, nameGlow, nameGlowSize);
 
-            // Score
-            this.super.drawGlowText(context, colScore, y, entry.score.toString(), 34, '#00ff88', '#00ff00', 8);
+            if (isRanked) {
+                // ELO
+                const elo = entry.elo || 1000;
+                const eloColor = elo >= 1000 ? '#00ff88' : '#ff8888';
+                const eloGlow = elo >= 1000 ? '#00ff00' : '#ff4444';
+                this.super.drawGlowText(context, colScore, y, elo.toString(), 34, eloColor, eloGlow, 8);
 
-            // Kills
-            this.super.drawGlowText(context, colKills, y, entry.kills.toString(), 34, '#ff8888', '#ff4444', 8);
+                // Games played
+                const games = entry.games_played || entry.gamesPlayed || 0;
+                this.super.drawGlowText(context, colKills, y, games.toString(), 34, '#88ffff', '#00ffff', 8);
+            } else {
+                // Score
+                this.super.drawGlowText(context, colScore, y, entry.score.toString(), 34, '#00ff88', '#00ff00', 8);
 
-            // Best Streak
-            this.super.drawGlowText(context, colStreak, y, entry.best_streak.toString(), 34, '#ffff88', '#ffff00', 8);
+                // Kills
+                this.super.drawGlowText(context, colKills, y, entry.kills.toString(), 34, '#ff8888', '#ff4444', 8);
+
+                // Best Streak
+                this.super.drawGlowText(context, colStreak, y, entry.best_streak.toString(), 34, '#ffff88', '#ffff00', 8);
+            }
         }
     }
 }

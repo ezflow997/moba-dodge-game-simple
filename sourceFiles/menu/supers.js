@@ -201,9 +201,13 @@ export class superFunctions {
                 context.shadowBlur = 15 * rX;
                 context.fillStyle = '#ffdd00';
 
-                // Draw star decorations
-                this.drawStar(context, centerX - 200 * rX, messageY, 15 * rX, time);
-                this.drawStar(context, centerX + 200 * rX, messageY, 15 * rX, time + 1);
+                // Measure text width to position stars outside of it
+                const textWidth = context.measureText(menu.showMessage).width;
+                const starOffset = (textWidth / 2) + 30 * rX;
+
+                // Draw star decorations outside the text
+                this.drawStar(context, centerX - starOffset, messageY, 15 * rX, time);
+                this.drawStar(context, centerX + starOffset, messageY, 15 * rX, time + 1);
             } else {
                 context.shadowColor = '#00ffff';
                 context.shadowBlur = 10 * rX;
