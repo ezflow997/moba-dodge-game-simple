@@ -355,12 +355,12 @@ export class ShopMenu {
         // Draw close button
         this.closeButton.draw(context);
 
-        // Draw message
+        // Draw message (above close button)
         if (this.message && Date.now() - this.messageTime < 3000) {
-            context.font = `${24 * rX}px Arial`;
+            context.font = `bold ${22 * rX}px Arial`;
             context.textAlign = 'center';
             context.fillStyle = this.message.isError ? '#ff4444' : '#00ff88';
-            context.fillText(this.message.text, centerX, panelY + panelH - 25 * rY);
+            context.fillText(this.message.text, centerX, panelY + panelH - 115 * rY);
         }
 
         context.restore();

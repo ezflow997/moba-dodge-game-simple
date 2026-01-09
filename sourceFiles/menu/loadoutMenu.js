@@ -88,15 +88,30 @@ export class LoadoutMenu {
         return this.selectedRewards.filter(r => r.id === rewardId).length;
     }
 
-    // Check if we can add more of this reward
+    // Check if a gun is already selected
+    hasGunSelected() {
+        return this.selectedRewards.some(r => r.category === CATEGORY.GUN);
+    }
+
+    // Check if we can add this reward
     canAddReward(rewardId) {
         const data = this.inventory[rewardId];
         if (!data) return false;
 
-        if (data.permanentUnlock) return true; // Unlimited for permanent
+        // Each item can only be selected once
+        if (this.getSelectedCount(rewardId) > 0) return false;
 
-        const selectedCount = this.getSelectedCount(rewardId);
-        return selectedCount < data.quantity;
+        // Find the reward to check its category
+        const reward = Object.values(REWARDS).find(r => r.id === rewardId);
+        if (!reward) return false;
+
+        // Only one gun can be selected at a time
+        if (reward.category === CATEGORY.GUN && this.hasGunSelected()) return false;
+
+        // For non-permanent items, check quantity
+        if (!data.permanentUnlock && data.quantity <= 0) return false;
+
+        return true;
     }
 
     // Add a reward to selection
@@ -249,11 +264,8 @@ export class LoadoutMenu {
                 if (window.gameSound) window.gameSound.playMenuClick();
 
                 const item = available[itemIndex];
-                // Toggle: if already selected max times, remove one; otherwise add one
-                const selectedCount = this.getSelectedCount(item.reward.id);
-                const maxSelectable = item.isPermanent ? 999 : item.quantity;
-
-                if (selectedCount >= maxSelectable) {
+                // Toggle: if selected, remove; if not selected, try to add
+                if (this.getSelectedCount(item.reward.id) > 0) {
                     this.removeReward(item.reward.id);
                 } else {
                     this.addReward(item.reward);
@@ -385,8 +397,9 @@ export class LoadoutMenu {
 
             if (itemY + itemHeight < gridTop || itemY > gridTop + listH) continue;
 
-            const selectedCount = this.getSelectedCount(item.reward.id);
-            const isSelected = selectedCount > 0;
+            const isSelected = this.getSelectedCount(item.reward.id) > 0;
+            const canAdd = this.canAddReward(item.reward.id);
+            const isDisabled = !isSelected && !canAdd;
 
             // Item background
             context.beginPath();
@@ -395,6 +408,9 @@ export class LoadoutMenu {
             if (isSelected) {
                 context.fillStyle = 'rgba(0, 255, 170, 0.15)';
                 context.strokeStyle = '#00ffaa';
+            } else if (isDisabled) {
+                context.fillStyle = 'rgba(20, 20, 30, 0.6)';
+                context.strokeStyle = '#444444';
             } else {
                 context.fillStyle = 'rgba(30, 40, 60, 0.6)';
                 context.strokeStyle = item.reward.rarity.color;
@@ -404,35 +420,38 @@ export class LoadoutMenu {
             context.stroke();
 
             // Rarity bar
-            context.fillStyle = item.reward.rarity.color;
+            context.fillStyle = isDisabled ? '#444444' : item.reward.rarity.color;
             context.fillRect(listX + 5 * rX, itemY + 5 * rY, 5 * rX, itemHeight - 10 * rY);
 
             // Item name
             context.font = `bold ${18 * rX}px Arial`;
             context.textAlign = 'left';
-            context.fillStyle = item.reward.rarity.color;
+            context.fillStyle = isDisabled ? '#666666' : item.reward.rarity.color;
             context.fillText(item.reward.name, listX + 22 * rX, itemY + 28 * rY);
 
             // Description
             context.font = `${14 * rX}px Arial`;
-            context.fillStyle = '#aaaaaa';
+            context.fillStyle = isDisabled ? '#555555' : '#aaaaaa';
             context.fillText(item.reward.description, listX + 22 * rX, itemY + 50 * rY);
 
             // Quantity/status
             context.font = `${16 * rX}px Arial`;
             context.textAlign = 'right';
             if (item.isPermanent) {
-                context.fillStyle = '#00ff88';
+                context.fillStyle = isDisabled ? '#555555' : '#00ff88';
                 context.fillText('UNLIMITED', listX + listW - 20 * rX, itemY + 28 * rY);
             } else {
-                context.fillStyle = '#88ffff';
+                context.fillStyle = isDisabled ? '#555555' : '#88ffff';
                 context.fillText(`x${item.quantity}`, listX + listW - 20 * rX, itemY + 28 * rY);
             }
 
-            // Selected count
-            if (selectedCount > 0) {
+            // Selected indicator or disabled reason
+            if (isSelected) {
                 context.fillStyle = '#00ffaa';
-                context.fillText(`Selected: ${selectedCount}`, listX + listW - 20 * rX, itemY + 50 * rY);
+                context.fillText('SELECTED', listX + listW - 20 * rX, itemY + 50 * rY);
+            } else if (isDisabled && item.reward.category === CATEGORY.GUN) {
+                context.fillStyle = '#ff6666';
+                context.fillText('Gun already selected', listX + listW - 20 * rX, itemY + 50 * rY);
             }
         }
 

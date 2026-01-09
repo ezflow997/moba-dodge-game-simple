@@ -307,11 +307,6 @@ export class Menu{
         if (game.playerName) {
             this.rankedButton.draw(context);
             this.shopButton.draw(context);
-
-            // Draw shop points next to shop button
-            if (this.shopPoints > 0) {
-                this.super.drawGlowText(context, 430, 540, `${this.shopPoints.toLocaleString()} pts`, 20, '#ffcc00', '#ff8800', 5);
-            }
         }
 
         this.leaderboardButton.draw(context);
