@@ -66,7 +66,7 @@ export class LoadoutMenu {
         // Buttons
         this.startButton = new Button(0, 0, 220, 70, "Start Game", 30, 0, 0, false, true, 'white', 'white');
         this.cancelButton = new Button(0, 0, 180, 70, "Cancel", 28, 0, 0, false, true, 'white', 'white');
-        this.clearButton = new Button(0, 0, 160, 50, "Clear All", 20, 0, 0, false, true, 'white', 'white');
+        this.clearButton = new Button(0, 0, 130, 40, "Clear All", 16, 0, 0, false, true, 'white', 'white');
     }
 
     show() {
@@ -242,8 +242,8 @@ export class LoadoutMenu {
         this.cancelButton.y = refPanelBottom - 90;
         this.cancelButton.update(inX, inY);
 
-        this.clearButton.x = refCenterX + 300;
-        this.clearButton.y = refPanelTop + 70;
+        this.clearButton.x = refCenterX + 420;
+        this.clearButton.y = refPanelTop + 45;
         this.clearButton.update(inX, inY);
 
         // Handle button clicks
@@ -268,7 +268,7 @@ export class LoadoutMenu {
 
         // Update category buttons
         const refPanelLeft = refCenterX - 600;
-        const catBtnY = refPanelTop + 95;
+        const catBtnY = refPanelTop + 65;
         const catBtnStartX = refPanelLeft + 40;
 
         for (let i = 0; i < this.categories.length; i++) {
@@ -301,9 +301,9 @@ export class LoadoutMenu {
 
         // Grid coordinates (matching draw function)
         const gridLeft = refPanelLeft + 30;    // List starts at panelX + 30
-        const gridTop = refPanelTop + 160;     // Adjusted for category tabs
+        const gridTop = refPanelTop + 115;     // Adjusted for category tabs
         const gridWidth = 730;
-        const gridHeight = refPanelH - 300;
+        const gridHeight = refPanelH - 240;
         this.maxScrollOffset = Math.max(0, contentHeight - gridHeight);
 
         // Convert to screen pixels
@@ -454,18 +454,13 @@ export class LoadoutMenu {
         context.shadowBlur = 0;
 
         // Title
-        context.font = `bold ${42 * rX}px Arial`;
+        context.font = `bold ${36 * rX}px Arial`;
         context.textAlign = 'center';
         context.fillStyle = '#00ffaa';
         context.shadowColor = '#00ffaa';
         context.shadowBlur = 15 * rX;
-        context.fillText('SELECT LOADOUT', centerX, panelY + 55 * rY);
+        context.fillText('SELECT LOADOUT', centerX, panelY + 45 * rY);
         context.shadowBlur = 0;
-
-        // Subtitle
-        context.font = `${18 * rX}px Arial`;
-        context.fillStyle = '#aaaaaa';
-        context.fillText('Click to select rewards for your next game', centerX, panelY + 82 * rY);
 
         // Draw category tabs
         this.drawCategoryTabs(context, rX, rY, panelX, panelY);
@@ -485,7 +480,7 @@ export class LoadoutMenu {
     }
 
     drawCategoryTabs(context, rX, rY, panelX, panelY) {
-        const tabY = panelY + 95 * rY;
+        const tabY = panelY + 65 * rY;
         const tabStartX = panelX + 40 * rX;
 
         for (let i = 0; i < this.categories.length; i++) {
@@ -530,9 +525,9 @@ export class LoadoutMenu {
 
     drawAvailableItems(context, rX, rY, panelX, panelY, panelH) {
         const listX = panelX + 30 * rX;
-        const listY = panelY + 145 * rY;
+        const listY = panelY + 115 * rY;
         const listW = 730 * rX;
-        const listH = panelH - 290 * rY;
+        const listH = panelH - 240 * rY;
 
         // List header removed - category tabs show the current category
         const gridTop = listY;
@@ -697,7 +692,7 @@ export class LoadoutMenu {
         const listY = panelY + 130 * rY;
         const listW = 370 * rX;
 
-        // Header with clear button
+        // Header
         context.font = `bold ${22 * rX}px Arial`;
         context.textAlign = 'left';
         context.fillStyle = '#ffffff';
