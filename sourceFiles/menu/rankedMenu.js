@@ -542,17 +542,19 @@ export class RankedMenu {
     }
 
     drawMyQueuePage(context, centerX, panelY, rX, rY) {
-        // Time remaining display (live countdown)
+        // Time remaining display (live countdown) - only shows when minimum players reached
         const liveTimeRemaining = this.getLiveTimeRemaining(this.timeRemaining);
+        context.font = `${22 * rX}px Arial`;
+        context.textAlign = 'center';
         if (liveTimeRemaining !== null) {
             const minutes = Math.floor(liveTimeRemaining / 60000);
             const seconds = Math.floor((liveTimeRemaining % 60000) / 1000);
             const timeStr = `${minutes}m ${seconds}s remaining`;
-
-            context.font = `${22 * rX}px Arial`;
-            context.textAlign = 'center';
             context.fillStyle = minutes < 10 ? '#ff8844' : '#88ffff';
             context.fillText(timeStr, centerX, panelY + 160 * rY);
+        } else if (this.queueSize > 0 && this.queueSize < this.maxPlayers) {
+            context.fillStyle = '#888888';
+            context.fillText('Waiting for more players to start timer...', centerX, panelY + 160 * rY);
         }
 
         // Queue status

@@ -114,12 +114,16 @@ export default async function handler(req, res) {
 
         // Build all queues summary for the queue list view
         const allQueuesSummary = Object.entries(queues).map(([queueId, entries]) => {
-            const oldestEntry = entries.reduce((oldest, entry) => {
-                const entryTime = new Date(entry.submitted_at).getTime();
-                return entryTime < oldest ? entryTime : oldest;
-            }, Date.now());
-            const queueAge = Date.now() - oldestEntry;
-            const timeRemaining = Math.max(0, QUEUE_TIMEOUT_MS - queueAge);
+            // Only calculate time remaining if queue has minimum players
+            let timeRemaining = null;
+            if (entries.length >= MIN_PLAYERS_FOR_TOURNAMENT) {
+                const oldestEntry = entries.reduce((oldest, entry) => {
+                    const entryTime = new Date(entry.submitted_at).getTime();
+                    return entryTime < oldest ? entryTime : oldest;
+                }, Date.now());
+                const queueAge = Date.now() - oldestEntry;
+                timeRemaining = Math.max(0, QUEUE_TIMEOUT_MS - queueAge);
+            }
 
             return {
                 queueId,
@@ -153,9 +157,9 @@ export default async function handler(req, res) {
             const uniquePlayers = targetQueue.length;
             const playersReady = targetQueue.filter(p => (p.attempts || 1) >= MAX_ATTEMPTS_PER_PLAYER).length;
 
-            // Calculate queue timeout info
+            // Calculate queue timeout info - only if minimum players reached
             let timeRemaining = null;
-            if (targetQueue.length > 0) {
+            if (targetQueue.length >= MIN_PLAYERS_FOR_TOURNAMENT) {
                 const oldestEntry = targetQueue.reduce((oldest, entry) => {
                     const entryTime = new Date(entry.submitted_at).getTime();
                     return entryTime < oldest ? entryTime : oldest;
@@ -214,9 +218,9 @@ export default async function handler(req, res) {
         // Get player rank
         const playerRank = eloRecord ? await getPlayerRank(name, eloRecord.elo) : null;
 
-        // Calculate queue timeout info
+        // Calculate queue timeout info - only if minimum players reached
         let timeRemaining = null;
-        if (queue.length > 0) {
+        if (queue.length >= MIN_PLAYERS_FOR_TOURNAMENT) {
             const oldestEntry = queue.reduce((oldest, entry) => {
                 const entryTime = new Date(entry.submitted_at).getTime();
                 return entryTime < oldest ? entryTime : oldest;
