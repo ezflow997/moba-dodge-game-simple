@@ -459,7 +459,7 @@ export class RankedMenu {
         context.fillStyle = '#888888';
         const rulesStartY = infoEndY + 45;
         const rules = [
-            'EASY difficulty only',
+            'HARD difficulty only',
             `${this.maxAttempts} attempts per tournament`,
             'Best score counts for placement',
             'Resolves when complete or after 1 hour',

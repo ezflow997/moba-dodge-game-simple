@@ -433,12 +433,16 @@ window.addEventListener('load', function () {
 									} else if (result.tournamentResolved) {
 										console.log('[RANKED] Tournament resolved!');
 										game.rankedMenu.setTournamentResults(result);
+										game.rankedMenu.isVisible = true;
 									} else {
 										console.log('[RANKED] Queued successfully');
 										game.rankedMenu.setQueuedState(result);
+										game.rankedMenu.isVisible = true;
 									}
 								}).catch(err => {
 									console.error('[RANKED] Submit failed:', err);
+									game.rankedMenu.setError('Failed to submit score');
+									game.rankedMenu.show('confirm');
 								});
 							} else {
 								// Missing credentials - show error
@@ -553,7 +557,7 @@ window.addEventListener('load', function () {
 					console.log('[RANKED] Starting ranked game for:', game.playerName);
 					game.rankedMenu.hide();
 					game.isRankedGame = true;
-					game.difficulty_level = 0; // Force EASY
+					game.difficulty_level = 2; // Force HARD
 					game.gameOver = false;
 					M.mainMenuShow = false;
 					if (game.devMode) {
