@@ -49,7 +49,9 @@ export class ChargeBoss {
         this.chargeSpeed = 0;
         this.baseChargeSpeed = 45.0;
         this.chargeDirection = { x: 0, y: 0 };
-        this.chargeWindupDuration = 800; // Wind-up time in ms
+        this.baseChargeWindupDuration = 800; // Base wind-up time in ms
+        this.chargeWindupRandomDelay = 400; // Random additional delay (0-400ms)
+        this.chargeWindupDuration = this.baseChargeWindupDuration; // Current wind-up (set per charge)
         this.chargeWindupStart = 0;
         this.chargeDuration = 1200; // Charge duration in ms
         this.chargeStart = 0;
@@ -178,6 +180,9 @@ export class ChargeBoss {
         this.chargingWindup = true;
         this.chargeWindupStart = performance.now();
         this.hovering = false;
+
+        // Add random delay to wind-up duration for unpredictability
+        this.chargeWindupDuration = this.baseChargeWindupDuration + Math.random() * this.chargeWindupRandomDelay;
     }
 
     updateChargeWindup(player) {
