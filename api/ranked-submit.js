@@ -221,6 +221,41 @@ async function resolveTournament(allEntries) {
             })
         });
 
+        // Upsert history record (one entry per player, updated each tournament)
+        const historyCheck = await fetch(`${SUPABASE_URL}/rest/v1/ranked_history?player_name=eq.${encodeURIComponent(result.player_name)}&limit=1`, {
+            method: 'GET',
+            headers: getHeaders()
+        });
+        const existingHistory = await historyCheck.json();
+
+        const historyData = {
+            tournament_id: tournamentId,
+            player_name: result.player_name,
+            score: result.score,
+            placement: result.placement,
+            total_players: totalPlayers,
+            elo_before: eloBefore,
+            elo_after: eloAfter,
+            elo_change: result.eloChange,
+            resolved_at: new Date().toISOString()
+        };
+
+        if (existingHistory.length > 0) {
+            // Update existing entry
+            await fetch(`${SUPABASE_URL}/rest/v1/ranked_history?player_name=eq.${encodeURIComponent(result.player_name)}`, {
+                method: 'PATCH',
+                headers: getHeaders(),
+                body: JSON.stringify(historyData)
+            });
+        } else {
+            // Insert new entry
+            await fetch(`${SUPABASE_URL}/rest/v1/ranked_history`, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify(historyData)
+            });
+        }
+
         // Add ELO info to result for response
         result.eloBefore = eloBefore;
         result.eloAfter = eloAfter;
