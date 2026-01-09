@@ -331,9 +331,12 @@ export default async function handler(req, res) {
         if (!password || password.length < 4) {
             return res.status(400).json({ error: 'Password required' });
         }
-        if (typeof score !== 'number' || score <= 0) {
-            return res.status(400).json({ error: 'Valid score required (must be > 0)' });
+        if (typeof score !== 'number') {
+            return res.status(400).json({ error: 'Valid score required' });
         }
+
+        // Ensure score is at least 0 (negative scores count as 0)
+        const finalScore = Math.max(0, score);
 
         const name = playerName.trim();
 
@@ -378,7 +381,7 @@ export default async function handler(req, res) {
         }
 
         // Submit to queue (inserts new or updates existing)
-        const submitResult = await submitToQueue(name, score, kills, bestStreak, targetQueueId);
+        const submitResult = await submitToQueue(name, finalScore, kills, bestStreak, targetQueueId);
         const newAttemptsUsed = submitResult.attempts;
 
         // Get entries for the player's specific queue
@@ -464,7 +467,7 @@ export default async function handler(req, res) {
                 attemptsRemaining: MAX_ATTEMPTS_PER_PLAYER - newAttemptsUsed,
                 maxAttempts: MAX_ATTEMPTS_PER_PLAYER,
                 bestScore: bestScore,
-                currentScore: score,
+                currentScore: finalScore,
                 uniquePlayers: uniquePlayers,
                 playersNeeded: Math.max(0, MIN_PLAYERS_FOR_TOURNAMENT - uniquePlayers),
                 playersReady: playersReady,
