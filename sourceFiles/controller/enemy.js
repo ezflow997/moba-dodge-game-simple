@@ -144,13 +144,15 @@ export class Enemy {
             this.playerCollision = false;
         }
 
-        if(bullets.length > 0){
+        // Only check bullet collisions if not already marked as hit
+        // (ricochet bullets set bulletCollision directly when bouncing)
+        if(bullets.length > 0 && !this.bulletCollision){
             for(let i = 0; i < bullets.length; i++){
                 let bullet = bullets[i];
                 var distX = Math.abs(this.x - bullet.x);
                 var distY = Math.abs(this.y - bullet.y);
                 var distC = Math.sqrt(Math.pow(distX,2) + Math.pow(distY,2));
-        
+
                 if(distC < (this.size + bullet.size)){
                     this.bulletCollision = true;
                     switch(bullets.bulletType){
@@ -168,9 +170,6 @@ export class Enemy {
                         }
                     }
                     break;
-                }
-                else{
-                    this.bulletCollision = false;
                 }
             }
         }

@@ -288,9 +288,7 @@ export class SpecialBullet {
                 this.piercedEnemies.add(enemy);
 
                 // Ricochet - bounce off enemy if we have bounces left
-                console.log('[RICOCHET] Hit enemy. gunType:', this.gunType, 'bouncesRemaining:', this.bouncesRemaining, 'bounceCount:', this.bounceCount);
                 if (this.gunType === 'ricochet' && this.bouncesRemaining > 0) {
-                    console.log('[RICOCHET] Bouncing off enemy!');
                     this.bounceOffEnemy(enemy);
                     // Don't set enemyCollision - bullet continues without interruption
 
@@ -329,7 +327,6 @@ export class SpecialBullet {
     }
 
     bounceOffEnemy(enemy) {
-        console.log('[RICOCHET] bounceOffEnemy called. Before: bouncesRemaining =', this.bouncesRemaining);
         // Mark enemy as hit so it gets killed
         enemy.bulletCollision = true;
 
@@ -364,7 +361,6 @@ export class SpecialBullet {
         const remaining = this.maxTravel - this.distanceTraveled;
         this.endX = this.x + this.dirX * remaining;
         this.endY = this.y + this.dirY * remaining;
-        console.log('[RICOCHET] Bounce complete. After: bouncesRemaining =', this.bouncesRemaining, 'new dir:', this.dirX.toFixed(2), this.dirY.toFixed(2));
     }
 
     triggerChain(hitEnemy, enemies, onChain) {
