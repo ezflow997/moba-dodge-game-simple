@@ -242,15 +242,11 @@ async function resolveTournament(allEntries) {
         result.eloAfter = eloAfter;
     }
 
-    // Mark ALL queue entries as resolved
+    // Delete ALL queue entries after resolution
     for (const entry of allEntries) {
         await fetch(`${SUPABASE_URL}/rest/v1/ranked_queue?id=eq.${entry.id}`, {
-            method: 'PATCH',
-            headers: getHeaders(),
-            body: JSON.stringify({
-                resolved: true,
-                tournament_id: tournamentId
-            })
+            method: 'DELETE',
+            headers: getHeaders()
         });
     }
 
