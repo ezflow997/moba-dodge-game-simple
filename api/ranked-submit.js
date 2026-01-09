@@ -415,9 +415,18 @@ export default async function handler(req, res) {
             });
         }
 
-        // Tournament resolves when: min players AND (all attempts complete OR timed out)
+        // Check if leader has no reason to continue (they're #1 and the only one with attempts left)
+        const playersWithAttemptsLeft = queue.filter(p => (p.attempts || 1) < MAX_ATTEMPTS_PER_PLAYER);
+        const sortedByScore = [...queue].sort((a, b) => b.score - a.score);
+        const leader = sortedByScore[0];
+        const leaderIsOnlyOneWithAttempts = playersWithAttemptsLeft.length === 1 &&
+            playersWithAttemptsLeft[0].player_name === leader.player_name;
+
+        // Tournament resolves when: min players AND (all attempts complete OR timed out OR leader is only one with attempts left)
         const allReady = queue.every(p => (p.attempts || 1) >= MAX_ATTEMPTS_PER_PLAYER);
-        if (uniquePlayers >= MIN_PLAYERS_FOR_TOURNAMENT && (allReady || isTimedOut)) {
+        const shouldResolveEarly = uniquePlayers >= MIN_PLAYERS_FOR_TOURNAMENT && leaderIsOnlyOneWithAttempts;
+
+        if (uniquePlayers >= MIN_PLAYERS_FOR_TOURNAMENT && (allReady || isTimedOut || shouldResolveEarly)) {
             // Resolve tournament for this queue!
             const tournamentResult = await resolveTournament(queue);
 
