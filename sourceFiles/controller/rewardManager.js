@@ -777,7 +777,8 @@ export class RewardManager {
 
         // Draw loadout weapon reactivation button if available
         if (this.loadoutWeapon) {
-            const loadoutX = startX - 110 * rX;
+            // Position to the left of permanent upgrades panel (which is at ~220 from right edge)
+            const loadoutX = startX - 320 * rX;
             const loadoutY = startY;
             const loadoutW = 100 * rX;
             const loadoutH = slotHeight;
