@@ -660,20 +660,23 @@ export class VortexBoss {
         if (!this.invulnerable && !this.entering && bullets.bulletsList) {
             for (let i = bullets.bulletsList.length - 1; i >= 0; i--) {
                 const bullet = bullets.bulletsList[i];
-                
+
                 // Check orbitals first (shield mechanic)
                 let hitOrbital = false;
+                let orbitalHitX = 0, orbitalHitY = 0;
                 for (let ring of this.orbitalRings) {
                     for (let orbital of ring.orbitals) {
                         if (orbital.health <= 0) continue;
-                        
+
                         const ox = this.x + Math.cos(orbital.angle + this.rotationAngle) * orbital.radius * rX;
                         const oy = this.y + Math.sin(orbital.angle + this.rotationAngle) * orbital.radius * rX;
                         const dx = ox - bullet.x;
                         const dy = oy - bullet.y;
-                        
+
                         if (Math.sqrt(dx * dx + dy * dy) < (orbital.size + bullet.size)) {
                             orbital.health--;
+                            orbitalHitX = bullet.x;
+                            orbitalHitY = bullet.y;
                             bullets.bulletsList.splice(i, 1);
                             hitOrbital = true;
                             if (window.gameSound) window.gameSound.playMenuClick();
@@ -682,8 +685,11 @@ export class VortexBoss {
                     }
                     if (hitOrbital) break;
                 }
-                
-                if (hitOrbital) continue;
+
+                // Return orbital hit so it counts towards streak
+                if (hitOrbital) {
+                    return { type: 'orbital', x: orbitalHitX, y: orbitalHitY };
+                }
                 
                 // Check boss body
                 const bulletDx = this.x - bullet.x;

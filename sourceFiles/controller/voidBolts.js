@@ -84,7 +84,7 @@ export class VoidBolts {
             const collision = bolt.checkCollision(enemies.enemiesList, enemies.boss);
 
             // Track hits BEFORE auto-split changes state
-            if (collision && (collision.type === 'enemy' || collision.type === 'boss')) {
+            if (collision && (collision.type === 'enemy' || collision.type === 'boss' || collision.type === 'orbital')) {
                 this.anyBoltHit = true;
                 if (bolt === this.activeBolt && !bolt.hasSplit) {
                     this.mainBoltHit = true;
@@ -124,6 +124,13 @@ export class VoidBolts {
                     }
                 } else if (collision.type === 'boss') {
                     // Boss hit - increase streak and add score
+                    enemies.hitStreak += 1;
+                    if (enemies.hitStreak > enemies.best_streak) {
+                        enemies.best_streak = enemies.hitStreak;
+                    }
+                    game.score += enemies.enemyScoreValue * enemies.hitStreak;
+                } else if (collision.type === 'orbital') {
+                    // Vortex boss orbital hit - counts towards streak
                     enemies.hitStreak += 1;
                     if (enemies.hitStreak > enemies.best_streak) {
                         enemies.best_streak = enemies.hitStreak;

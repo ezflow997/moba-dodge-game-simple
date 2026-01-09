@@ -147,6 +147,18 @@ export class Enemies {
                         }
                     }
                     if (window.gameSound) window.gameSound.playBossHit();
+                } else if (collision.type === 'orbital') {
+                    // Orbital hit - counts towards streak but doesn't trigger full boss hit effects
+                    if (game.effects) {
+                        game.effects.spawnBurst(collision.x, collision.y, 'bossHit');
+                    }
+
+                    // Increase hit streak for orbital hits
+                    this.hitStreak += 1;
+                    if (this.hitStreak > this.best_streak) {
+                        this.best_streak = this.hitStreak;
+                    }
+                    game.score = game.score + (this.enemyScoreValue * this.hitStreak);
                 }
             }
 
