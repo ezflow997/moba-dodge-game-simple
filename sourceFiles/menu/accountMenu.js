@@ -46,12 +46,14 @@ export class AccountMenu {
 
         // Buttons - Main menu
         this.changePasswordButton = new Button(830, 420, 400, 70, "Change Password", 32, 0, 0, false, true, 'white', 'white');
-        this.setSecurityButton = new Button(830, 500, 400, 70, "Set Security Question", 28, 0, 0, false, true, 'white', 'white');
-        this.backButton = new Button(830, 580, 400, 70, "Back", 32, 0, 0, false, true, 'white', 'white');
+        this.forgotPasswordButton = new Button(830, 500, 400, 70, "Forgot Password", 32, 0, 0, false, true, 'white', 'white');
+        this.setSecurityButton = new Button(830, 580, 400, 70, "Set Security Question", 28, 0, 0, false, true, 'white', 'white');
+        this.backButton = new Button(830, 660, 400, 70, "Back", 32, 0, 0, false, true, 'white', 'white');
 
         // Buttons - Sub-menus
         this.submitButton = new Button(1050, 680, 200, 60, "Submit", 28, 0, 0, false, true, 'white', 'white');
         this.cancelButton = new Button(810, 680, 200, 60, "Cancel", 28, 0, 0, false, true, 'white', 'white');
+        this.nextButton = new Button(1050, 580, 200, 60, "Next", 28, 0, 0, false, true, 'white', 'white');
 
         // Security question selector buttons
         this.prevQuestionButton = new Button(650, 440, 60, 50, "<", 32, 0, 0, false, true, 'white', 'white');
@@ -391,6 +393,17 @@ export class AccountMenu {
                 this.successMessage = '';
             }
 
+            // Forgot password button
+            this.forgotPasswordButton.update(inX, inY);
+            if (this.forgotPasswordButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.mode = 'enterUsername';
+                this.activeField = 'username';
+                this.errorMessage = '';
+                this.successMessage = '';
+            }
+
             // Set security question button (only if no security question set)
             if (!this.hasSecurityQuestion) {
                 this.setSecurityButton.update(inX, inY);
@@ -538,7 +551,7 @@ export class AccountMenu {
         // Panel height based on mode
         let panelHeight = 480;
         if (this.mode === 'main') {
-            panelHeight = !this.hasSecurityQuestion ? 400 : 320;
+            panelHeight = !this.hasSecurityQuestion ? 480 : 400;
         }
         context.save();
         context.fillStyle = 'rgba(10, 20, 40, 0.95)';
@@ -586,15 +599,16 @@ export class AccountMenu {
         this.super.drawGlowText(context, 860, 390, "Logged in as: " + this.username, 24, '#00ff88', '#00ff00', 5);
 
         this.changePasswordButton.draw(context);
+        this.forgotPasswordButton.draw(context);
 
         // Show "Set Security Question" button if user doesn't have one
         if (!this.hasSecurityQuestion) {
             this.setSecurityButton.draw(context);
             // Back button at lower position
-            this.backButton.y = 580;
+            this.backButton.y = 660;
         } else {
             // Back button shifts up when no security button
-            this.backButton.y = 500;
+            this.backButton.y = 580;
         }
 
         this.backButton.draw(context);
