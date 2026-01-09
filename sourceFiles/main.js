@@ -80,6 +80,7 @@ window.addEventListener('load', function () {
 				this.submitError = '';
 				this.pendingSecurityQuestion = null;
 				this.pendingSecurityAnswer = null;
+				this.hasSecurityQuestion = true; // Assume true by default, updated on login
 
 				// Ranked system
 				this.isRankedGame = false;
@@ -473,6 +474,14 @@ window.addEventListener('load', function () {
 								if(result && result.name && result.password) {
 									game.playerName = result.name;
 									game.playerPassword = result.password;
+									// Track security question status
+									if (result.isNewPlayer) {
+										game.pendingSecurityQuestion = result.securityQuestion;
+										game.pendingSecurityAnswer = result.securityAnswer;
+										game.hasSecurityQuestion = true;
+									} else {
+										game.hasSecurityQuestion = result.hasSecurityQuestion !== false;
+									}
 									localStorage.setItem('playerName', result.name);
 									localStorage.setItem('playerPassword', result.password);
 									game.submitScoreToLeaderboard();

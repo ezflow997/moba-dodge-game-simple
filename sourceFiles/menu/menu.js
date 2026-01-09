@@ -190,7 +190,7 @@ export class Menu{
                 game.awaitingNameInput = true;
                 game.nameInputMenu.show((result) => {
                     if (result) {
-                        console.log('[LOGIN] Result:', result.name, 'isNewPlayer:', result.isNewPlayer);
+                        console.log('[LOGIN] Result:', result.name, 'isNewPlayer:', result.isNewPlayer, 'hasSecurityQuestion:', result.hasSecurityQuestion);
                         game.playerName = result.name;
                         game.playerPassword = result.password;
                         // Track if a new account was created this session
@@ -201,6 +201,11 @@ export class Menu{
                             // Store security question/answer for first score submission
                             game.pendingSecurityQuestion = result.securityQuestion;
                             game.pendingSecurityAnswer = result.securityAnswer;
+                            // New players just set their security question
+                            game.hasSecurityQuestion = true;
+                        } else {
+                            // Existing player - use the value from check
+                            game.hasSecurityQuestion = result.hasSecurityQuestion !== false;
                         }
                         localStorage.setItem('playerName', result.name);
                         localStorage.setItem('playerPassword', result.password);
@@ -219,6 +224,7 @@ export class Menu{
                 // Clear stored credentials
                 game.playerName = '';
                 game.playerPassword = '';
+                game.hasSecurityQuestion = true; // Reset to default
                 localStorage.removeItem('playerName');
                 localStorage.removeItem('playerPassword');
             }
@@ -230,7 +236,7 @@ export class Menu{
             if(this.accountButton.isHovered == true && game.input.buttons.indexOf(0) > -1 && this.clicked == false){
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
-                game.accountMenu.show(!!game.playerName, game.playerName);
+                game.accountMenu.show(!!game.playerName, game.playerName, game.hasSecurityQuestion);
             }
         }
 

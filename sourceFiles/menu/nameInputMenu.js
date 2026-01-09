@@ -60,6 +60,7 @@ export class NameInputMenu {
         this.inputState = 'name';
         this.activeField = 'name';
         this.isNewPlayer = false;
+        this.existingPlayerHasSecurityQuestion = true; // Track existing player's security question status
         this.errorMessage = '';
         this.showPassword = false;
         this.allowRegistration = allowRegistration;
@@ -163,7 +164,11 @@ export class NameInputMenu {
         try {
             const exists = await this.supabase.checkPlayerExists(this.playerName.trim());
             this.isNewPlayer = !exists;
-            console.log('[NAME_INPUT] Player exists:', exists, 'isNewPlayer:', this.isNewPlayer, 'allowRegistration:', this.allowRegistration);
+            // Track if existing player has a security question
+            if (exists) {
+                this.existingPlayerHasSecurityQuestion = !!exists.hasSecurityQuestion;
+            }
+            console.log('[NAME_INPUT] Player exists:', exists, 'isNewPlayer:', this.isNewPlayer, 'hasSecurityQuestion:', this.existingPlayerHasSecurityQuestion, 'allowRegistration:', this.allowRegistration);
 
             // Block new account creation if not allowed
             if (this.isNewPlayer && !this.allowRegistration) {
@@ -212,7 +217,12 @@ export class NameInputMenu {
             // Password verified, proceed
             if (name.length > 0 && this.onSubmit) {
                 this.hide();
-                this.onSubmit({ name: name, password: this.password, isNewPlayer: false });
+                this.onSubmit({
+                    name: name,
+                    password: this.password,
+                    isNewPlayer: false,
+                    hasSecurityQuestion: this.existingPlayerHasSecurityQuestion
+                });
             }
         } else {
             // New player - go to security question step

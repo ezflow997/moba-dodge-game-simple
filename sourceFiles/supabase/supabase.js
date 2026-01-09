@@ -323,4 +323,31 @@ export class SupabaseLeaderboard {
             return { matches: [] };
         }
     }
+
+    // Set security question for existing account (one-time only)
+    async setSecurityQuestion(playerName, password, securityQuestion, securityAnswer) {
+        try {
+            const response = await fetch(`${this.apiBase}/set-security-question`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    playerName,
+                    password,
+                    securityQuestion,
+                    securityAnswer
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                return { error: data.error };
+            }
+
+            return data;
+        } catch (error) {
+            console.error('setSecurityQuestion error:', error);
+            return { error: error.message };
+        }
+    }
 }

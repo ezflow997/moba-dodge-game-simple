@@ -1,6 +1,15 @@
 import { Button, superFunctions } from "./supers.js";
 import { SupabaseLeaderboard } from "../supabase/supabase.js";
 
+// Predefined security questions
+const SECURITY_QUESTIONS = [
+    "What is your favorite color?",
+    "What is your pet's name?",
+    "What city were you born in?",
+    "What is your favorite food?",
+    "What is your lucky number?"
+];
+
 export class AccountMenu {
     constructor() {
         this.super = new superFunctions();
@@ -9,7 +18,7 @@ export class AccountMenu {
         this.clicked = false;
         this.cursorBlink = 0;
 
-        // Mode: 'main', 'changePassword', 'forgotPassword', 'enterUsername', 'answerQuestion', 'setNewPassword'
+        // Mode: 'main', 'changePassword', 'forgotPassword', 'enterUsername', 'answerQuestion', 'setNewPassword', 'setSecurityQuestion'
         this.mode = 'main';
 
         // Input fields
@@ -26,6 +35,10 @@ export class AccountMenu {
         // Security question for recovery
         this.securityQuestion = '';
 
+        // Security question setup (for accounts without one)
+        this.hasSecurityQuestion = true; // Assume true by default
+        this.selectedQuestionIndex = 0;
+
         // Messages
         this.errorMessage = '';
         this.successMessage = '';
@@ -33,17 +46,20 @@ export class AccountMenu {
 
         // Buttons
         this.changePasswordButton = new Button(830, 400, 400, 70, "Change Password", 32, 0, 0, false, true, 'white', 'white');
-        this.forgotPasswordButton = new Button(830, 500, 400, 70, "Forgot Password", 32, 0, 0, false, true, 'white', 'white');
-        this.backButton = new Button(830, 600, 400, 70, "Back", 32, 0, 0, false, true, 'white', 'white');
+        this.setSecurityButton = new Button(830, 480, 400, 70, "Set Security Question", 28, 0, 0, false, true, 'white', 'white');
+        this.forgotPasswordButton = new Button(830, 560, 400, 70, "Forgot Password", 32, 0, 0, false, true, 'white', 'white');
+        this.backButton = new Button(830, 640, 400, 70, "Back", 32, 0, 0, false, true, 'white', 'white');
         this.submitButton = new Button(1050, 680, 200, 60, "Submit", 28, 0, 0, false, true, 'white', 'white');
         this.cancelButton = new Button(810, 680, 200, 60, "Cancel", 28, 0, 0, false, true, 'white', 'white');
-        this.nextButton = new Button(1050, 550, 200, 60, "Next", 28, 0, 0, false, true, 'white', 'white');
+        this.nextButton = new Button(1050, 680, 200, 60, "Next", 28, 0, 0, false, true, 'white', 'white');
+        this.prevQuestionButton = new Button(650, 430, 60, 50, "<", 32, 0, 0, false, true, 'white', 'white');
+        this.nextQuestionButton = new Button(1150, 430, 60, 50, ">", 32, 0, 0, false, true, 'white', 'white');
 
         // Keyboard handler
         this.keyHandler = this.handleKeyPress.bind(this);
     }
 
-    show(isLoggedIn = false, playerName = '') {
+    show(isLoggedIn = false, playerName = '', hasSecurityQuestion = true) {
         this.isVisible = true;
         this.mode = 'main';
         this.username = playerName;
@@ -57,6 +73,8 @@ export class AccountMenu {
         this.isLoading = false;
         this.activeField = 'currentPassword';
         this.isLoggedIn = isLoggedIn;
+        this.hasSecurityQuestion = hasSecurityQuestion;
+        this.selectedQuestionIndex = 0;
 
         document.addEventListener('keydown', this.keyHandler);
     }
@@ -123,6 +141,8 @@ export class AccountMenu {
             const fields = ['newPassword', 'confirmPassword'];
             const idx = fields.indexOf(this.activeField);
             this.activeField = fields[(idx + 1) % fields.length];
+        } else if (this.mode === 'setSecurityQuestion') {
+            this.activeField = 'securityAnswer';
         }
     }
 
@@ -167,6 +187,8 @@ export class AccountMenu {
             this.verifySecurityAnswer();
         } else if (this.mode === 'setNewPassword') {
             this.submitNewPassword();
+        } else if (this.mode === 'setSecurityQuestion') {
+            this.submitSetSecurityQuestion();
         }
     }
 
@@ -272,6 +294,45 @@ export class AccountMenu {
         this.isLoading = false;
     }
 
+    async submitSetSecurityQuestion() {
+        if (this.securityAnswer.trim().length < 1) {
+            this.errorMessage = 'Please enter your security answer';
+            return;
+        }
+
+        this.isLoading = true;
+        this.errorMessage = '';
+
+        try {
+            const question = SECURITY_QUESTIONS[this.selectedQuestionIndex];
+            const password = window.game ? window.game.playerPassword : localStorage.getItem('playerPassword');
+
+            const result = await this.supabase.setSecurityQuestion(
+                this.username,
+                password,
+                question,
+                this.securityAnswer.trim()
+            );
+
+            if (result.error) {
+                this.errorMessage = result.error;
+            } else {
+                this.successMessage = 'Security question set successfully!';
+                this.hasSecurityQuestion = true;
+                this.mode = 'main';
+                this.securityAnswer = '';
+                // Update game state
+                if (window.game) {
+                    window.game.hasSecurityQuestion = true;
+                }
+            }
+        } catch (error) {
+            this.errorMessage = 'Failed to set security question';
+        }
+
+        this.isLoading = false;
+    }
+
     // Helper to check if click is within an input field
     isClickInField(mouseX, mouseY, fieldX, fieldY, fieldW, fieldH, rX, rY) {
         const x = fieldX * rX;
@@ -306,6 +367,21 @@ export class AccountMenu {
                     this.activeField = 'currentPassword';
                     this.errorMessage = '';
                     this.successMessage = '';
+                }
+
+                // Set security question button (only if no security question set)
+                if (!this.hasSecurityQuestion) {
+                    this.setSecurityButton.update(inX, inY);
+                    if (this.setSecurityButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                        this.clicked = true;
+                        if (window.gameSound) window.gameSound.playMenuClick();
+                        this.mode = 'setSecurityQuestion';
+                        this.activeField = 'securityAnswer';
+                        this.selectedQuestionIndex = 0;
+                        this.securityAnswer = '';
+                        this.errorMessage = '';
+                        this.successMessage = '';
+                    }
                 }
             }
 
@@ -409,6 +485,32 @@ export class AccountMenu {
                 this.submitNewPassword();
             }
         }
+
+        // Set security question mode
+        if (this.mode === 'setSecurityQuestion') {
+            // Question navigation buttons
+            this.prevQuestionButton.update(inX, inY);
+            if (this.prevQuestionButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.selectedQuestionIndex = (this.selectedQuestionIndex - 1 + SECURITY_QUESTIONS.length) % SECURITY_QUESTIONS.length;
+            }
+
+            this.nextQuestionButton.update(inX, inY);
+            if (this.nextQuestionButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.selectedQuestionIndex = (this.selectedQuestionIndex + 1) % SECURITY_QUESTIONS.length;
+            }
+
+            // Submit button
+            this.submitButton.update(inX, inY);
+            if (this.submitButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked && this.securityAnswer.trim().length > 0) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.submitSetSecurityQuestion();
+            }
+        }
     }
 
     draw(context, game) {
@@ -423,8 +525,11 @@ export class AccountMenu {
         context.fillRect(0, 0, game.width, game.height);
         context.restore();
 
-        // Panel
-        const panelHeight = this.mode === 'main' ? 400 : 480;
+        // Panel - taller for main menu when security button is shown
+        let panelHeight = 480;
+        if (this.mode === 'main') {
+            panelHeight = (this.isLoggedIn && !this.hasSecurityQuestion) ? 480 : 400;
+        }
         context.save();
         context.fillStyle = 'rgba(10, 20, 40, 0.95)';
         context.fillRect(580 * rX, 280 * rY, 900 * rX, panelHeight * rY);
@@ -446,6 +551,8 @@ export class AccountMenu {
             this.drawAnswerQuestion(context, rX, rY);
         } else if (this.mode === 'setNewPassword') {
             this.drawSetNewPassword(context, rX, rY);
+        } else if (this.mode === 'setSecurityQuestion') {
+            this.drawSetSecurityQuestion(context, rX, rY);
         }
 
         // Loading indicator
@@ -470,6 +577,11 @@ export class AccountMenu {
         if (this.isLoggedIn) {
             this.super.drawGlowText(context, 860, 390, "Logged in as: " + this.username, 24, '#00ff88', '#00ff00', 5);
             this.changePasswordButton.draw(context);
+
+            // Show "Set Security Question" button if user doesn't have one
+            if (!this.hasSecurityQuestion) {
+                this.setSecurityButton.draw(context);
+            }
         } else {
             this.super.drawGlowText(context, 900, 390, "Not logged in", 24, '#888888', '#666666', 5);
         }
@@ -543,6 +655,46 @@ export class AccountMenu {
         this.drawInputField(context, rX, rY, 650, 540, 560, 'confirmPassword', this.confirmPassword, true);
 
         this.submitButton.draw(context);
+        this.cancelButton.draw(context);
+    }
+
+    drawSetSecurityQuestion(context, rX, rY) {
+        this.super.drawGlowText(context, 800, 340, "SET SECURITY QUESTION", 36, '#ffffff', '#00ffff', 12);
+        this.super.drawGlowText(context, 700, 390, "This is a one-time setup for password recovery", 20, '#888888', '#666666', 5);
+
+        // Security question selector
+        this.super.drawGlowText(context, 660, 430, "Select Question:", 24, '#888888', '#666666', 5);
+
+        // Question display box
+        context.save();
+        context.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        context.fillRect(720 * rX, 440 * rY, 420 * rX, 50 * rY);
+        context.strokeStyle = '#00ffff';
+        context.lineWidth = 2 * rY;
+        context.strokeRect(720 * rX, 440 * rY, 420 * rX, 50 * rY);
+        context.restore();
+
+        // Draw current question
+        const currentQuestion = SECURITY_QUESTIONS[this.selectedQuestionIndex];
+        this.super.drawGlowText(context, 735, 478, currentQuestion, 22, '#ffaa00', '#ff8800', 5);
+
+        // Navigation buttons
+        this.prevQuestionButton.draw(context);
+        this.nextQuestionButton.draw(context);
+
+        // Answer field
+        this.super.drawGlowText(context, 660, 530, "Your Answer:", 24, '#888888', '#666666', 5);
+        this.drawInputField(context, rX, rY, 650, 540, 560, 'securityAnswer', this.securityAnswer, false);
+
+        // Submit button (dim if no answer)
+        if (this.securityAnswer.trim().length > 0) {
+            this.submitButton.draw(context);
+        } else {
+            context.save();
+            context.globalAlpha = 0.3;
+            this.submitButton.draw(context);
+            context.restore();
+        }
         this.cancelButton.draw(context);
     }
 
