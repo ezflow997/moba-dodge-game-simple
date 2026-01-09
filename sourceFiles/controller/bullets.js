@@ -155,6 +155,9 @@ export class Bullets {
                                     // For piercing bullets, don't clear - just mark hit and continue
                                     if (bullet.pierceCount > 0) {
                                         bullet.enemyCollision = false;
+                                    // For ricochet bullets with bounces remaining, continue bouncing
+                                    } else if (bullet.gunType === 'ricochet' && bullet.bouncesRemaining >= 0) {
+                                        bullet.enemyCollision = false;
                                     } else if (isIndependent) {
                                         // Independent bullets: remove only this bullet
                                         this.bulletsList.splice(i, 1);
@@ -187,6 +190,9 @@ export class Bullets {
                                 const isIndependent = independentTypes.includes(bullet.bulletType);
 
                                 if (bullet.pierceCount > 0) {
+                                    bullet.enemyCollision = false;
+                                // For ricochet bullets with bounces remaining, continue bouncing
+                                } else if (bullet.gunType === 'ricochet' && bullet.bouncesRemaining >= 0) {
                                     bullet.enemyCollision = false;
                                 } else if (isIndependent) {
                                     // Independent bullets: remove only this bullet
