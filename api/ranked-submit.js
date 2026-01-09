@@ -392,6 +392,25 @@ export default async function handler(req, res) {
         const queueAge = Date.now() - oldestEntry;
         const isTimedOut = queueAge >= QUEUE_TIMEOUT_MS;
 
+        // Handle timed out queue with insufficient players - cancel without resolving
+        if (isTimedOut && uniquePlayers < MIN_PLAYERS_FOR_TOURNAMENT) {
+            // Delete all entries in this queue without resolving
+            for (const entry of queue) {
+                await fetch(`${SUPABASE_URL}/rest/v1/ranked_queue?id=eq.${entry.id}`, {
+                    method: 'DELETE',
+                    headers: getHeaders()
+                });
+            }
+
+            return res.status(200).json({
+                success: true,
+                tournamentResolved: false,
+                queueCancelled: true,
+                message: 'Queue cancelled - not enough players joined before timeout',
+                playersNeeded: MIN_PLAYERS_FOR_TOURNAMENT
+            });
+        }
+
         // Tournament resolves when: min players AND (all attempts complete OR timed out)
         const allReady = queue.every(p => (p.attempts || 1) >= MAX_ATTEMPTS_PER_PLAYER);
         if (uniquePlayers >= MIN_PLAYERS_FOR_TOURNAMENT && (allReady || isTimedOut)) {
