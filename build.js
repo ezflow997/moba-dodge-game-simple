@@ -47,6 +47,10 @@ function copyDir(src, dest) {
 }
 copyDir('audio', `${DIST_DIR}/audio`);
 
+// Copy API functions (for Vercel serverless)
+console.log('Copying API functions...');
+copyDir('api', `${DIST_DIR}/api`);
+
 // Create production index.html
 console.log('Creating index.html...');
 const indexHtml = `<!DOCTYPE html>
