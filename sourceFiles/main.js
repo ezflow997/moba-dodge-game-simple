@@ -19,6 +19,7 @@ import { DevMode } from "./dev/DevMode.js";
 import { CommandRegistry } from "./dev/CommandRegistry.js";
 import { DebugConsole } from "./dev/DebugConsole.js";
 import { TestRoom } from "./dev/TestRoom.js";
+import { PowerupHUD } from "./ui/PowerupHUD.js";
 
 // Simple Score class for local session tracking
 class SimpleScore {
@@ -104,6 +105,9 @@ window.addEventListener('load', function () {
 				this.commandRegistry = new CommandRegistry(this, this.devMode);
 				this.debugConsole = new DebugConsole(this.commandRegistry, this.input);
 				this.testRoom = new TestRoom(this);
+
+				// HUD system
+				this.powerupHUD = new PowerupHUD();
 			}
 
 			setupMusicUnlock() {
@@ -186,6 +190,12 @@ window.addEventListener('load', function () {
 				}
 				this.display.update(this);
 
+				// Handle weapon slot cycling with Tab
+				if (this.input.tabPressed) {
+					this.rewardManager.cycleWeaponSlot();
+					this.input.tabPressed = false;
+				}
+
 				// Update reward manager
 				this.rewardManager.update(this.player, this);
 
@@ -209,7 +219,7 @@ window.addEventListener('load', function () {
 					this.testRoom.draw(context);
 				}
 				
-				this.player.draw(context);
+				this.player.draw(context, this);
 				if(this.challenge_level == 0){
 					this.bullets.draw(context);
 				}
@@ -219,9 +229,13 @@ window.addEventListener('load', function () {
 				this.enemies.draw(context);
 				this.projectiles.draw(context);
 				this.effects.draw(context);
-				// Draw rewards (drops and effects)
+				// Draw rewards (drops and on-player effects only)
 				this.rewardManager.draw(context, this.player);
-				this.rewardManager.drawActiveRewardsUI(context);
+
+				// Draw unified PowerupHUD (abilities, weapon slots, active timers, permanent upgrades)
+				this.powerupHUD.draw(context, this);
+
+				// Draw score/kills display (top of screen)
 				this.display.draw(context, this);
 				
 				// Draw dev mode overlays

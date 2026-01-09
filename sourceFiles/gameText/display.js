@@ -50,18 +50,7 @@ export class Display{
             context.fillText('K:'+this.enemyTakeDowns, window.innerWidth*(0.57), window.innerHeight*0.05);
         }
 
-        // draw E Cool Down Time
-        if(this.eCoolDownTime != game.player.eCoolDown && this.eCoolDownTime > 0){
-            context.fillText('E: '+(this.eCoolDownTime/1000).toFixed(1), window.innerWidth*(0.08), window.innerHeight*0.96);
-        }
-        // draw F Cool Down Time
-        if(this.fCoolDownTime != game.player.fCoolDown && this.fCoolDownTime > 0){
-            context.fillText('F: '+(this.fCoolDownTime/1000).toFixed(1), window.innerWidth*(0.08 + (0.12*1)), window.innerHeight*0.96);
-        }
-        // draw Q Cool Down Time
-        if(this.qCoolDownTime != game.player.qCoolDown && this.qCoolDownTime > 0){
-            context.fillText('Q: '+(this.qCoolDownTime/1000).toFixed(1), window.innerWidth*(0.08 + (0.12*2)), window.innerHeight*0.96);
-        }
+        // Note: Cooldown timers are now rendered by PowerupHUD with radial timer icons
         context.closePath();
     }
 }

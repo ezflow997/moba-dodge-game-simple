@@ -139,11 +139,50 @@ export class MenuEffects {
         }
     }
 
-    // Draw glowing title text
+    // Draw glowing title text (centered version)
+    drawTitleCentered(context, text, x, y, size) {
+        const rX = window.innerWidth / 2560;
+        const rY = window.innerHeight / 1440;
+        const pulse = 0.8 + Math.sin(this.gradientPhase * 2) * 0.2;
+        const fontFamily = "'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
+
+        context.save();
+        context.textAlign = 'center';
+
+        // Glow layers
+        for (let i = 3; i > 0; i--) {
+            context.shadowColor = '#00ffff';
+            context.shadowBlur = (15 * i * pulse) * rX;
+            context.font = `900 ${size * rX}px ${fontFamily}`;
+            context.fillStyle = `rgba(0, 255, 255, ${0.3 / i})`;
+            context.fillText(text, x * rX, y * rY);
+        }
+
+        // Main text with gradient
+        const textGradient = context.createLinearGradient(
+            (x - 200) * rX, (y - size) * rY,
+            (x - 200) * rX, y * rY
+        );
+        textGradient.addColorStop(0, '#ffffff');
+        textGradient.addColorStop(0.5, '#00ffff');
+        textGradient.addColorStop(1, '#0088ff');
+
+        context.shadowColor = '#00ffff';
+        context.shadowBlur = 20 * rX;
+        context.font = `900 ${size * rX}px ${fontFamily}`;
+        context.fillStyle = textGradient;
+        context.fillText(text, x * rX, y * rY);
+
+        context.restore();
+    }
+
+    // Draw glowing title text (left aligned - legacy)
     drawTitle(context, text, x, y, size) {
         const rX = window.innerWidth / 2560;
         const rY = window.innerHeight / 1440;
         const pulse = 0.8 + Math.sin(this.gradientPhase * 2) * 0.2;
+        // Modern, clean font stack
+        const fontFamily = "'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
 
         context.save();
 
@@ -151,7 +190,7 @@ export class MenuEffects {
         for (let i = 3; i > 0; i--) {
             context.shadowColor = '#00ffff';
             context.shadowBlur = (15 * i * pulse) * rX;
-            context.font = (size * rX) + "px Arial Black";
+            context.font = `900 ${size * rX}px ${fontFamily}`;
             context.fillStyle = `rgba(0, 255, 255, ${0.3 / i})`;
             context.fillText(text, x * rX, y * rY);
         }
@@ -167,7 +206,7 @@ export class MenuEffects {
 
         context.shadowColor = '#00ffff';
         context.shadowBlur = 20 * rX;
-        context.font = (size * rX) + "px Arial Black";
+        context.font = `900 ${size * rX}px ${fontFamily}`;
         context.fillStyle = textGradient;
         context.fillText(text, x * rX, y * rY);
 
