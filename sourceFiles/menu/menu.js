@@ -24,9 +24,10 @@ export class Menu{
         this.challengeButton = new Button(btnX, 80 + btnSpacing, btnW, btnH, "Skill Mode: NORMAL", 28, 0, 0, false, true, 'white', 'white');
         this.difficultyButton = new Button(btnX, 80 + btnSpacing * 2, btnW, btnH, "Difficulty: EASY", 28, 0, 0, false, true, 'white', 'white');
         this.startButton = new Button(btnX, 80 + btnSpacing * 3, btnW, btnH, "New Game", 32, 0, 0, false, true, 'white', 'white');
-        this.leaderboardButton = new Button(btnX, 80 + btnSpacing * 4, btnW, btnH, "Leaderboard", 32, 0, 0, false, true, 'white', 'white');
-        this.loginButton = new Button(btnX, 80 + btnSpacing * 5, btnW, btnH, "Login", 32, 0, 0, false, true, 'white', 'white');
-        this.logoutButton = new Button(btnX + btnW + 20, 80 + btnSpacing * 5, 120, 50, "Logout", 24, 0, 0, false, true, 'white', 'white');
+        this.rankedButton = new Button(btnX, 80 + btnSpacing * 4, btnW, btnH, "Ranked", 32, 0, 0, false, true, 'white', 'white');
+        this.leaderboardButton = new Button(btnX, 80 + btnSpacing * 5, btnW, btnH, "Leaderboard", 32, 0, 0, false, true, 'white', 'white');
+        this.loginButton = new Button(btnX, 80 + btnSpacing * 6, btnW, btnH, "Login", 32, 0, 0, false, true, 'white', 'white');
+        this.logoutButton = new Button(btnX + btnW + 20, 80 + btnSpacing * 6, 120, 50, "Logout", 24, 0, 0, false, true, 'white', 'white');
 
         // Player leaderboard data cache
         this.playerLeaderboardData = null;
@@ -150,8 +151,22 @@ export class Menu{
             }
         }
 
+        // Ranked button - only active when logged in and menus are not visible
+        if(game.playerName && !game.leaderboardMenu.isVisible && !game.rankedMenu.isVisible) {
+            this.rankedButton.update(inX, inY);
+            if(this.rankedButton.isHovered == true && game.input.buttons.indexOf(0) > -1 && this.clicked == false){
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                // Fetch ranked status and show ranked menu
+                game.supabase.getRankedStatus(game.playerName).then(status => {
+                    game.rankedMenu.setQueueStatus(status);
+                    game.rankedMenu.show('confirm');
+                });
+            }
+        }
+
         // Leaderboard button - only active when leaderboard menu is not visible
-        if(!game.leaderboardMenu.isVisible) {
+        if(!game.leaderboardMenu.isVisible && !game.rankedMenu.isVisible) {
             this.leaderboardButton.update(inX, inY);
             if(this.leaderboardButton.isHovered == true && game.input.buttons.indexOf(0) > -1 && this.clicked == false){
                 this.clicked = true;
@@ -226,11 +241,17 @@ export class Menu{
         this.challengeButton.draw(context);
         this.difficultyButton.draw(context);
         this.startButton.draw(context);
+
+        // Draw ranked button (only if logged in)
+        if (game.playerName) {
+            this.rankedButton.draw(context);
+        }
+
         this.leaderboardButton.draw(context);
 
         // Show login button or player name based on login state
         if(game.playerName) {
-            this.super.drawGlowText(context, 80, 565, "Playing as: " + game.playerName, 26, '#00ff88', '#00ff00', 5);
+            this.super.drawGlowText(context, 80, 655, "Playing as: " + game.playerName, 26, '#00ff88', '#00ff00', 5);
             this.logoutButton.draw(context);
         } else {
             this.loginButton.draw(context);

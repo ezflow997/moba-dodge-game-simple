@@ -146,4 +146,74 @@ export class SupabaseLeaderboard {
 
         return results;
     }
+
+    // =====================================================
+    // RANKED TOURNAMENT METHODS
+    // =====================================================
+
+    // Submit ranked score
+    async submitRankedScore(playerName, password, score, kills, bestStreak) {
+        try {
+            const response = await fetch(`${this.apiBase}/ranked-submit`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    playerName,
+                    password,
+                    score,
+                    kills,
+                    bestStreak
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                return { error: data.error, passwordError: data.passwordError || false };
+            }
+
+            return data;
+        } catch (error) {
+            console.error('submitRankedScore error:', error);
+            return { error: error.message };
+        }
+    }
+
+    // Get ranked queue status and player ELO
+    async getRankedStatus(playerName = null) {
+        try {
+            let url = `${this.apiBase}/ranked-status`;
+            if (playerName) {
+                url += `?playerName=${encodeURIComponent(playerName)}`;
+            }
+
+            const response = await fetch(url, { method: 'GET' });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('getRankedStatus error:', error);
+            return { queueSize: 0, playersNeeded: 10 };
+        }
+    }
+
+    // Get ELO-based ranked leaderboard
+    async getRankedLeaderboard(limit = 10, page = 1) {
+        try {
+            const url = `${this.apiBase}/ranked-leaderboard?limit=${limit}&page=${page}`;
+            const response = await fetch(url, { method: 'GET' });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('getRankedLeaderboard error:', error);
+            return { entries: [], pagination: { page: 1, limit: 10, totalEntries: 0, totalPages: 0 } };
+        }
+    }
 }

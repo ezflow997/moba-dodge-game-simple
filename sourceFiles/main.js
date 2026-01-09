@@ -14,6 +14,7 @@ import { VoidBolts } from "./controller/voidBolts.js";
 import { SupabaseLeaderboard } from "./supabase/supabase.js";
 import { LeaderboardMenu } from "./menu/leaderboardMenu.js";
 import { NameInputMenu } from "./menu/nameInputMenu.js";
+import { RankedMenu } from "./menu/rankedMenu.js";
 import { RewardManager } from "./controller/rewardManager.js";
 import { DevMode } from "./dev/DevMode.js";
 import { CommandRegistry } from "./dev/CommandRegistry.js";
@@ -68,11 +69,16 @@ window.addEventListener('load', function () {
 				this.supabase = new SupabaseLeaderboard();
 				this.leaderboardMenu = new LeaderboardMenu();
 				this.nameInputMenu = new NameInputMenu();
+				this.rankedMenu = new RankedMenu();
 				this.playerName = localStorage.getItem('playerName') || '';
 				this.playerPassword = localStorage.getItem('playerPassword') || '';
 				this.pendingScore = null;
 				this.awaitingNameInput = false;
 				this.submitError = '';
+
+				// Ranked system
+				this.isRankedGame = false;
+				this.pendingRankedScore = null;
 
 				this.msDraw = window.performance.now();
 				this.msUpdate = window.performance.now();
@@ -345,7 +351,19 @@ window.addEventListener('load', function () {
 					if (game.devMode && game.devMode.wasUsedThisSession()) {
 						game.showMessage = 'Dev Mode - Score not saved (' + game.score + ')';
 						game.showMessageNow = window.performance.now();
-						game.pendingScore = null; // Don't submit to leaderboard
+						game.pendingScore = null;
+						game.pendingRankedScore = null;
+						game.isRankedGame = false;
+					} else if (game.isRankedGame) {
+						// Ranked game - store for ranked submission
+						game.pendingRankedScore = {
+							score: game.score,
+							kills: game.enemies.enemiesTakenDown,
+							bestStreak: game.enemies.best_streak
+						};
+						game.showMessage = 'Ranked Score: ' + game.score;
+						game.showMessageNow = window.performance.now();
+						game.pendingScore = null; // Don't submit to regular leaderboard
 					} else {
 						// Store pending score for leaderboard submission
 						game.pendingScore = {
@@ -394,8 +412,29 @@ window.addEventListener('load', function () {
 					if(msPassed > 5000 || (msPassed > minReadTime && clicked)){
 						game.showMessage = 'None';
 
+						// Handle ranked score submission
+						if (game.pendingRankedScore && game.playerName && game.playerPassword) {
+							game.supabase.submitRankedScore(
+								game.playerName,
+								game.playerPassword,
+								game.pendingRankedScore.score,
+								game.pendingRankedScore.kills,
+								game.pendingRankedScore.bestStreak
+							).then(result => {
+								if (result.error) {
+									game.rankedMenu.setError(result.error);
+									game.rankedMenu.show('confirm');
+								} else if (result.tournamentResolved) {
+									game.rankedMenu.setTournamentResults(result);
+								} else {
+									game.rankedMenu.setQueuedState(result);
+								}
+							});
+							game.pendingRankedScore = null;
+							game.isRankedGame = false;
+						}
 						// After showing score message, check if we need name/password input
-						if(game.pendingScore && (!game.playerName || !game.playerPassword)) {
+						else if(game.pendingScore && (!game.playerName || !game.playerPassword)) {
 							game.awaitingNameInput = true;
 							game.nameInputMenu.show((result) => {
 								if(result && result.name && result.password) {
@@ -480,6 +519,24 @@ window.addEventListener('load', function () {
 			if(game.leaderboardMenu.isVisible) {
 				game.leaderboardMenu.update(game);
 				game.leaderboardMenu.draw(ctx, game);
+			}
+
+			// Draw and update ranked menu if visible
+			if(game.rankedMenu.isVisible) {
+				const rankedResult = game.rankedMenu.update(game);
+				game.rankedMenu.draw(ctx, game);
+
+				// Check if player confirmed to start ranked game
+				if (rankedResult === 'start_ranked') {
+					game.rankedMenu.hide();
+					game.isRankedGame = true;
+					game.difficulty_level = 0; // Force EASY
+					game.gameOver = false;
+					M.mainMenuShow = false;
+					if (game.devMode) {
+						game.devMode.resetSession();
+					}
+				}
 			}
 
 			// Draw and update name input menu if visible
