@@ -94,74 +94,65 @@ async function getOrCreatePlayerElo(playerName) {
     return insertedData[0];
 }
 
-// Get player's unresolved attempts count
-async function getPlayerAttempts(playerName) {
-    const url = `${SUPABASE_URL}/rest/v1/ranked_queue?player_name=eq.${encodeURIComponent(playerName)}&resolved=eq.false`;
+// Get player's queue entry (single entry per player with attempts count)
+async function getPlayerQueueEntry(playerName) {
+    const url = `${SUPABASE_URL}/rest/v1/ranked_queue?player_name=eq.${encodeURIComponent(playerName)}&limit=1`;
     const response = await fetch(url, { method: 'GET', headers: getHeaders() });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    return data;
+    return data.length > 0 ? data[0] : null;
 }
 
-// Submit score to ranked queue
+// Submit or update score in ranked queue (one entry per player)
 async function submitToQueue(playerName, score, kills, bestStreak) {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/ranked_queue`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({
-            player_name: playerName,
-            score: score,
-            kills: kills || 0,
-            best_streak: bestStreak || 0,
-            resolved: false
-        })
-    });
+    // Check if player already has an entry
+    const existing = await getPlayerQueueEntry(playerName);
 
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.json();
+    if (existing) {
+        // Update existing entry - increment attempts, update score if higher
+        const newScore = score > existing.score ? score : existing.score;
+        const newKills = score > existing.score ? (kills || 0) : existing.kills;
+        const newStreak = score > existing.score ? (bestStreak || 0) : existing.best_streak;
+
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/ranked_queue?id=eq.${existing.id}`, {
+            method: 'PATCH',
+            headers: getHeaders(),
+            body: JSON.stringify({
+                score: newScore,
+                kills: newKills,
+                best_streak: newStreak,
+                attempts: (existing.attempts || 1) + 1,
+                updated_at: new Date().toISOString()
+            })
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return { updated: true, newHighScore: score > existing.score, attempts: (existing.attempts || 1) + 1 };
+    } else {
+        // Insert new entry
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/ranked_queue`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({
+                player_name: playerName,
+                score: score,
+                kills: kills || 0,
+                best_streak: bestStreak || 0,
+                attempts: 1
+            })
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return { updated: false, newHighScore: true, attempts: 1 };
+    }
 }
 
-// Get all unresolved queue entries
+// Get all queue entries (entries are deleted after resolution)
 async function getUnresolvedQueue() {
-    const url = `${SUPABASE_URL}/rest/v1/ranked_queue?resolved=eq.false&order=submitted_at.asc`;
+    const url = `${SUPABASE_URL}/rest/v1/ranked_queue?order=submitted_at.asc`;
     const response = await fetch(url, { method: 'GET', headers: getHeaders() });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return await response.json();
-}
-
-// Get unique players with their best scores and attempt counts from queue entries
-function getPlayerBestScores(entries) {
-    const playerBests = {};
-
-    for (const entry of entries) {
-        const name = entry.player_name;
-        if (!playerBests[name]) {
-            playerBests[name] = {
-                player_name: name,
-                score: entry.score,
-                kills: entry.kills,
-                best_streak: entry.best_streak,
-                entryIds: [entry.id],
-                attempts: 1
-            };
-        } else {
-            playerBests[name].attempts++;
-            playerBests[name].entryIds.push(entry.id);
-            if (entry.score > playerBests[name].score) {
-                playerBests[name].score = entry.score;
-                playerBests[name].kills = entry.kills;
-                playerBests[name].best_streak = entry.best_streak;
-            }
-        }
-    }
-
-    // Sort by score descending
-    return Object.values(playerBests).sort((a, b) => b.score - a.score);
-}
-
-// Check if all players have completed their max attempts
-function allPlayersReady(playerBests) {
-    return playerBests.every(player => player.attempts >= MAX_ATTEMPTS_PER_PLAYER);
 }
 
 // Calculate ELO changes for tournament
@@ -198,9 +189,9 @@ function calculateEloChanges(entries) {
 async function resolveTournament(allEntries) {
     const tournamentId = crypto.randomUUID();
 
-    // Get best score per player
-    const playerBests = getPlayerBestScores(allEntries);
-    const results = calculateEloChanges(playerBests);
+    // Sort entries by score descending (each entry is already one per player with best score)
+    const sortedEntries = [...allEntries].sort((a, b) => b.score - a.score);
+    const results = calculateEloChanges(sortedEntries);
     const totalPlayers = results.length;
 
     // Process each player
@@ -317,50 +308,47 @@ export default async function handler(req, res) {
             return res.status(401).json({ error: 'Invalid password', passwordError: true });
         }
 
-        // Check player's current attempts
-        const playerAttempts = await getPlayerAttempts(name);
-        const attemptsUsed = playerAttempts.length;
+        // Check player's current queue entry
+        const playerEntry = await getPlayerQueueEntry(name);
+        const attemptsUsed = playerEntry ? (playerEntry.attempts || 1) : 0;
 
         if (attemptsUsed >= MAX_ATTEMPTS_PER_PLAYER) {
-            // Find their best score
-            const bestScore = Math.max(...playerAttempts.map(a => a.score));
             return res.status(400).json({
                 error: 'Maximum attempts reached',
                 attemptsUsed: attemptsUsed,
                 maxAttempts: MAX_ATTEMPTS_PER_PLAYER,
-                bestScore: bestScore,
+                bestScore: playerEntry.score,
                 message: 'Wait for the tournament to close before queuing again.'
             });
         }
 
         // Check if queue is full (10 players) and player is not already in it
-        if (attemptsUsed === 0) {
+        if (!playerEntry) {
             const currentQueue = await getUnresolvedQueue();
-            const uniquePlayers = new Set(currentQueue.map(e => e.player_name));
 
-            if (uniquePlayers.size >= MIN_PLAYERS_FOR_TOURNAMENT) {
+            if (currentQueue.length >= MIN_PLAYERS_FOR_TOURNAMENT) {
                 return res.status(400).json({
                     error: 'Queue is full',
-                    queueSize: uniquePlayers.size,
+                    queueSize: currentQueue.length,
                     message: 'Tournament queue is full. Please wait for it to resolve before joining.'
                 });
             }
         }
 
-        // Submit to queue
-        await submitToQueue(name, score, kills, bestStreak);
-        const newAttemptsUsed = attemptsUsed + 1;
+        // Submit to queue (inserts new or updates existing)
+        const submitResult = await submitToQueue(name, score, kills, bestStreak);
+        const newAttemptsUsed = submitResult.attempts;
 
         // Get current queue state
         const queue = await getUnresolvedQueue();
 
-        // Get player standings with attempt counts
-        const playerBests = getPlayerBestScores(queue);
-        const uniquePlayers = playerBests.length;
-        const playersReady = playerBests.filter(p => p.attempts >= MAX_ATTEMPTS_PER_PLAYER).length;
+        // Each entry now has attempts field directly
+        const uniquePlayers = queue.length;
+        const playersReady = queue.filter(p => (p.attempts || 1) >= MAX_ATTEMPTS_PER_PLAYER).length;
 
         // Tournament resolves when: 10+ players AND all players have completed all attempts
-        if (uniquePlayers >= MIN_PLAYERS_FOR_TOURNAMENT && allPlayersReady(playerBests)) {
+        const allReady = queue.every(p => (p.attempts || 1) >= MAX_ATTEMPTS_PER_PLAYER);
+        if (uniquePlayers >= MIN_PLAYERS_FOR_TOURNAMENT && allReady) {
             // Resolve tournament!
             const tournamentResult = await resolveTournament(queue);
 

@@ -28,9 +28,9 @@ async function getPlayerElo(playerName) {
     return data.length > 0 ? data[0] : null;
 }
 
-// Get all unresolved queue entries
+// Get all queue entries (entries are deleted after resolution)
 async function getUnresolvedQueue() {
-    const url = `${SUPABASE_URL}/rest/v1/ranked_queue?resolved=eq.false&order=submitted_at.asc`;
+    const url = `${SUPABASE_URL}/rest/v1/ranked_queue?order=submitted_at.asc`;
     const response = await fetch(url, { method: 'GET', headers: getHeaders() });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return await response.json();
@@ -73,39 +73,28 @@ export default async function handler(req, res) {
     try {
         const { playerName } = req.query;
 
-        // Get current queue
+        // Get current queue (one entry per player with attempts count)
         const queue = await getUnresolvedQueue();
 
-        // Build queue standings (best score per player, sorted by score)
-        const playerData = {};
-        for (const entry of queue) {
-            const name = entry.player_name;
-            if (!playerData[name]) {
-                playerData[name] = {
-                    player_name: name,
-                    score: entry.score,
-                    attempts: 1
-                };
-            } else {
-                playerData[name].attempts++;
-                if (entry.score > playerData[name].score) {
-                    playerData[name].score = entry.score;
-                }
-            }
-        }
+        // Build queue standings sorted by score
+        const queueStandings = queue
+            .map(entry => ({
+                player_name: entry.player_name,
+                score: entry.score,
+                attempts: entry.attempts || 1
+            }))
+            .sort((a, b) => b.score - a.score);
 
-        // Sort by score descending
-        const queueStandings = Object.values(playerData).sort((a, b) => b.score - a.score);
-        const uniquePlayers = queueStandings.length;
+        const uniquePlayers = queue.length;
 
         // Count players who have completed all attempts
-        const playersReady = queueStandings.filter(p => p.attempts >= MAX_ATTEMPTS_PER_PLAYER).length;
+        const playersReady = queue.filter(p => (p.attempts || 1) >= MAX_ATTEMPTS_PER_PLAYER).length;
 
         // Basic response without player info
         if (!playerName) {
             return res.status(200).json({
                 queueSize: uniquePlayers,
-                totalEntries: queue.length,
+                totalEntries: uniquePlayers,
                 playersNeeded: Math.max(0, 10 - uniquePlayers),
                 queueStandings,
                 playersReady,
@@ -118,17 +107,17 @@ export default async function handler(req, res) {
         // Get player-specific info
         const eloRecord = await getPlayerElo(name);
 
-        // Get player's queue entries
-        const playerEntries = queue.filter(e => e.player_name === name);
-        const isQueued = playerEntries.length > 0;
-        const attemptsUsed = playerEntries.length;
+        // Get player's queue entry (now one entry per player)
+        const playerEntry = queue.find(e => e.player_name === name);
+        const isQueued = !!playerEntry;
+        const attemptsUsed = playerEntry ? (playerEntry.attempts || 1) : 0;
         const attemptsRemaining = MAX_ATTEMPTS_PER_PLAYER - attemptsUsed;
 
         // Get player's best score in current queue
-        const bestScore = isQueued ? Math.max(...playerEntries.map(e => e.score)) : null;
+        const bestScore = playerEntry ? playerEntry.score : null;
 
-        // Get queue position (first entry)
-        const queuePosition = isQueued ? queue.findIndex(e => e.player_name === name) + 1 : null;
+        // Get queue position (by score ranking)
+        const queuePosition = isQueued ? queueStandings.findIndex(e => e.player_name === name) + 1 : null;
 
         // Get player rank
         const playerRank = eloRecord ? await getPlayerRank(name, eloRecord.elo) : null;
