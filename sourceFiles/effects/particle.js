@@ -57,22 +57,34 @@ export class Particle {
         if (this.alpha <= 0 || this.size <= 0) return;
 
         const rX = window.innerWidth / 2560;
+        const scaledSize = this.size * rX;
 
-        context.save();
-        context.globalAlpha = this.alpha;
+        // Skip very small particles
+        if (scaledSize < 0.5) return;
 
-        // Glow effect
-        if (this.glow) {
+        // Only use glow for visible, larger particles (shadowBlur is expensive)
+        const useGlow = this.glow && this.alpha > 0.3 && scaledSize > 2;
+
+        if (useGlow) {
+            context.save();
+            context.globalAlpha = this.alpha;
             context.shadowColor = this.color;
             context.shadowBlur = this.glowSize * rX;
+            context.beginPath();
+            context.fillStyle = this.color;
+            context.arc(this.x, this.y, scaledSize, 0, Math.PI * 2);
+            context.fill();
+            context.restore();
+        } else {
+            // Fast path without glow - no save/restore needed
+            const prevAlpha = context.globalAlpha;
+            context.globalAlpha = this.alpha;
+            context.beginPath();
+            context.fillStyle = this.color;
+            context.arc(this.x, this.y, scaledSize, 0, Math.PI * 2);
+            context.fill();
+            context.globalAlpha = prevAlpha;
         }
-
-        context.beginPath();
-        context.fillStyle = this.color;
-        context.arc(this.x, this.y, Math.max(0.5, this.size * rX), 0, Math.PI * 2);
-        context.fill();
-
-        context.restore();
     }
 
     isAlive() {

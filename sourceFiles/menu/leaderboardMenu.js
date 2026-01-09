@@ -56,18 +56,24 @@ export class LeaderboardMenu {
         this.isLoading = true;
         this.loadError = null;
         try {
+            console.log('[Leaderboard] Loading...', {
+                difficulty: this.difficulties[this.currentDifficulty],
+                page: this.currentPage,
+                isDaily: this.isDaily
+            });
             const result = await this.supabase.getLeaderboard(
                 this.difficulties[this.currentDifficulty],
                 this.entriesPerPage,
                 this.currentPage,
                 this.isDaily
             );
+            console.log('[Leaderboard] Result:', result);
             this.leaderboardData = result.entries || [];
             this.totalPages = result.pagination?.totalPages || 1;
             this.totalEntries = result.pagination?.totalEntries || 0;
         } catch (error) {
             this.loadError = "Failed to load leaderboard";
-            console.error('Leaderboard load error:', error);
+            console.error('[Leaderboard] Load error:', error);
         }
         this.isLoading = false;
     }

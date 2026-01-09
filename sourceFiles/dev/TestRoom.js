@@ -15,8 +15,8 @@ export class TestRoom {
         this.width = 2000;
         this.height = 1200;
         
-        // Pickup constants
-        this.PICKUP_COLLECTION_RADIUS = 25;  // Tighter collection for smaller pickups
+        // Pickup constants (scaled by resolution)
+        this.PICKUP_COLLECTION_RADIUS = 25 * (window.innerWidth / 2560);
         this.PICKUP_RESPAWN_DELAY_MS = 3000;
         
         // Pickup respawn timers
@@ -30,6 +30,15 @@ export class TestRoom {
 
         // Saved game state
         this.savedState = null;
+
+        // Performance optimization: cached values updated once per frame
+        this._cachedAliveDummies = [];
+        this._cachedPickupCategories = null;
+        this._lastPickupCount = 0;
+
+        // Track window size for resize detection
+        this._lastWindowWidth = window.innerWidth;
+        this._lastWindowHeight = window.innerHeight;
         
         // Pickup type to reward ID mapping
         this.pickupTypeToRewardId = {
@@ -258,24 +267,25 @@ export class TestRoom {
      * Setup target dummies
      */
     setupDummies() {
+        const rX = window.innerWidth / 2560;
         const centerX = this.game.width / 2;
-        const topY = 200;
-        const spacing = 250;
-        
+        const topY = 200 * rX;
+        const spacing = 250 * rX;
+
         // Create dummies with different HP values
         this.dummies = [
-            this.createDummy(centerX - spacing * 2, topY, 1000, 'Low HP', false),
-            this.createDummy(centerX - spacing, topY, 5000, 'Medium HP', false),
-            this.createDummy(centerX, topY, 10000, 'High HP', false),
-            this.createDummy(centerX + spacing, topY, 20000, 'Very High HP', false),
-            this.createDummy(centerX + spacing * 2, topY, 50000, 'Ultra HP', false)
+            this.createDummy(centerX - spacing * 2, topY, 1000, 'Low HP', false, rX),
+            this.createDummy(centerX - spacing, topY, 5000, 'Medium HP', false, rX),
+            this.createDummy(centerX, topY, 10000, 'High HP', false, rX),
+            this.createDummy(centerX + spacing, topY, 20000, 'Very High HP', false, rX),
+            this.createDummy(centerX + spacing * 2, topY, 50000, 'Ultra HP', false, rX)
         ];
     }
     
     /**
      * Create a target dummy
      */
-    createDummy(x, y, maxHp, label, moving) {
+    createDummy(x, y, maxHp, label, moving, rX = 1) {
         return {
             x,
             y,
@@ -284,10 +294,10 @@ export class TestRoom {
             maxHp,
             hp: maxHp,
             label,
-            size: 60,
+            size: 60 * rX,
             moving,
             moveAngle: 0,
-            moveRadius: 100,
+            moveRadius: 100 * rX,
             moveSpeed: 0.02,
             color: '#888888',
             dead: false,
@@ -320,11 +330,12 @@ export class TestRoom {
      */
     setupPickupGrid() {
         this.pickupGrid = [];
-        const spacing = 110;  // Good spacing for navigation
+        const rX = window.innerWidth / 2560;
+        const spacing = 110 * rX;
 
-        // COOLDOWN pickups (top-left section) - pushed further left
-        const cdStartX = 100;
-        const cdStartY = this.game.height / 2 - 100;
+        // COOLDOWN pickups (top-left section)
+        const cdStartX = 100 * rX;
+        const cdStartY = this.game.height / 2 - 100 * rX;
         const cooldownTypes = [
             { type: 'q_cooldown', label: 'Q CD', color: '#ffff00', category: 'cooldown' },
             { type: 'e_cooldown', label: 'E CD', color: '#ff8800', category: 'cooldown' },
@@ -339,14 +350,14 @@ export class TestRoom {
                 type: pickup.type,
                 label: pickup.label,
                 color: pickup.color,
-                size: 18,  // Smaller size for easier navigation
+                size: 18 * rX,
                 category: pickup.category
             });
         }
 
         // SURVIVABILITY pickups (middle-left section)
-        const survStartX = 100;
-        const survStartY = this.game.height / 2 + 30;
+        const survStartX = 100 * rX;
+        const survStartY = this.game.height / 2 + 30 * rX;
         const survTypes = [
             { type: 'life', label: 'Life', color: '#ff4444', category: 'survivability' },
             { type: 'shield', label: 'Shield', color: '#4488ff', category: 'survivability' },
@@ -361,14 +372,14 @@ export class TestRoom {
                 type: pickup.type,
                 label: pickup.label,
                 color: pickup.color,
-                size: 18,
+                size: 18 * rX,
                 category: pickup.category
             });
         }
 
         // MOVEMENT pickups (bottom-left section)
-        const moveStartX = 100;
-        const moveStartY = this.game.height / 2 + 160;
+        const moveStartX = 100 * rX;
+        const moveStartY = this.game.height / 2 + 160 * rX;
         const moveTypes = [
             { type: 'speed', label: 'Speed', color: '#00ff88', category: 'movement' },
             { type: 'dash', label: 'Dash', color: '#00ffff', category: 'movement' },
@@ -383,14 +394,14 @@ export class TestRoom {
                 type: pickup.type,
                 label: pickup.label,
                 color: pickup.color,
-                size: 18,
+                size: 18 * rX,
                 category: pickup.category
             });
         }
 
         // OFFENSE pickups (far-left section, below movement)
-        const offStartX = 100;
-        const offStartY = this.game.height / 2 + 290;
+        const offStartX = 100 * rX;
+        const offStartY = this.game.height / 2 + 290 * rX;
         const offTypes = [
             { type: 'score', label: 'Score', color: '#ffcc00', category: 'offense' },
             { type: 'bullet_size', label: 'Bullet', color: '#ff6600', category: 'offense' },
@@ -406,15 +417,15 @@ export class TestRoom {
                 type: pickup.type,
                 label: pickup.label,
                 color: pickup.color,
-                size: 18,
+                size: 18 * rX,
                 category: pickup.category
             });
         }
-        
+
         // Create gun upgrade pickups (right side)
-        const gunStartX = this.game.width - 470;
+        const gunStartX = this.game.width - 470 * rX;
         const gunStartY = this.game.height / 2;
-        const gunSpacing = 110;
+        const gunSpacing = 110 * rX;
 
         const gunTypes = [
             { type: 'shotgun_common', label: 'Shotgun', color: '#9d9d9d', gunType: 'shotgun' },
@@ -435,16 +446,16 @@ export class TestRoom {
                 type: gun.type,
                 label: gun.label,
                 color: gun.color,
-                size: 30,
+                size: 30 * rX,
                 isGun: true,
                 gunType: gun.gunType
             });
         }
 
-        // Create rarity selector pickups (bottom center - lowered to avoid spawn)
-        const rarityStartX = this.game.width / 2 - 300;
-        const rarityStartY = this.game.height - 100;
-        const raritySpacing = 100;
+        // Create rarity selector pickups (bottom center)
+        const rarityStartX = this.game.width / 2 - 300 * rX;
+        const rarityStartY = this.game.height - 100 * rX;
+        const raritySpacing = 100 * rX;
 
         for (let i = 0; i < this.rarityOptions.length; i++) {
             const rarity = this.rarityOptions[i];
@@ -454,7 +465,7 @@ export class TestRoom {
                 type: `rarity_${rarity.key}`,
                 label: rarity.name,
                 color: rarity.color,
-                size: 25,
+                size: 25 * rX,
                 isRaritySelector: true,
                 rarityKey: rarity.key
             });
@@ -467,10 +478,35 @@ export class TestRoom {
     update() {
         if (!this.active) return;
 
+        // Check for window resize and recalculate positions
+        if (window.innerWidth !== this._lastWindowWidth || window.innerHeight !== this._lastWindowHeight) {
+            this._lastWindowWidth = window.innerWidth;
+            this._lastWindowHeight = window.innerHeight;
+            // Update collection radius
+            this.PICKUP_COLLECTION_RADIUS = 25 * (window.innerWidth / 2560);
+            // Save dummy states before recalculating
+            const dummyStates = this.dummies.map(d => ({ hp: d.hp, dead: d.dead, respawnTime: d.respawnTime }));
+            // Recalculate positions
+            this.setupDummies();
+            // Restore dummy states
+            for (let i = 0; i < this.dummies.length && i < dummyStates.length; i++) {
+                this.dummies[i].hp = dummyStates[i].hp;
+                this.dummies[i].dead = dummyStates[i].dead;
+                this.dummies[i].respawnTime = dummyStates[i].respawnTime;
+            }
+            this.setupPickupGrid();
+            this._cachedPickupCategories = null; // Force category cache refresh
+        }
+
+        // Cache alive dummies once per frame for performance
+        this._cachedAliveDummies = this.dummies.filter(d => !d.dead);
+
         // Check for R key press to reset dummies
         if (this.game.input.buttons.includes('r')) {
             this.handleResetKey();
         }
+
+        const now = performance.now();
 
         // Update moving dummies
         for (const dummy of this.dummies) {
@@ -480,16 +516,14 @@ export class TestRoom {
                 dummy.y = dummy.startY + Math.sin(dummy.moveAngle) * dummy.moveRadius;
             }
 
-            // Check collisions with bullets (only if not dead)
-            if (!dummy.dead) {
-                this.checkBulletCollisions(dummy);
-            }
-
             // Check if dummy should respawn
-            if (dummy.dead && dummy.respawnTime > 0 && performance.now() >= dummy.respawnTime) {
+            if (dummy.dead && dummy.respawnTime > 0 && now >= dummy.respawnTime) {
                 dummy.respawn();
             }
         }
+
+        // Batch collision check - check all bullets against all alive dummies
+        this.checkAllBulletCollisions();
 
         // Update homing bullets to track dummies
         this.updateHomingBullets();
@@ -505,7 +539,7 @@ export class TestRoom {
      * Update chain bolts and handle recursive bouncing for test room
      */
     updateChainBolts() {
-        const aliveDummies = this.dummies.filter(d => !d.dead);
+        const aliveDummies = this._cachedAliveDummies;
 
         for (let i = this.chainBolts.length - 1; i >= 0; i--) {
             const bolt = this.chainBolts[i];
@@ -515,6 +549,7 @@ export class TestRoom {
             if (bolt.needsRecursiveChain && bolt.recursiveDepth < bolt.maxRecursiveBounces) {
                 // Create recursive chains to nearby dummies
                 const chainRange = (bolt.gunData.chainRange || 150) * window.innerWidth / 2560;
+                const chainRangeSq = chainRange * chainRange;
                 const targets = [];
 
                 for (const dummy of aliveDummies) {
@@ -523,15 +558,15 @@ export class TestRoom {
 
                     const dx = dummy.x - bolt.targetEnemy.x;
                     const dy = dummy.y - bolt.targetEnemy.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const distSq = dx * dx + dy * dy;
 
-                    if (dist <= chainRange) {
-                        targets.push({ dummy, dist });
+                    if (distSq <= chainRangeSq) {
+                        targets.push({ dummy, distSq });
                     }
                 }
 
                 // Sort by distance and chain to closest
-                targets.sort((a, b) => a.dist - b.dist);
+                targets.sort((a, b) => a.distSq - b.distSq);
                 const chainCount = bolt.gunData.chainCount || 1;
                 const toChain = Math.min(chainCount, targets.length);
 
@@ -578,12 +613,12 @@ export class TestRoom {
      */
     updateHomingBullets() {
         const bulletsList = this.game.bullets.bulletsList;
-        const aliveDummies = this.dummies.filter(d => !d.dead);
+        const aliveDummies = this._cachedAliveDummies;
 
         for (const bullet of bulletsList) {
             if (bullet.isHoming && aliveDummies.length > 0) {
-                // Find closest dummy
-                let closestDist = Infinity;
+                // Find closest dummy using squared distance (faster)
+                let closestDistSq = Infinity;
                 let closestDummy = null;
 
                 for (const dummy of aliveDummies) {
@@ -593,10 +628,10 @@ export class TestRoom {
 
                     const dx = dummy.x - bullet.x;
                     const dy = dummy.y - bullet.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const distSq = dx * dx + dy * dy;
 
-                    if (dist < closestDist) {
-                        closestDist = dist;
+                    if (distSq < closestDistSq) {
+                        closestDistSq = distSq;
                         closestDummy = dummy;
                     }
                 }
@@ -627,61 +662,124 @@ export class TestRoom {
     }
     
     /**
-     * Check bullet collisions with dummies
+     * Optimized: Check all bullets against all alive dummies in one pass
+     */
+    checkAllBulletCollisions() {
+        const aliveDummies = this._cachedAliveDummies;
+        if (aliveDummies.length === 0) return;
+
+        const bulletsList = this.game.challenge_level === 0
+            ? this.game.bullets.bulletsList
+            : this.game.voidBolts.bolts;
+
+        const damage = this.game.devMode ? 100 * this.game.devMode.damageMultiplier : 100;
+        const now = performance.now();
+
+        for (let i = bulletsList.length - 1; i >= 0; i--) {
+            const bullet = bulletsList[i];
+            const bulletSize = bullet.size || 8;
+            let bulletRemoved = false;
+
+            for (const dummy of aliveDummies) {
+                if (dummy.dead) continue;
+
+                // Skip if this bullet already hit this dummy (for piercing)
+                if (bullet.piercedDummies && bullet.piercedDummies.has(dummy)) {
+                    continue;
+                }
+
+                const dx = bullet.x - dummy.x;
+                const dy = bullet.y - dummy.y;
+                // Use squared distance to avoid sqrt (faster)
+                const distSq = dx * dx + dy * dy;
+                const hitDist = dummy.size + bulletSize;
+
+                if (distSq < hitDist * hitDist) {
+                    // Hit!
+                    dummy.takeDamage(damage);
+
+                    // Visual effect
+                    if (this.game.effects) {
+                        this.game.effects.spawnBurst(bullet.x, bullet.y, 'enemyDeath');
+                    }
+
+                    // Handle chain lightning
+                    if (bullet.chainsRemaining && bullet.chainsRemaining > 0) {
+                        this.triggerChainLightning(dummy, bullet);
+                    }
+
+                    // Check if bullet should pierce through
+                    if (bullet.pierceCount && bullet.pierceCount > 0) {
+                        bullet.pierceCount--;
+                        if (!bullet.piercedDummies) {
+                            bullet.piercedDummies = new Set();
+                        }
+                        bullet.piercedDummies.add(dummy);
+                    } else {
+                        bulletsList.splice(i, 1);
+                        bulletRemoved = true;
+                    }
+
+                    // Check if dummy died
+                    if (dummy.dead && dummy.respawnTime === 0) {
+                        dummy.respawnTime = now + 3000;
+                        if (this.game.effects) {
+                            this.game.effects.spawnBurst(dummy.x, dummy.y, 'enemyDeath');
+                            this.game.effects.spawnBurst(dummy.x, dummy.y, 'enemyDeath');
+                        }
+                    }
+
+                    if (bulletRemoved) break;
+                }
+            }
+        }
+    }
+
+    /**
+     * Check bullet collisions with a single dummy (legacy, kept for compatibility)
      */
     checkBulletCollisions(dummy) {
         const bulletsList = this.game.challenge_level === 0
             ? this.game.bullets.bulletsList
             : this.game.voidBolts.bolts;
 
+        const damage = this.game.devMode ? 100 * this.game.devMode.damageMultiplier : 100;
+
         for (let i = bulletsList.length - 1; i >= 0; i--) {
             const bullet = bulletsList[i];
 
-            // Skip if this bullet already hit this dummy (for piercing)
             if (bullet.piercedDummies && bullet.piercedDummies.has(dummy)) {
                 continue;
             }
 
             const dx = bullet.x - dummy.x;
             const dy = bullet.y - dummy.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            const distSq = dx * dx + dy * dy;
+            const hitDist = dummy.size + (bullet.size || 8);
 
-            if (distance < dummy.size + (bullet.size || 8)) {
-                // Hit!
-                const damage = this.game.devMode ?
-                    100 * this.game.devMode.damageMultiplier : 100;
+            if (distSq < hitDist * hitDist) {
                 dummy.takeDamage(damage);
 
-                // Visual effect
                 if (this.game.effects) {
                     this.game.effects.spawnBurst(bullet.x, bullet.y, 'enemyDeath');
                 }
 
-                // Handle chain lightning
                 if (bullet.chainsRemaining && bullet.chainsRemaining > 0) {
                     this.triggerChainLightning(dummy, bullet);
                 }
 
-                // Check if bullet should pierce through
                 if (bullet.pierceCount && bullet.pierceCount > 0) {
                     bullet.pierceCount--;
-                    // Track which dummies this bullet has hit
                     if (!bullet.piercedDummies) {
                         bullet.piercedDummies = new Set();
                     }
                     bullet.piercedDummies.add(dummy);
-                    // Don't remove the bullet - it pierces through
                 } else {
-                    // Remove bullet (no pierce or out of pierce)
                     bulletsList.splice(i, 1);
                 }
 
-                // Check if dummy died
                 if (dummy.dead && dummy.respawnTime === 0) {
-                    // Set respawn time (3 seconds from now)
                     dummy.respawnTime = performance.now() + 3000;
-
-                    // Create enhanced death effect
                     if (this.game.effects) {
                         this.game.effects.spawnBurst(dummy.x, dummy.y, 'enemyDeath');
                         this.game.effects.spawnBurst(dummy.x, dummy.y, 'enemyDeath');
@@ -696,7 +794,9 @@ export class TestRoom {
      */
     triggerChainLightning(hitDummy, bullet) {
         const chainRange = bullet.chainRange || 350;
-        const aliveDummies = this.dummies.filter(d => !d.dead && d !== hitDummy);
+        const chainRangeSq = chainRange * chainRange;
+        // Use cached alive dummies, filter out the hit dummy
+        const aliveDummies = this._cachedAliveDummies.filter(d => d !== hitDummy);
 
         // Create a shared set for tracking hit targets across recursive bounces
         const hitEnemies = new Set();
@@ -710,15 +810,15 @@ export class TestRoom {
 
             const dx = dummy.x - hitDummy.x;
             const dy = dummy.y - hitDummy.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
+            const distSq = dx * dx + dy * dy;
 
-            if (dist <= chainRange) {
-                chainTargets.push({ dummy, dist });
+            if (distSq <= chainRangeSq) {
+                chainTargets.push({ dummy, distSq });
             }
         }
 
         // Sort by distance
-        chainTargets.sort((a, b) => a.dist - b.dist);
+        chainTargets.sort((a, b) => a.distSq - b.distSq);
 
         // Chain to closest targets
         const toChain = Math.min(bullet.chainsRemaining, chainTargets.length);
@@ -766,14 +866,16 @@ export class TestRoom {
      */
     checkPickupCollisions() {
         const player = this.game.player;
+        const collectionDist = this.PICKUP_COLLECTION_RADIUS + player.size;
+        const collectionDistSq = collectionDist * collectionDist;
 
         for (let i = this.pickupGrid.length - 1; i >= 0; i--) {
             const pickup = this.pickupGrid[i];
             const dx = player.x - pickup.x;
             const dy = player.y - pickup.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            const distSq = dx * dx + dy * dy;
 
-            if (distance < this.PICKUP_COLLECTION_RADIUS + player.size) {
+            if (distSq < collectionDistSq) {
                 // Handle rarity selector pickups
                 if (pickup.isRaritySelector) {
                     this.selectedRarity = pickup.rarityKey === 'default' ? null : pickup.rarityKey;
@@ -788,11 +890,15 @@ export class TestRoom {
                     const originalPickup = {...pickup};
                     this.pickupGrid.splice(i, 1);
 
-                    // Respawn after short delay
-                    const timerId = setTimeout(() => {
+                    // Respawn after short delay with self-cleanup
+                    let timerId;
+                    timerId = setTimeout(() => {
                         if (this.active) {
                             this.pickupGrid.push(originalPickup);
                         }
+                        // Clean up timer reference
+                        const idx = this.respawnTimers.indexOf(timerId);
+                        if (idx !== -1) this.respawnTimers.splice(idx, 1);
                     }, 500);
 
                     this.respawnTimers.push(timerId);
@@ -875,40 +981,40 @@ export class TestRoom {
                 const originalPickup = {...pickup};
                 this.pickupGrid.splice(i, 1);
 
-                // Respawn after delay
-                const timerId = setTimeout(() => {
+                // Respawn after delay with self-cleanup
+                let timerId;
+                timerId = setTimeout(() => {
                     if (this.active) {
                         this.pickupGrid.push(originalPickup);
                     }
+                    // Clean up timer reference
+                    const idx = this.respawnTimers.indexOf(timerId);
+                    if (idx !== -1) this.respawnTimers.splice(idx, 1);
                 }, this.PICKUP_RESPAWN_DELAY_MS);
 
-                // Store timer ID for cleanup
                 this.respawnTimers.push(timerId);
             }
         }
     }
     
     /**
-     * Draw test room
+     * Draw test room (optimized - minimal shadowBlur)
      */
     draw(context) {
         if (!this.active) return;
-        
+
         const rX = window.innerWidth / 2560;
-        
-        // Draw test room title
+
+        // Draw test room title (no shadow for performance)
         context.save();
         context.font = `${50 * rX}px monospace`;
         context.fillStyle = '#00ffff';
-        context.shadowColor = '#00ffff';
-        context.shadowBlur = 10 * rX;
         context.textAlign = 'center';
         context.fillText('TEST ROOM', this.game.width / 2, 60);
-        
+
         // Draw instructions
         context.font = `${24 * rX}px monospace`;
         context.fillStyle = '#ffffff';
-        context.shadowBlur = 5 * rX;
         context.fillText('Type "testroom" or "test" to exit', this.game.width / 2, 100);
         context.restore();
         
@@ -928,32 +1034,23 @@ export class TestRoom {
     }
     
     /**
-     * Draw target dummies
+     * Draw target dummies (optimized - no gradients)
      */
     drawDummies(context) {
         const rX = window.innerWidth / 2560;
-        
+        const now = performance.now();
+
         for (const dummy of this.dummies) {
             context.save();
-            
-            // If dummy is dead, show different visuals
+
             if (dummy.dead) {
-                // Draw faded dummy with skull or X
+                // Draw faded dummy body
                 context.globalAlpha = 0.3;
-                
-                // Draw dummy body (faded)
-                const gradient = context.createRadialGradient(
-                    dummy.x, dummy.y, 0,
-                    dummy.x, dummy.y, dummy.size
-                );
-                gradient.addColorStop(0, '#333333');
-                gradient.addColorStop(1, '#111111');
-                
-                context.fillStyle = gradient;
+                context.fillStyle = '#222222';
                 context.beginPath();
                 context.arc(dummy.x, dummy.y, dummy.size, 0, Math.PI * 2);
                 context.fill();
-                
+
                 // Draw X mark
                 context.globalAlpha = 0.6;
                 context.strokeStyle = '#ff0000';
@@ -965,103 +1062,90 @@ export class TestRoom {
                 context.moveTo(dummy.x + xSize, dummy.y - xSize);
                 context.lineTo(dummy.x - xSize, dummy.y + xSize);
                 context.stroke();
-                
-                // Draw respawn timer
+
+                // Draw respawn timer (no shadow)
                 context.globalAlpha = 1;
-                const respawnSeconds = Math.max(0, Math.ceil((dummy.respawnTime - performance.now()) / 1000));
+                const respawnSeconds = Math.max(0, Math.ceil((dummy.respawnTime - now) / 1000));
                 context.font = `${20 * rX}px monospace`;
                 context.fillStyle = '#ff0000';
                 context.textAlign = 'center';
-                context.shadowColor = '#ff0000';
-                context.shadowBlur = 5 * rX;
-                context.fillText(`Respawning in ${respawnSeconds}s`, dummy.x, dummy.y + dummy.size + 25);
+                context.fillText(`Respawning in ${respawnSeconds}s`, dummy.x, dummy.y + dummy.size + 25 * rX);
             } else {
-                // Draw normal dummy
-                
                 // Draw dummy body
-                const gradient = context.createRadialGradient(
-                    dummy.x, dummy.y, 0,
-                    dummy.x, dummy.y, dummy.size
-                );
-                gradient.addColorStop(0, '#666666');
-                gradient.addColorStop(1, dummy.color);
-                
-                context.fillStyle = gradient;
+                context.fillStyle = dummy.color;
                 context.beginPath();
                 context.arc(dummy.x, dummy.y, dummy.size, 0, Math.PI * 2);
                 context.fill();
-                
+
+                // Draw inner circle for depth effect
+                context.fillStyle = '#666666';
+                context.beginPath();
+                context.arc(dummy.x, dummy.y, dummy.size * 0.6, 0, Math.PI * 2);
+                context.fill();
+
                 // Draw outline
                 context.strokeStyle = '#ffffff';
                 context.lineWidth = 2 * rX;
+                context.beginPath();
+                context.arc(dummy.x, dummy.y, dummy.size, 0, Math.PI * 2);
                 context.stroke();
-                
+
                 // Draw HP bar
                 const barWidth = dummy.size * 2;
                 const barHeight = 8 * rX;
                 const barX = dummy.x - barWidth / 2;
-                const barY = dummy.y - dummy.size - 20;
-                
-                // Background
+                const barY = dummy.y - dummy.size - 20 * rX;
+
                 context.fillStyle = 'rgba(0, 0, 0, 0.7)';
                 context.fillRect(barX, barY, barWidth, barHeight);
-                
-                // HP fill
+
                 const hpPercent = dummy.hp / dummy.maxHp;
-                const fillColor = hpPercent > 0.5 ? '#00ff00' : hpPercent > 0.25 ? '#ffff00' : '#ff0000';
-                context.fillStyle = fillColor;
+                context.fillStyle = hpPercent > 0.5 ? '#00ff00' : hpPercent > 0.25 ? '#ffff00' : '#ff0000';
                 context.fillRect(barX, barY, barWidth * hpPercent, barHeight);
-                
-                // HP text
+
+                // HP text (no shadow)
                 context.font = `${14 * rX}px monospace`;
                 context.fillStyle = '#ffffff';
                 context.textAlign = 'center';
-                context.shadowBlur = 3 * rX;
-                context.fillText(`${dummy.hp}/${dummy.maxHp}`, dummy.x, barY - 5);
-                
+                context.fillText(`${dummy.hp}/${dummy.maxHp}`, dummy.x, barY - 5 * rX);
+
                 // Draw label
                 context.font = `${16 * rX}px monospace`;
                 const lines = dummy.label.split('\n');
                 for (let i = 0; i < lines.length; i++) {
-                    context.fillText(lines[i], dummy.x, dummy.y + dummy.size + 25 + i * 18);
+                    context.fillText(lines[i], dummy.x, dummy.y + dummy.size + 25 * rX + i * 18 * rX);
                 }
-                
+
                 // Reset button indicator
                 context.font = `${12 * rX}px monospace`;
                 context.fillStyle = '#00ffff';
-                context.fillText('[R to Reset]', dummy.x, dummy.y + dummy.size + 55);
+                context.fillText('[R to Reset]', dummy.x, dummy.y + dummy.size + 55 * rX);
             }
-            
+
             context.restore();
         }
     }
     
     /**
-     * Draw unique weapon icon based on gun type
+     * Draw unique weapon icon based on gun type (optimized - no shadowBlur)
+     * @param {number} time - Cached time value (performance.now() / 1000)
      */
-    drawWeaponIcon(context, x, y, size, gunType, rX) {
-        const time = performance.now() / 1000;
-        const pulse = 0.9 + Math.sin(time * 3) * 0.1;
-
+    drawWeaponIcon(context, x, y, size, gunType, rX, time) {
         context.save();
 
         // Weapon color schemes
         const colors = {
-            shotgun: { primary: '#ff6600', secondary: '#ff9944', glow: '#ff4400' },
-            rapidfire: { primary: '#ffee00', secondary: '#ffff66', glow: '#ffaa00' },
-            piercing: { primary: '#00ffff', secondary: '#88ffff', glow: '#00aaff' },
-            ricochet: { primary: '#44ff44', secondary: '#88ff88', glow: '#00ff00' },
-            homing: { primary: '#ff44ff', secondary: '#ff88ff', glow: '#aa00ff' },
-            twin: { primary: '#4488ff', secondary: '#88aaff', glow: '#0066ff' },
-            nova: { primary: '#ff00ff', secondary: '#ff66ff', glow: '#ff00aa' },
-            chain: { primary: '#00aaff', secondary: '#66ccff', glow: '#0088ff' }
+            shotgun: { primary: '#ff6600', secondary: '#ff9944' },
+            rapidfire: { primary: '#ffee00', secondary: '#ffff66' },
+            piercing: { primary: '#00ffff', secondary: '#88ffff' },
+            ricochet: { primary: '#44ff44', secondary: '#88ff88' },
+            homing: { primary: '#ff44ff', secondary: '#ff88ff' },
+            twin: { primary: '#4488ff', secondary: '#88aaff' },
+            nova: { primary: '#ff00ff', secondary: '#ff66ff' },
+            chain: { primary: '#00aaff', secondary: '#66ccff' }
         };
 
         const c = colors[gunType] || colors.shotgun;
-
-        // Base glow
-        context.shadowColor = c.glow;
-        context.shadowBlur = 20 * rX * pulse;
 
         switch (gunType) {
             case 'shotgun':
@@ -1241,97 +1325,97 @@ export class TestRoom {
     }
 
     /**
+     * Update cached pickup categories (call when pickups change)
+     */
+    _updatePickupCategories() {
+        this._cachedPickupCategories = {
+            cooldown: this.pickupGrid.filter(p => p.category === 'cooldown'),
+            survivability: this.pickupGrid.filter(p => p.category === 'survivability'),
+            movement: this.pickupGrid.filter(p => p.category === 'movement'),
+            offense: this.pickupGrid.filter(p => p.category === 'offense'),
+            guns: this.pickupGrid.filter(p => p.isGun),
+            rarity: this.pickupGrid.filter(p => p.isRaritySelector)
+        };
+        this._lastPickupCount = this.pickupGrid.length;
+    }
+
+    /**
      * Draw pickup grid
      */
     drawPickupGrid(context) {
         const rX = window.innerWidth / 2560;
+        const time = performance.now() / 1000; // Cache time once for all icons
 
         context.save();
 
-        // Separate pickups into groups by category
-        const cooldownPickups = this.pickupGrid.filter(p => p.category === 'cooldown');
-        const survPickups = this.pickupGrid.filter(p => p.category === 'survivability');
-        const movePickups = this.pickupGrid.filter(p => p.category === 'movement');
-        const offensePickups = this.pickupGrid.filter(p => p.category === 'offense');
-        const gunPickups = this.pickupGrid.filter(p => p.isGun);
-        const rarityPickups = this.pickupGrid.filter(p => p.isRaritySelector);
+        // Use cached categories, rebuild if pickup count changed
+        if (!this._cachedPickupCategories || this.pickupGrid.length !== this._lastPickupCount) {
+            this._updatePickupCategories();
+        }
 
-        // Draw category labels
+        const cooldownPickups = this._cachedPickupCategories.cooldown;
+        const survPickups = this._cachedPickupCategories.survivability;
+        const movePickups = this._cachedPickupCategories.movement;
+        const offensePickups = this._cachedPickupCategories.offense;
+        const gunPickups = this._cachedPickupCategories.guns;
+        const rarityPickups = this._cachedPickupCategories.rarity;
+
+        // Draw category labels (no shadows for performance)
         context.textAlign = 'left';
         context.font = `${14 * rX}px monospace`;
 
-        // COOLDOWNS label
         context.fillStyle = '#ffff00';
-        context.shadowColor = '#ffff00';
-        context.shadowBlur = 6 * rX;
-        context.fillText('COOLDOWNS', 40, this.game.height / 2 - 130);
+        context.fillText('COOLDOWNS', 40 * rX, this.game.height / 2 - 130 * rX);
 
-        // SURVIVABILITY label
         context.fillStyle = '#ff4488';
-        context.shadowColor = '#ff4488';
-        context.fillText('SURVIVABILITY', 40, this.game.height / 2);
+        context.fillText('SURVIVABILITY', 40 * rX, this.game.height / 2);
 
-        // MOVEMENT label
         context.fillStyle = '#00ff88';
-        context.shadowColor = '#00ff88';
-        context.fillText('MOVEMENT', 40, this.game.height / 2 + 130);
+        context.fillText('MOVEMENT', 40 * rX, this.game.height / 2 + 130 * rX);
 
-        // OFFENSE label
         context.fillStyle = '#ffaa00';
-        context.shadowColor = '#ffaa00';
-        context.fillText('OFFENSE', 40, this.game.height / 2 + 260);
+        context.fillText('OFFENSE', 40 * rX, this.game.height / 2 + 260 * rX);
 
-        // Draw all non-gun, non-rarity pickups
+        // Draw all non-gun, non-rarity pickups (no shadows)
         const leftPickups = [...cooldownPickups, ...survPickups, ...movePickups, ...offensePickups];
         for (const pickup of leftPickups) {
-            // Draw pickup circle
             context.fillStyle = pickup.color;
-            context.shadowColor = pickup.color;
-            context.shadowBlur = 15 * rX;
             context.beginPath();
             context.arc(pickup.x, pickup.y, pickup.size, 0, Math.PI * 2);
             context.fill();
 
-            // Draw label
             context.font = `${12 * rX}px monospace`;
             context.fillStyle = '#ffffff';
-            context.shadowBlur = 3 * rX;
             context.textAlign = 'center';
-            context.fillText(pickup.label, pickup.x, pickup.y + pickup.size + 18);
+            context.fillText(pickup.label, pickup.x, pickup.y + pickup.size + 18 * rX);
         }
 
-        // Draw right section title (GUN UPGRADES)
+        // Draw right section title
         context.font = `${32 * rX}px monospace`;
         context.fillStyle = '#ff8000';
-        context.shadowColor = '#ff8000';
-        context.shadowBlur = 8 * rX;
         context.textAlign = 'right';
-        context.fillText('GUN UPGRADES', this.game.width - 100, this.game.height / 2 - 60);
+        context.fillText('GUN UPGRADES', this.game.width - 100 * rX, this.game.height / 2 - 60 * rX);
 
         // Draw gun pickups with unique icons
         for (const pickup of gunPickups) {
-            this.drawWeaponIcon(context, pickup.x, pickup.y, pickup.size, pickup.gunType, rX);
+            this.drawWeaponIcon(context, pickup.x, pickup.y, pickup.size, pickup.gunType, rX, time);
 
-            // Draw label
             context.font = `${14 * rX}px monospace`;
             context.fillStyle = '#ffffff';
-            context.shadowBlur = 3 * rX;
             context.textAlign = 'center';
             const lines = pickup.label.split('\n');
             for (let i = 0; i < lines.length; i++) {
-                context.fillText(lines[i], pickup.x, pickup.y + pickup.size + 20 + i * 16);
+                context.fillText(lines[i], pickup.x, pickup.y + pickup.size + 20 * rX + i * 16 * rX);
             }
         }
 
         // Draw rarity selector section title
         context.font = `${28 * rX}px monospace`;
         context.fillStyle = '#00ffff';
-        context.shadowColor = '#00ffff';
-        context.shadowBlur = 8 * rX;
         context.textAlign = 'center';
-        context.fillText('RARITY SELECTOR', this.game.width / 2, this.game.height - 140);
+        context.fillText('RARITY SELECTOR', this.game.width / 2, this.game.height - 140 * rX);
 
-        // Draw rarity selector pickups
+        // Draw rarity selector pickups (no shadows)
         for (const pickup of rarityPickups) {
             const isSelected = (pickup.rarityKey === 'default' && !this.selectedRarity) ||
                                (pickup.rarityKey === this.selectedRarity);
@@ -1340,54 +1424,44 @@ export class TestRoom {
             if (isSelected) {
                 context.strokeStyle = '#ffffff';
                 context.lineWidth = 3 * rX;
-                context.shadowColor = '#ffffff';
-                context.shadowBlur = 15 * rX;
                 context.beginPath();
-                context.arc(pickup.x, pickup.y, pickup.size + 8, 0, Math.PI * 2);
+                context.arc(pickup.x, pickup.y, pickup.size + 8 * rX, 0, Math.PI * 2);
                 context.stroke();
             }
 
-            // Draw pickup circle
             context.fillStyle = pickup.color;
-            context.shadowColor = pickup.color;
-            context.shadowBlur = isSelected ? 20 * rX : 10 * rX;
             context.beginPath();
             context.arc(pickup.x, pickup.y, pickup.size, 0, Math.PI * 2);
             context.fill();
 
-            // Draw label
             context.font = `${12 * rX}px monospace`;
             context.fillStyle = isSelected ? '#ffffff' : '#aaaaaa';
-            context.shadowBlur = 3 * rX;
             context.textAlign = 'center';
-            context.fillText(pickup.label, pickup.x, pickup.y + pickup.size + 18);
+            context.fillText(pickup.label, pickup.x, pickup.y + pickup.size + 18 * rX);
         }
 
         context.restore();
     }
     
     /**
-     * Draw test room boundaries
+     * Draw test room boundaries (no shadow for performance)
      */
     drawBoundaries(context) {
         const rX = window.innerWidth / 2560;
-        const margin = 20;  // Closer to edge for more play area
-        
+        const margin = 20;
+
         context.save();
         context.strokeStyle = '#00ffff';
         context.lineWidth = 3 * rX;
         context.setLineDash([10, 5]);
-        context.shadowColor = '#00ffff';
-        context.shadowBlur = 10 * rX;
-        
-        // Draw boundary rectangle
+
         context.strokeRect(
             margin,
             margin,
             this.game.width - margin * 2,
             this.game.height - margin * 2
         );
-        
+
         context.restore();
     }
     

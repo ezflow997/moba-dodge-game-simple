@@ -315,6 +315,8 @@ export class PauseMenu {
                     this.isPaused = false;
                     this.showKeybinds = false;
                     this.showVolume = false;
+                    // Resume music since we bypassed toggle()
+                    if (window.gameSound) window.gameSound.resumeMusic();
                 }
                 this.quitButton.y = 280 + 85 * 6;  // Below exit test room button
             } else {

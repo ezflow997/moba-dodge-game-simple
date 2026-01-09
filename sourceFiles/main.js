@@ -317,11 +317,17 @@ window.addEventListener('load', function () {
 
 		const game = new Game(canvas.width, canvas.height);
 
-		function animate() {
+		// Handle window resize - only resize canvas when window actually changes
+		function handleResize() {
 			canvas.width = window.innerWidth;
 			canvas.height = window.innerHeight;
 			game.width = window.innerWidth;
 			game.height = window.innerHeight;
+		}
+		window.addEventListener('resize', handleResize);
+
+		function animate() {
+			// Canvas size is now handled by resize event listener
 
 			if(game.input.escapePressed && game.pauseMenu.isPaused) {
 				game.pauseMenu.toggle();
@@ -335,25 +341,32 @@ window.addEventListener('load', function () {
 
 			if(game.gameOver == true){
 				if(game.showMessage == '' && game.score != 0){
-					// Store pending score for leaderboard submission
-					game.pendingScore = {
-						score: game.score,
-						kills: game.enemies.enemiesTakenDown,
-						bestStreak: game.enemies.best_streak,
-						difficulty: game.difficulties[game.difficulty_level]
-					};
+					// Check if dev mode is enabled - don't save scores
+					if (game.devMode && game.devMode.isEnabled()) {
+						game.showMessage = 'Dev Mode - Score not saved (' + game.score + ')';
+						game.showMessageNow = window.performance.now();
+						game.pendingScore = null; // Don't submit to leaderboard
+					} else {
+						// Store pending score for leaderboard submission
+						game.pendingScore = {
+							score: game.score,
+							kills: game.enemies.enemiesTakenDown,
+							bestStreak: game.enemies.best_streak,
+							difficulty: game.difficulties[game.difficulty_level]
+						};
 
-					// Check for high score
-					if(game.score > parseInt(game.player_data.high_score[game.difficulty_level].value) || !(parseInt(game.player_data.high_score[game.difficulty_level].value) > 0)){
-						game.showMessage = 'New High Score of ' + game.score + ' !';
-						game.showMessageNow = window.performance.now();
-						game.setScores(game.player_data.high_score[game.difficulty_level]);
-						game.setScores(game.player_data.last_score[game.difficulty_level]);
-					}
-					else{
-						game.showMessage = 'Your Score is ' + game.score;
-						game.showMessageNow = window.performance.now();
-						game.setScores(game.player_data.last_score[game.difficulty_level]);
+						// Check for high score
+						if(game.score > parseInt(game.player_data.high_score[game.difficulty_level].value) || !(parseInt(game.player_data.high_score[game.difficulty_level].value) > 0)){
+							game.showMessage = 'New High Score of ' + game.score + ' !';
+							game.showMessageNow = window.performance.now();
+							game.setScores(game.player_data.high_score[game.difficulty_level]);
+							game.setScores(game.player_data.last_score[game.difficulty_level]);
+						}
+						else{
+							game.showMessage = 'Your Score is ' + game.score;
+							game.showMessageNow = window.performance.now();
+							game.setScores(game.player_data.last_score[game.difficulty_level]);
+						}
 					}
 
 					game.score = 0;
@@ -426,11 +439,7 @@ window.addEventListener('load', function () {
 		}
 
 		function drawMenu() {
-			canvas.width = window.innerWidth;
-			canvas.height = window.innerHeight;
-			game.width = window.innerWidth;
-			game.height = window.innerHeight;
-
+			// Canvas size is now handled by resize event listener
 			ctx.clearRect(-100, -100, game.width * 2, game.height * 2);
 			var M = game.menu;
 

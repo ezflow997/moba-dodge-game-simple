@@ -30,9 +30,10 @@ export class CommandRegistry {
         this.register('maxlevel', this.cmdMaxLevel.bind(this), 'Set to maximum level');
         
         // Spawning & testing
-        this.register('testroom', this.cmdTestRoom.bind(this), 'Load isolated test room');
+        this.register('testroom', this.cmdTestRoom.bind(this), 'Load isolated test room', ['test']);
         this.register('spawn', this.cmdSpawn.bind(this), 'Spawn specific enemy <type>');
         this.register('spawnpickup', this.cmdSpawnPickup.bind(this), 'Spawn specific pickup <type>');
+        this.register('boss', this.cmdBoss.bind(this), 'Spawn a boss [type: shooter, charger, vortex]', ['spawnboss']);
         this.register('clear', this.cmdClear.bind(this), 'Remove all enemies and projectiles', ['clearenemies']);
         this.register('clearprojectiles', this.cmdClearProjectiles.bind(this), 'Remove only projectiles');
         
@@ -63,7 +64,11 @@ export class CommandRegistry {
         this.register('help', this.cmdHelp.bind(this), 'List all available commands or show help for <command>');
         this.register('echo', this.cmdEcho.bind(this), 'Print message to console <message>');
         this.register('reset', this.cmdReset.bind(this), 'Reset all cheats to default state');
+        this.register('quit', this.cmdQuit.bind(this), 'Quit to main menu', ['exit', 'menu']);
         
+        // Debug commands
+        this.register('leaderboard', this.cmdLeaderboard.bind(this), 'Test leaderboard connection', ['lb']);
+
         // Testing commands
         this.register('test', this.cmdTest.bind(this), 'Run all tests or tests in a category: test [category]');
         this.register('testfast', this.cmdTestFast.bind(this), 'Run quick smoke tests');
@@ -256,8 +261,8 @@ export class CommandRegistry {
                 return { success: false, message: 'Failed to spawn enemy: ' + error.message };
             }
         } else if (type === 'boss') {
-            this.game.enemies.spawnBoss(this.game);
-            return { success: true, message: 'Spawned boss' };
+            // Use the dedicated boss command
+            return this.cmdBoss([]);
         }
         
         return { success: false, message: 'Unknown enemy type. Available: enemy, boss' };
@@ -267,7 +272,7 @@ export class CommandRegistry {
         if (args.length === 0) {
             return { success: false, message: 'Usage: spawnpickup <type>' };
         }
-        
+
         if (this.game.rewardManager) {
             // Spawn reward drop at player position
             this.game.rewardManager.spawnDrop(
@@ -277,10 +282,65 @@ export class CommandRegistry {
             );
             return { success: true, message: `Spawned pickup: ${args[0]}` };
         }
-        
+
         return { success: false, message: 'Reward system not available' };
     }
-    
+
+    async cmdBoss(args) {
+        // Exit test room if active
+        if (this.game.testRoom && this.game.testRoom.active) {
+            this.game.testRoom.exit();
+            this.devMode.inTestRoom = false;
+        }
+
+        // Clear existing enemies and projectiles for a clean boss fight
+        this.game.enemies.enemiesList = [];
+        this.game.projectiles.projectilesList = [];
+
+        const bossTypes = ['shooter', 'charger', 'vortex'];
+
+        // Check if a specific boss type was requested
+        if (args.length > 0) {
+            const requestedType = args[0].toLowerCase();
+
+            if (!bossTypes.includes(requestedType)) {
+                return { success: false, message: `Unknown boss type: ${requestedType}. Available: ${bossTypes.join(', ')}` };
+            }
+
+            // Spawn specific boss type
+            try {
+                const spawnX = this.game.width + 150;
+                const spawnY = this.game.height / 2;
+
+                if (requestedType === 'shooter') {
+                    const { Boss } = await import('../controller/boss.js');
+                    this.game.enemies.boss = new Boss(spawnX, spawnY);
+                    if (this.game.effects) this.game.effects.addScreenFlash('#ff0000', 500, 0.3);
+                } else if (requestedType === 'charger') {
+                    const { ChargeBoss } = await import('../controller/chargeBoss.js');
+                    this.game.enemies.boss = new ChargeBoss(spawnX, spawnY);
+                    if (this.game.effects) this.game.effects.addScreenFlash('#aa00ff', 500, 0.3);
+                } else if (requestedType === 'vortex') {
+                    const { VortexBoss } = await import('../controller/vortexBoss.js');
+                    this.game.enemies.boss = new VortexBoss(spawnX, spawnY);
+                    if (this.game.effects) this.game.effects.addScreenFlash('#ff00ff', 500, 0.3);
+                }
+
+                this.game.enemies.bossActive = true;
+                if (this.game.world) this.game.world.shake(15, 30);
+                if (window.gameSound) window.gameSound.playBossWarning();
+
+                return { success: true, message: `Spawned ${requestedType} boss!` };
+            } catch (error) {
+                return { success: false, message: 'Failed to spawn boss: ' + error.message };
+            }
+        }
+
+        // No type specified - spawn random boss
+        this.game.enemies.spawnBoss(this.game);
+        return { success: true, message: 'Spawned random boss!' };
+    }
+
     cmdClear(args) {
         this.game.enemies.enemiesList = [];
         this.game.projectiles.projectilesList = [];
@@ -493,14 +553,50 @@ export class CommandRegistry {
     
     cmdReset(args) {
         this.devMode.resetAllCheats();
-        
+
         // Also reset player speed
         this.game.player.speed = this.game.player.baseSpeed;
         this.game.logic_fps = 60;
-        
+
         return { success: true, message: 'All cheats reset to default state' };
     }
-    
+
+    cmdQuit(args) {
+        // Exit test room if active (without restoring state)
+        if (this.game.testRoom && this.game.testRoom.active) {
+            this.game.testRoom.active = false;
+            this.game.testRoom.dummies = [];
+            this.game.testRoom.pickupGrid = [];
+            this.game.testRoom.savedState = null;
+            this.devMode.inTestRoom = false;
+        }
+
+        // Quit to main menu
+        this.game.gameOver = true;
+        this.game.score = 0;
+        this.game.showMessage = 'None';
+        this.game.player.reset(this.game);
+        this.game.projectiles.reset();
+        this.game.bullets.reset();
+        this.game.voidBolts.reset();
+        this.game.enemies.reset();
+        this.game.effects.reset();
+        this.game.world.reset();
+        this.game.rewardManager.reset();
+
+        // Close debug console
+        if (this.game.debugConsole) {
+            this.game.debugConsole.visible = false;
+        }
+
+        // Switch to menu music
+        if (window.gameSound) {
+            window.gameSound.playMenuMusic();
+        }
+
+        return { success: true, message: 'Returning to main menu...' };
+    }
+
     async cmdTest(args) {
         try {
             const { globalTestRunner } = await import('../testing/testRunner.js');
@@ -563,6 +659,39 @@ export class CommandRegistry {
             return { success: true, message: 'Available test categories: ' + categories.join(', ') };
         } catch (error) {
             return { success: false, message: 'Test system not available: ' + error.message };
+        }
+    }
+
+    async cmdLeaderboard(args) {
+        try {
+            const { SupabaseLeaderboard } = await import('../supabase/supabase.js');
+            const supabase = new SupabaseLeaderboard();
+
+            // Test with EASY difficulty
+            const testDifficulty = args.length > 0 ? args[0].toUpperCase() : 'EASY';
+            const validDifficulties = ['EASY', 'MEDIUM', 'HARD', 'EXPERT', 'INSANE'];
+            if (!validDifficulties.includes(testDifficulty)) {
+                return { success: false, message: `Invalid difficulty. Valid: ${validDifficulties.join(', ')}` };
+            }
+
+            const startTime = performance.now();
+            const result = await supabase.getLeaderboard(testDifficulty, 5, 1, false);
+            const elapsed = (performance.now() - startTime).toFixed(0);
+
+            if (result.entries && result.entries.length > 0) {
+                let msg = `Leaderboard OK (${elapsed}ms)\n`;
+                msg += `Difficulty: ${testDifficulty}\n`;
+                msg += `Total entries: ${result.pagination.totalEntries}\n`;
+                msg += `Top ${result.entries.length} players:\n`;
+                result.entries.forEach((e, i) => {
+                    msg += `  ${i + 1}. ${e.player_name}: ${e.score}\n`;
+                });
+                return { success: true, message: msg };
+            } else {
+                return { success: true, message: `Leaderboard OK (${elapsed}ms) - No entries for ${testDifficulty}. Total: ${result.pagination?.totalEntries || 0}` };
+            }
+        } catch (error) {
+            return { success: false, message: `Leaderboard error: ${error.message}` };
         }
     }
 }

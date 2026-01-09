@@ -126,9 +126,15 @@ export class Boss {
             proj.update();
 
             if (proj.checkCollision(player)) {
-                game.gameOver = true;
-                proj.destroy = true;
-                if (window.gameSound) window.gameSound.playPlayerDeath();
+                // Check if god mode is enabled
+                if (game.devMode && game.devMode.isEnabled() && game.devMode.godMode) {
+                    // God mode - destroy projectile but don't kill player
+                    proj.destroy = true;
+                } else {
+                    game.gameOver = true;
+                    proj.destroy = true;
+                    if (window.gameSound) window.gameSound.playPlayerDeath();
+                }
             }
 
             if (proj.destroy) {

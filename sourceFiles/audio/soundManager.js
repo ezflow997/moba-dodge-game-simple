@@ -14,7 +14,7 @@ export class SoundManager {
         this.menuMusic = null;
         this.gameMusic = null;
         this.currentMusic = null;
-        this.bgMusicVolume = 0.05;
+        this.bgMusicVolume = 0.01;
         this.musicUnlocked = false;
         this.pendingMusic = null; // Store which music to play after unlock
     }

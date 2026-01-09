@@ -236,9 +236,15 @@ export class VortexBoss {
             this.updateHomingMissile(missile, player);
 
             if (missile.checkCollision(player)) {
-                game.gameOver = true;
-                this.homingMissiles.splice(i, 1);
-                if (window.gameSound) window.gameSound.playPlayerDeath();
+                // Check if god mode is enabled
+                if (game.devMode && game.devMode.isEnabled() && game.devMode.godMode) {
+                    // God mode - destroy missile but don't kill player
+                    this.homingMissiles.splice(i, 1);
+                } else {
+                    game.gameOver = true;
+                    this.homingMissiles.splice(i, 1);
+                    if (window.gameSound) window.gameSound.playPlayerDeath();
+                }
             } else if (missile.destroy) {
                 this.homingMissiles.splice(i, 1);
             }
@@ -270,9 +276,15 @@ export class VortexBoss {
             proj.update();
 
             if (proj.checkCollision(player)) {
-                game.gameOver = true;
-                this.spiralProjectiles.splice(i, 1);
-                if (window.gameSound) window.gameSound.playPlayerDeath();
+                // Check if god mode is enabled
+                if (game.devMode && game.devMode.isEnabled() && game.devMode.godMode) {
+                    // God mode - destroy projectile but don't kill player
+                    this.spiralProjectiles.splice(i, 1);
+                } else {
+                    game.gameOver = true;
+                    this.spiralProjectiles.splice(i, 1);
+                    if (window.gameSound) window.gameSound.playPlayerDeath();
+                }
             } else if (proj.destroy) {
                 this.spiralProjectiles.splice(i, 1);
             }

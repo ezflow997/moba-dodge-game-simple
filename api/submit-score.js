@@ -6,6 +6,13 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 
+// Helper to set CORS headers
+function setCorsHeaders(res) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+}
+
 function getHeaders() {
     return {
         'apikey': SUPABASE_KEY,
@@ -155,10 +162,8 @@ async function updatePlayerScore(playerName, difficulty, score, kills, bestStrea
 }
 
 module.exports = async (req, res) => {
-    // Set CORS headers
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    // Always set CORS headers first
+    setCorsHeaders(res);
 
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
@@ -166,6 +171,19 @@ module.exports = async (req, res) => {
 
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    // Check if environment variables are configured
+    if (!SUPABASE_URL || !SUPABASE_KEY || !ENCRYPTION_KEY) {
+        console.error('Missing environment variables:', {
+            hasUrl: !!SUPABASE_URL,
+            hasKey: !!SUPABASE_KEY,
+            hasEncKey: !!ENCRYPTION_KEY
+        });
+        return res.status(500).json({
+            error: 'Server configuration error',
+            details: 'Database not configured'
+        });
     }
 
     try {
@@ -236,6 +254,6 @@ module.exports = async (req, res) => {
         }
     } catch (error) {
         console.error('submit-score error:', error);
-        return res.status(500).json({ error: 'Server error' });
+        return res.status(500).json({ error: 'Server error', details: error.message });
     }
 };

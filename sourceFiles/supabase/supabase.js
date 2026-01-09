@@ -91,18 +91,23 @@ export class SupabaseLeaderboard {
                 url += '&daily=true';
             }
 
+            console.log('[Supabase] Fetching:', url);
             const response = await fetch(url, { method: 'GET' });
+            console.log('[Supabase] Response status:', response.status);
 
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+                const errorText = await response.text();
+                console.error('[Supabase] Error response:', errorText);
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
 
             const data = await response.json();
+            console.log('[Supabase] Data received:', data);
 
             // Return format: { entries: [], pagination: { page, limit, totalEntries, totalPages } }
             return data;
         } catch (error) {
-            console.error('getLeaderboard error:', error);
+            console.error('[Supabase] getLeaderboard error:', error);
             return { entries: [], pagination: { page: 1, limit: 10, totalEntries: 0, totalPages: 0 } };
         }
     }

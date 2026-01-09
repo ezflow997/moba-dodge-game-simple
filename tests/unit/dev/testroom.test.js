@@ -87,7 +87,7 @@ describe('TestRoom - Bug Fixes', () => {
         player: {
           x: 960,
           y: 540,
-          speed: 4.1,
+          baseSpeed: 4.1,
           size: 40,
           desiredX: 960,
           desiredY: 540
