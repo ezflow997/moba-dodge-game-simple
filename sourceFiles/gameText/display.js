@@ -30,6 +30,11 @@ export class Display{
         this.qCoolDownTime = (game.player.qCoolDown - game.player.qCoolDownElapsed);
     }
     draw(context, game){
+        // Hide score UI when in test room
+        if (game.testRoom && game.testRoom.active) {
+            return;
+        }
+
         let size = 0;
 
         // draw UI
