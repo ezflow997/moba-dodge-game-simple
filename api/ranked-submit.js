@@ -221,22 +221,6 @@ async function resolveTournament(allEntries) {
             })
         });
 
-        // Insert history record
-        await fetch(`${SUPABASE_URL}/rest/v1/ranked_history`, {
-            method: 'POST',
-            headers: getHeaders(),
-            body: JSON.stringify({
-                tournament_id: tournamentId,
-                player_name: result.player_name,
-                score: result.score,
-                placement: result.placement,
-                total_players: totalPlayers,
-                elo_before: eloBefore,
-                elo_after: eloAfter,
-                elo_change: result.eloChange
-            })
-        });
-
         // Add ELO info to result for response
         result.eloBefore = eloBefore;
         result.eloAfter = eloAfter;

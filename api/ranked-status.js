@@ -36,14 +36,6 @@ async function getUnresolvedQueue() {
     return await response.json();
 }
 
-// Get player's recent ranked history
-async function getPlayerHistory(playerName, limit = 5) {
-    const url = `${SUPABASE_URL}/rest/v1/ranked_history?player_name=eq.${encodeURIComponent(playerName)}&order=resolved_at.desc&limit=${limit}`;
-    const response = await fetch(url, { method: 'GET', headers: getHeaders() });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.json();
-}
-
 // Get player's rank in ELO leaderboard
 async function getPlayerRank(playerName, playerElo) {
     if (!playerElo) return null;
@@ -141,9 +133,6 @@ export default async function handler(req, res) {
         // Get player rank
         const playerRank = eloRecord ? await getPlayerRank(name, eloRecord.elo) : null;
 
-        // Get recent history
-        const history = await getPlayerHistory(name, 5);
-
         return res.status(200).json({
             queueSize: uniquePlayers,
             totalEntries: queue.length,
@@ -166,14 +155,7 @@ export default async function handler(req, res) {
             bestScore,
             queueStandings,
             playersReady,
-            totalQueuedPlayers: uniquePlayers,
-            recentHistory: history.map(h => ({
-                placement: h.placement,
-                totalPlayers: h.total_players,
-                score: h.score,
-                eloChange: h.elo_change,
-                date: h.resolved_at
-            }))
+            totalQueuedPlayers: uniquePlayers
         });
     } catch (error) {
         console.error('ranked-status error:', error);
