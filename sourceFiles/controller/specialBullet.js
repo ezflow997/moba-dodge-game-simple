@@ -290,7 +290,7 @@ export class SpecialBullet {
                 // Ricochet - bounce off enemy if we have bounces left
                 if (this.gunType === 'ricochet' && this.bouncesRemaining > 0) {
                     this.bounceOffEnemy(enemy);
-                    this.enemyCollision = true;
+                    // Don't set enemyCollision - bullet continues without interruption
 
                     // Chain lightning effect
                     if (this.chainsRemaining > 0 && onChain) {
