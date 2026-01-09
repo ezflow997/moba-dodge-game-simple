@@ -37,6 +37,10 @@ export class RankedMenu {
         // Queue view pagination
         this.queueViewPage = 0; // 0 = current queue, 1 = all queues
         this.scrollOffset = 0;
+        this.maxScrollOffset = 0;
+        this.isDraggingScrollbar = false;
+        this.scrollbarDragStartY = 0;
+        this.scrollbarDragStartOffset = 0;
 
         // Tournament results
         this.tournamentResults = null;
@@ -252,12 +256,55 @@ export class RankedMenu {
             }
 
             // Handle scroll on page 1 (all queues)
-            if (this.queueViewPage === 1 && game.input.wheelDelta) {
-                this.scrollOffset += game.input.wheelDelta > 0 ? -60 : 60;
-                // Calculate max scroll based on content height
+            if (this.queueViewPage === 1) {
+                // Calculate content and scroll dimensions
                 const totalHeight = this.allQueuesSummary.reduce((h, q) => h + 80 + q.players.length * 30, 0);
-                const maxScroll = Math.max(0, totalHeight - 400);
-                this.scrollOffset = Math.max(0, Math.min(maxScroll, this.scrollOffset));
+                const viewHeight = 400;
+                this.maxScrollOffset = Math.max(0, totalHeight - viewHeight);
+
+                // Scrollbar dimensions (in reference coordinates)
+                const scrollbarX = refCenterX + 400;
+                const scrollbarY = 720 - refPanelH / 2 + 180;
+                const scrollbarHeight = 420;
+                const scrollbarWidth = 15;
+
+                // Calculate thumb size and position
+                const thumbHeight = this.maxScrollOffset > 0
+                    ? Math.max(40, (viewHeight / totalHeight) * scrollbarHeight)
+                    : scrollbarHeight;
+                const thumbY = this.maxScrollOffset > 0
+                    ? scrollbarY + (this.scrollOffset / this.maxScrollOffset) * (scrollbarHeight - thumbHeight)
+                    : scrollbarY;
+
+                // Handle scrollbar dragging
+                if (clicking && this.maxScrollOffset > 0) {
+                    // Check if clicking on scrollbar track or thumb
+                    if (inX >= scrollbarX && inX <= scrollbarX + scrollbarWidth &&
+                        inY >= scrollbarY && inY <= scrollbarY + scrollbarHeight) {
+                        if (!this.isDraggingScrollbar && !this.clicked) {
+                            this.isDraggingScrollbar = true;
+                            this.scrollbarDragStartY = inY;
+                            this.scrollbarDragStartOffset = this.scrollOffset;
+                        }
+                    }
+                }
+
+                if (this.isDraggingScrollbar) {
+                    if (clicking) {
+                        const dragDelta = inY - this.scrollbarDragStartY;
+                        const scrollRatio = dragDelta / (scrollbarHeight - thumbHeight);
+                        this.scrollOffset = this.scrollbarDragStartOffset + scrollRatio * this.maxScrollOffset;
+                        this.scrollOffset = Math.max(0, Math.min(this.maxScrollOffset, this.scrollOffset));
+                    } else {
+                        this.isDraggingScrollbar = false;
+                    }
+                }
+
+                // Mouse wheel scrolling
+                if (game.input.wheelDelta) {
+                    this.scrollOffset += game.input.wheelDelta > 0 ? -60 : 60;
+                    this.scrollOffset = Math.max(0, Math.min(this.maxScrollOffset, this.scrollOffset));
+                }
             }
 
             if (this.backButton.isHovered && clicking && !this.clicked) {
@@ -570,11 +617,12 @@ export class RankedMenu {
         const panelW = 900 * rX;
         const panelH = 800 * rY;
 
-        // Scroll info
-        context.font = `${18 * rX}px Arial`;
+        // Queue count info
+        context.font = `${20 * rX}px Arial`;
         context.textAlign = 'center';
-        context.fillStyle = '#666666';
-        context.fillText('Scroll to see more queues', centerX, panelY + 160 * rY);
+        context.fillStyle = '#888888';
+        const queueCount = this.allQueuesSummary.length;
+        context.fillText(`${queueCount} active queue${queueCount !== 1 ? 's' : ''} | Drag scrollbar or use mouse wheel`, centerX, panelY + 160 * rY);
 
         // Draw clipping region for scrollable content
         context.save();
@@ -672,18 +720,44 @@ export class RankedMenu {
 
         context.restore();
 
-        // Draw scroll indicators if needed
+        // Draw scrollbar if content exceeds view
         const totalContentHeight = this.allQueuesSummary.reduce((h, q) => h + (35 + q.players.length * 28 + 30 + 15), 0);
-        if (totalContentHeight > 400) {
-            context.font = `${14 * rX}px Arial`;
-            context.textAlign = 'center';
-            context.fillStyle = '#555555';
-            if (this.scrollOffset > 0) {
-                context.fillText('\u25B2', centerX, clipY + 10 * rY);
+        const viewHeight = 400;
+
+        if (totalContentHeight > viewHeight && this.maxScrollOffset > 0) {
+            const scrollbarX = centerX + 400 * rX;
+            const scrollbarY = clipY;
+            const scrollbarHeight = clipH;
+            const scrollbarWidth = 12 * rX;
+
+            // Draw scrollbar track
+            context.beginPath();
+            context.roundRect(scrollbarX, scrollbarY, scrollbarWidth, scrollbarHeight, 6 * rX);
+            context.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            context.fill();
+            context.strokeStyle = 'rgba(255, 170, 0, 0.3)';
+            context.lineWidth = 1;
+            context.stroke();
+
+            // Calculate thumb size and position
+            const thumbHeight = Math.max(40 * rY, (viewHeight / totalContentHeight) * scrollbarHeight);
+            const thumbY = scrollbarY + (this.scrollOffset / this.maxScrollOffset) * (scrollbarHeight - thumbHeight);
+
+            // Draw scrollbar thumb
+            context.beginPath();
+            context.roundRect(scrollbarX + 2 * rX, thumbY, scrollbarWidth - 4 * rX, thumbHeight, 4 * rX);
+
+            // Highlight if dragging
+            if (this.isDraggingScrollbar) {
+                context.fillStyle = '#ffaa00';
+                context.shadowColor = '#ffaa00';
+                context.shadowBlur = 8 * rX;
+            } else {
+                context.fillStyle = 'rgba(255, 170, 0, 0.7)';
+                context.shadowBlur = 0;
             }
-            if (this.scrollOffset < totalContentHeight - 400) {
-                context.fillText('\u25BC', centerX, clipY + clipH - 5 * rY);
-            }
+            context.fill();
+            context.shadowBlur = 0;
         }
     }
 
