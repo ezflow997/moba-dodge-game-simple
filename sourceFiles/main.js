@@ -413,23 +413,29 @@ window.addEventListener('load', function () {
 						game.showMessage = 'None';
 
 						// Handle ranked score submission
-						if (game.pendingRankedScore && game.playerName && game.playerPassword) {
-							game.supabase.submitRankedScore(
-								game.playerName,
-								game.playerPassword,
-								game.pendingRankedScore.score,
-								game.pendingRankedScore.kills,
-								game.pendingRankedScore.bestStreak
-							).then(result => {
-								if (result.error) {
-									game.rankedMenu.setError(result.error);
-									game.rankedMenu.show('confirm');
-								} else if (result.tournamentResolved) {
-									game.rankedMenu.setTournamentResults(result);
-								} else {
-									game.rankedMenu.setQueuedState(result);
-								}
-							});
+						if (game.pendingRankedScore) {
+							if (game.playerName && game.playerPassword) {
+								game.supabase.submitRankedScore(
+									game.playerName,
+									game.playerPassword,
+									game.pendingRankedScore.score,
+									game.pendingRankedScore.kills,
+									game.pendingRankedScore.bestStreak
+								).then(result => {
+									if (result.error) {
+										game.rankedMenu.setError(result.error);
+										game.rankedMenu.show('confirm');
+									} else if (result.tournamentResolved) {
+										game.rankedMenu.setTournamentResults(result);
+									} else {
+										game.rankedMenu.setQueuedState(result);
+									}
+								});
+							} else {
+								// Missing credentials - show error
+								game.rankedMenu.setError('Login required to submit ranked score');
+								game.rankedMenu.show('confirm');
+							}
 							game.pendingRankedScore = null;
 							game.isRankedGame = false;
 						}
