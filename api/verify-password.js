@@ -1,6 +1,6 @@
 // API endpoint to verify password for existing player (single row per player)
 
-const crypto = require('crypto');
+import crypto from 'crypto';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -84,7 +84,7 @@ async function checkPlayerExists(playerName) {
     return data.length > 0 ? data[0] : null;
 }
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
     // Always set CORS headers first
     setCorsHeaders(res);
 
@@ -140,4 +140,4 @@ module.exports = async (req, res) => {
         console.error('verify-password error:', error);
         return res.status(500).json({ error: 'Server error', details: error.message });
     }
-};
+}

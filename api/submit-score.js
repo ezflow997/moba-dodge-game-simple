@@ -1,6 +1,6 @@
 // API endpoint to submit score (single row per player, all difficulties)
 
-const crypto = require('crypto');
+import crypto from 'crypto';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -161,7 +161,7 @@ async function updatePlayerScore(playerName, difficulty, score, kills, bestStrea
     return { updated: true, data: data };
 }
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
     // Always set CORS headers first
     setCorsHeaders(res);
 
@@ -256,4 +256,4 @@ module.exports = async (req, res) => {
         console.error('submit-score error:', error);
         return res.status(500).json({ error: 'Server error', details: error.message });
     }
-};
+}

@@ -75,7 +75,7 @@ async function getLeaderboard(difficulty, limit = 10, offset = 0, dailyOnly = fa
     return { data, totalCount };
 }
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
     // Always set CORS headers first
     setCorsHeaders(res);
 
@@ -148,4 +148,4 @@ module.exports = async (req, res) => {
             details: error.message
         });
     }
-};
+}

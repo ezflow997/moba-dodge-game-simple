@@ -33,7 +33,7 @@ async function checkPlayerExists(playerName) {
     return data.length > 0 ? data[0] : null;
 }
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
     // Always set CORS headers first
     setCorsHeaders(res);
 
@@ -74,4 +74,4 @@ module.exports = async (req, res) => {
         console.error('check-player error:', error);
         return res.status(500).json({ error: 'Server error', details: error.message });
     }
-};
+}
