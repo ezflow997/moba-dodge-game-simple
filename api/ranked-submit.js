@@ -134,23 +134,14 @@ function findAvailableQueue(allEntries) {
     // Find a queue with room AND enough time remaining
     for (const [queueId, entries] of Object.entries(queues)) {
         if (entries.length < MIN_PLAYERS_FOR_TOURNAMENT) {
-            // Check time remaining on this queue
-            const oldestEntry = entries.reduce((oldest, entry) => {
-                const entryTime = new Date(entry.submitted_at).getTime();
-                return entryTime < oldest ? entryTime : oldest;
-            }, Date.now());
-            const queueAge = Date.now() - oldestEntry;
-            const timeRemaining = QUEUE_TIMEOUT_MS - queueAge;
-
-            // Only join if there's enough time remaining (> 10 minutes)
-            if (timeRemaining > MIN_TIME_TO_JOIN_QUEUE_MS) {
-                return queueId;
-            }
-            // Skip this queue - not enough time remaining for new player
+            // Timer only matters if queue has minimum players already
+            // If queue doesn't have minimum players, timer hasn't started yet
+            // so always allow joining
+            return queueId;
         }
     }
 
-    return null; // All queues are full or don't have enough time
+    return null; // All queues are full
 }
 
 // Generate a new queue ID
