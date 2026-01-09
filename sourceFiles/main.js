@@ -537,6 +537,12 @@ window.addEventListener('load', function () {
 						game.devMode.resetSession();
 					}
 				}
+
+				// Check if player wants to open ranked leaderboard
+				if (rankedResult === 'open_ranked_leaderboard') {
+					game.rankedMenu.hide();
+					game.leaderboardMenu.showRanked();
+				}
 			}
 
 			// Draw and update name input menu if visible

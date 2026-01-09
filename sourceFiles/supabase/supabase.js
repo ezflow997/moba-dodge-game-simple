@@ -216,4 +216,21 @@ export class SupabaseLeaderboard {
             return { entries: [], pagination: { page: 1, limit: 10, totalEntries: 0, totalPages: 0 } };
         }
     }
+
+    // Search ranked players by name
+    async searchRankedPlayers(searchQuery) {
+        try {
+            const url = `${this.apiBase}/ranked-search?search=${encodeURIComponent(searchQuery)}`;
+            const response = await fetch(url, { method: 'GET' });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('searchRankedPlayers error:', error);
+            return { matches: [] };
+        }
+    }
 }

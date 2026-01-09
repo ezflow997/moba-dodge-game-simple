@@ -35,6 +35,7 @@ export class RankedMenu {
         // Confirmation buttons (positions set dynamically in update)
         this.confirmButton = new Button(0, 0, 260, 85, "Queue Up", 36, 0, 0, false, true, 'white', 'white');
         this.cancelButton = new Button(0, 0, 260, 85, "Cancel", 36, 0, 0, false, true, 'white', 'white');
+        this.leaderboardButton = new Button(0, 0, 260, 85, "Leaderboard", 30, 0, 0, false, true, 'white', 'white');
 
         // Results/Queued screen buttons
         this.closeButton = new Button(0, 0, 320, 85, "Continue", 38, 0, 0, false, true, 'white', 'white');
@@ -115,7 +116,7 @@ export class RankedMenu {
         };
 
         if (this.state === 'confirm') {
-            // Two buttons with 30px gap, each 260 wide
+            // Two bottom buttons with 30px gap, each 260 wide
             const btnW = 260;
             const gap = 30;
             const leftBtnX = refCenterX - btnW - gap / 2; // 1005
@@ -124,8 +125,13 @@ export class RankedMenu {
             setButtonPos(this.confirmButton, leftBtnX, buttonY, btnW, 85);
             setButtonPos(this.cancelButton, rightBtnX, buttonY, btnW, 85);
 
+            // Leaderboard button centered above the two buttons
+            const leaderboardY = buttonY - 100; // 100px above bottom buttons
+            setButtonPos(this.leaderboardButton, refCenterX - btnW / 2, leaderboardY, btnW, 85);
+
             this.confirmButton.update(inX, inY);
             this.cancelButton.update(inX, inY);
+            this.leaderboardButton.update(inX, inY);
 
             const clicking = game.input.buttons.indexOf(0) > -1;
 
@@ -138,6 +144,13 @@ export class RankedMenu {
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.hide();
                 return true;
+            }
+
+            if (this.leaderboardButton.isHovered && clicking && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                // Signal to open ranked leaderboard
+                return 'open_ranked_leaderboard';
             }
 
             // Only allow queue if attempts remaining (or never queued)
@@ -311,6 +324,7 @@ export class RankedMenu {
             this.confirmButton.draw(context);
         }
         this.cancelButton.draw(context);
+        this.leaderboardButton.draw(context);
     }
 
     drawQueuedState(context, centerX, panelY, rX, rY) {
