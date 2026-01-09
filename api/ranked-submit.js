@@ -483,7 +483,17 @@ export default async function handler(req, res) {
                 playersNeeded: Math.max(0, MIN_PLAYERS_FOR_TOURNAMENT - uniquePlayers),
                 playersReady: playersReady,
                 totalQueuedPlayers: uniquePlayers,
-                queueId: targetQueueId
+                queueId: targetQueueId,
+                // Debug info
+                _debug: {
+                    leaderIsOnlyOneWithAttempts,
+                    shouldResolveEarly,
+                    allReady,
+                    isTimedOut,
+                    leader: leader?.player_name,
+                    leaderAttempts: leader?.attempts,
+                    playersWithAttemptsLeft: playersWithAttemptsLeft.map(p => p.player_name)
+                }
             });
         }
     } catch (error) {
