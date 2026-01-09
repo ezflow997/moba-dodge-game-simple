@@ -237,12 +237,9 @@ export class DebugConsole {
             this.suggestions = [];
             return;
         }
-        
-        // Get command name (first word)
-        const parts = this.inputText.split(/\s+/);
-        const commandPart = parts[0];
-        
-        this.suggestions = this.commandRegistry.getSuggestions(commandPart);
+
+        // Pass full input to getSuggestions (it handles both command and argument suggestions)
+        this.suggestions = this.commandRegistry.getSuggestions(this.inputText);
         this.selectedSuggestion = 0;
     }
     
@@ -251,9 +248,20 @@ export class DebugConsole {
      */
     autocomplete() {
         if (this.suggestions.length === 0) return;
-        
+
         const suggestion = this.suggestions[this.selectedSuggestion];
-        this.inputText = suggestion + ' ';
+        const parts = this.inputText.split(/\s+/);
+
+        // If we're completing an argument (there's already a command with space)
+        if (parts.length >= 2) {
+            // Replace the partial argument with the full suggestion
+            parts[parts.length - 1] = suggestion;
+            this.inputText = parts.join(' ') + ' ';
+        } else {
+            // Completing a command
+            this.inputText = suggestion + ' ';
+        }
+
         this.suggestions = [];
     }
     

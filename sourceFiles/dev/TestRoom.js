@@ -478,6 +478,19 @@ export class TestRoom {
     update() {
         if (!this.active) return;
 
+        // Always recalculate player baseSpeed and sync speed to baseSpeed
+        // This ensures consistent movement regardless of starting window size
+        const player = this.game.player;
+        const rewardManager = this.game.rewardManager;
+        const speedMod = rewardManager ? rewardManager.speedMod : 1.0;
+        const newBaseSpeed = 4.1 * window.innerWidth / 2560 * 120 / 60 * speedMod;
+
+        // Only sync if player is not currently dashing
+        if (!player.ePressed && !player.fPressed) {
+            player.baseSpeed = newBaseSpeed;
+            player.speed = newBaseSpeed;
+        }
+
         // Check for window resize and recalculate positions
         if (window.innerWidth !== this._lastWindowWidth || window.innerHeight !== this._lastWindowHeight) {
             this._lastWindowWidth = window.innerWidth;
@@ -1149,11 +1162,12 @@ export class TestRoom {
 
         switch (gunType) {
             case 'shotgun':
-                // Spread pattern - multiple pellets in a fan
+                // Spread pattern - multiple pellets in a fan (animated spread)
                 context.fillStyle = c.primary;
+                const spreadAnim = Math.sin(time * 4) * 0.15;
                 for (let i = -2; i <= 2; i++) {
-                    const angle = (i * 25) * Math.PI / 180;
-                    const dist = size * 0.5;
+                    const angle = (i * 25 * (1 + spreadAnim)) * Math.PI / 180;
+                    const dist = size * (0.5 + Math.sin(time * 3 + i) * 0.1);
                     const px = x + Math.sin(angle) * dist;
                     const py = y - Math.cos(angle) * dist * 0.8;
                     const pelletSize = size * (0.25 - Math.abs(i) * 0.03);
@@ -1161,58 +1175,65 @@ export class TestRoom {
                     context.arc(px, py, pelletSize, 0, Math.PI * 2);
                     context.fill();
                 }
-                // Center barrel
+                // Center barrel (pulsing)
                 context.fillStyle = c.secondary;
                 context.beginPath();
-                context.arc(x, y + size * 0.3, size * 0.35, 0, Math.PI * 2);
+                context.arc(x, y + size * 0.3, size * (0.35 + Math.sin(time * 5) * 0.05), 0, Math.PI * 2);
                 context.fill();
                 break;
 
             case 'rapidfire':
-                // Stacked bullets with speed lines
+                // Stacked bullets with animated speed lines
                 context.fillStyle = c.primary;
                 for (let i = 0; i < 3; i++) {
                     const offset = (i - 1) * size * 0.35;
+                    const yOffset = Math.sin(time * 8 + i * 2) * size * 0.1;
                     context.beginPath();
-                    context.ellipse(x + offset, y, size * 0.2, size * 0.4, 0, 0, Math.PI * 2);
+                    context.ellipse(x + offset, y + yOffset, size * 0.2, size * 0.4, 0, 0, Math.PI * 2);
                     context.fill();
                 }
-                // Speed lines
+                // Animated speed lines
                 context.strokeStyle = c.secondary;
                 context.lineWidth = 2 * rX;
                 for (let i = 0; i < 4; i++) {
+                    const linePhase = (time * 6 + i * 0.5) % 1;
                     const ly = y - size * 0.6 + i * size * 0.4;
+                    const lineAlpha = 1 - linePhase;
+                    context.globalAlpha = lineAlpha;
                     context.beginPath();
-                    context.moveTo(x - size * 0.8, ly);
-                    context.lineTo(x - size * 0.4, ly);
+                    context.moveTo(x - size * 0.8 - linePhase * size * 0.3, ly);
+                    context.lineTo(x - size * 0.4 - linePhase * size * 0.3, ly);
                     context.stroke();
                 }
+                context.globalAlpha = 1;
                 break;
 
             case 'piercing':
-                // Arrow/spear shape
+                // Arrow/spear shape (bobbing up and down)
+                const pierceY = y + Math.sin(time * 4) * size * 0.15;
                 context.fillStyle = c.primary;
                 context.beginPath();
-                context.moveTo(x, y - size * 0.8);
-                context.lineTo(x + size * 0.4, y + size * 0.2);
-                context.lineTo(x + size * 0.15, y + size * 0.2);
-                context.lineTo(x + size * 0.15, y + size * 0.8);
-                context.lineTo(x - size * 0.15, y + size * 0.8);
-                context.lineTo(x - size * 0.15, y + size * 0.2);
-                context.lineTo(x - size * 0.4, y + size * 0.2);
+                context.moveTo(x, pierceY - size * 0.8);
+                context.lineTo(x + size * 0.4, pierceY + size * 0.2);
+                context.lineTo(x + size * 0.15, pierceY + size * 0.2);
+                context.lineTo(x + size * 0.15, pierceY + size * 0.8);
+                context.lineTo(x - size * 0.15, pierceY + size * 0.8);
+                context.lineTo(x - size * 0.15, pierceY + size * 0.2);
+                context.lineTo(x - size * 0.4, pierceY + size * 0.2);
                 context.closePath();
                 context.fill();
-                // Glow trail
+                // Animated glow trail
                 context.strokeStyle = c.secondary;
                 context.lineWidth = 3 * rX;
+                const trailLength = size * (0.4 + Math.sin(time * 6) * 0.2);
                 context.beginPath();
-                context.moveTo(x, y - size * 0.8);
-                context.lineTo(x, y - size * 1.2);
+                context.moveTo(x, pierceY - size * 0.8);
+                context.lineTo(x, pierceY - size * 0.8 - trailLength);
                 context.stroke();
                 break;
 
             case 'ricochet':
-                // Bouncing zigzag pattern
+                // Bouncing zigzag pattern with animated bounce points
                 context.strokeStyle = c.primary;
                 context.lineWidth = 4 * rX;
                 context.lineCap = 'round';
@@ -1222,65 +1243,70 @@ export class TestRoom {
                 context.lineTo(x - size * 0.3, y + size * 0.3);
                 context.lineTo(x + size * 0.6, y + size * 0.6);
                 context.stroke();
-                // Bounce points
+                // Animated bounce points (pulsing)
                 context.fillStyle = c.secondary;
+                const bounce1Size = size * (0.15 + Math.sin(time * 6) * 0.05);
+                const bounce2Size = size * (0.15 + Math.sin(time * 6 + Math.PI) * 0.05);
                 context.beginPath();
-                context.arc(x + size * 0.3, y - size * 0.1, size * 0.15, 0, Math.PI * 2);
-                context.arc(x - size * 0.3, y + size * 0.3, size * 0.15, 0, Math.PI * 2);
+                context.arc(x + size * 0.3, y - size * 0.1, bounce1Size, 0, Math.PI * 2);
+                context.fill();
+                context.beginPath();
+                context.arc(x - size * 0.3, y + size * 0.3, bounce2Size, 0, Math.PI * 2);
                 context.fill();
                 break;
 
             case 'homing':
-                // Target reticle with curved arrow
+                // Target reticle with rotating crosshairs
+                const homingRotation = time * 2;
                 context.strokeStyle = c.primary;
                 context.lineWidth = 3 * rX;
                 // Outer ring
                 context.beginPath();
                 context.arc(x, y, size * 0.7, 0, Math.PI * 2);
                 context.stroke();
-                // Crosshairs
+                // Rotating crosshairs
                 context.beginPath();
-                context.moveTo(x - size * 0.9, y);
-                context.lineTo(x - size * 0.4, y);
-                context.moveTo(x + size * 0.4, y);
-                context.lineTo(x + size * 0.9, y);
-                context.moveTo(x, y - size * 0.9);
-                context.lineTo(x, y - size * 0.4);
-                context.moveTo(x, y + size * 0.4);
-                context.lineTo(x, y + size * 0.9);
+                for (let i = 0; i < 4; i++) {
+                    const angle = homingRotation + i * Math.PI / 2;
+                    context.moveTo(x + Math.cos(angle) * size * 0.4, y + Math.sin(angle) * size * 0.4);
+                    context.lineTo(x + Math.cos(angle) * size * 0.9, y + Math.sin(angle) * size * 0.9);
+                }
                 context.stroke();
-                // Center dot
+                // Pulsing center dot
                 context.fillStyle = c.secondary;
                 context.beginPath();
-                context.arc(x, y, size * 0.2, 0, Math.PI * 2);
+                context.arc(x, y, size * (0.2 + Math.sin(time * 5) * 0.05), 0, Math.PI * 2);
                 context.fill();
                 break;
 
             case 'twin':
-                // Two parallel bullets
+                // Two orbiting bullets
+                const twinAngle = time * 3;
+                const twinRadius = size * 0.35;
                 context.fillStyle = c.primary;
                 context.beginPath();
-                context.arc(x - size * 0.35, y, size * 0.35, 0, Math.PI * 2);
+                context.arc(x + Math.cos(twinAngle) * twinRadius, y + Math.sin(twinAngle) * twinRadius * 0.3, size * 0.35, 0, Math.PI * 2);
                 context.fill();
                 context.beginPath();
-                context.arc(x + size * 0.35, y, size * 0.35, 0, Math.PI * 2);
+                context.arc(x + Math.cos(twinAngle + Math.PI) * twinRadius, y + Math.sin(twinAngle + Math.PI) * twinRadius * 0.3, size * 0.35, 0, Math.PI * 2);
                 context.fill();
-                // Connecting line
+                // Rotating connecting line
                 context.strokeStyle = c.secondary;
                 context.lineWidth = 3 * rX;
                 context.beginPath();
-                context.moveTo(x - size * 0.35, y + size * 0.4);
-                context.lineTo(x + size * 0.35, y + size * 0.4);
+                context.moveTo(x + Math.cos(twinAngle) * twinRadius, y + size * 0.4);
+                context.lineTo(x + Math.cos(twinAngle + Math.PI) * twinRadius, y + size * 0.4);
                 context.stroke();
                 break;
 
             case 'nova':
-                // Starburst pattern
+                // Rotating starburst pattern
+                const novaRotation = time * 1.5;
                 context.fillStyle = c.primary;
                 const spikes = 8;
                 context.beginPath();
                 for (let i = 0; i < spikes * 2; i++) {
-                    const angle = (i * Math.PI) / spikes - Math.PI / 2;
+                    const angle = (i * Math.PI) / spikes - Math.PI / 2 + novaRotation;
                     const radius = i % 2 === 0 ? size * 0.9 : size * 0.4;
                     const px = x + Math.cos(angle) * radius;
                     const py = y + Math.sin(angle) * radius;
@@ -1289,10 +1315,10 @@ export class TestRoom {
                 }
                 context.closePath();
                 context.fill();
-                // Center
+                // Pulsing center
                 context.fillStyle = c.secondary;
                 context.beginPath();
-                context.arc(x, y, size * 0.25, 0, Math.PI * 2);
+                context.arc(x, y, size * (0.25 + Math.sin(time * 4) * 0.08), 0, Math.PI * 2);
                 context.fill();
                 break;
 

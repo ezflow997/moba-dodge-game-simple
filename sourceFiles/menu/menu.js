@@ -23,10 +23,76 @@ export class Menu{
         this.leaderboardButton = new Button(btnX, 80 + btnSpacing * 3, btnW, btnH, "Leaderboard", 32, 0, 0, false, true, 'white', 'white');
         this.loginButton = new Button(btnX, 80 + btnSpacing * 4, btnW, btnH, "Login", 32, 0, 0, false, true, 'white', 'white');
         this.logoutButton = new Button(btnX + btnW + 20, 80 + btnSpacing * 4, 120, 50, "Logout", 24, 0, 0, false, true, 'white', 'white');
+
+        // Player leaderboard data cache
+        this.playerLeaderboardData = null;
+        this.lastFetchedPlayer = null;
+        this.lastFetchedDifficulty = null;
+        this.fetchingScores = false;
+        this.lastFetchTime = 0;
+        this.fetchCooldown = 10000; // 10 seconds between fetches
+    }
+
+    /**
+     * Fetch player's leaderboard scores from the API
+     */
+    async fetchPlayerScores(game) {
+        if (!game.playerName || this.fetchingScores) return;
+
+        const now = Date.now();
+        const difficulty = game.difficulties[game.difficulty_level];
+
+        // Check if we need to fetch (player changed, difficulty changed, or cooldown passed)
+        if (this.lastFetchedPlayer === game.playerName &&
+            this.lastFetchedDifficulty === difficulty &&
+            now - this.lastFetchTime < this.fetchCooldown) {
+            return;
+        }
+
+        this.fetchingScores = true;
+
+        try {
+            // Fetch all-time score
+            const allTimeResult = await game.supabase.searchPlayers(difficulty, game.playerName, false);
+
+            // Fetch daily score
+            const dailyResult = await game.supabase.searchPlayers(difficulty, game.playerName, true);
+
+            // Find exact match for player name
+            const allTimeMatch = allTimeResult.matches?.find(m =>
+                m.player_name.toLowerCase() === game.playerName.toLowerCase()
+            );
+            const dailyMatch = dailyResult.matches?.find(m =>
+                m.player_name.toLowerCase() === game.playerName.toLowerCase()
+            );
+
+            this.playerLeaderboardData = {
+                allTime: allTimeMatch || null,
+                daily: dailyMatch || null
+            };
+
+            this.lastFetchedPlayer = game.playerName;
+            this.lastFetchedDifficulty = difficulty;
+            this.lastFetchTime = now;
+        } catch (error) {
+            console.error('Failed to fetch player scores:', error);
+            this.playerLeaderboardData = null;
+        }
+
+        this.fetchingScores = false;
     }
     updateMain(game){
         var inX = game.input.mouseX;
         var inY = game.input.mouseY;
+
+        // Fetch player's leaderboard scores if logged in
+        if (game.playerName) {
+            this.fetchPlayerScores(game);
+        } else {
+            // Clear cached data when logged out
+            this.playerLeaderboardData = null;
+            this.lastFetchedPlayer = null;
+        }
 
         if(this.clicked == true && game.input.buttons.indexOf(0) == -1){
             this.clicked = false;
@@ -164,10 +230,178 @@ export class Menu{
             this.super.drawGlowText(context, infoX, infoY + infoSep * 3, "Shoot (+" + game.enemies.enemyScoreValue + "x" + game.voidBolts.splitScoreMultiplier + ") " + (game.player.qCoolDown/1000).toFixed(1) + "s", fontSize, '#88ff88', '#00ff00', 6);
         }
 
-        // Display high score in center
-        if(game.player_data.high_score[game.difficulty_level].value > 0){
-            this.super.drawGlowText(context, titleX - 80, 220, "High Score", 36, '#ffffff', '#00ffff', 6, true);
-            this.super.drawGlowText(context, titleX - 80, 270, "" + game.player_data.high_score[game.difficulty_level].value, 50, '#00ff88', '#00ff00', 10, true);
+        // Display player scores panel in center
+        this.drawScoresPanel(context, game, titleX, rX, rY);
+    }
+
+    /**
+     * Draw a centered scores panel showing leaderboard scores (if logged in) or session scores
+     */
+    drawScoresPanel(context, game, centerX, rX, rY) {
+        const difficulty = game.difficulties[game.difficulty_level];
+        const panelX = centerX - 400;  // 2x wider
+        const panelY = 220;
+        const panelW = 800;  // 2x wider
+        const lineHeight = 84;  // 2x taller
+
+        // Check if we have leaderboard data (logged in)
+        const hasLeaderboardData = game.playerName && this.playerLeaderboardData;
+        const allTime = hasLeaderboardData ? this.playerLeaderboardData.allTime : null;
+        const daily = hasLeaderboardData ? this.playerLeaderboardData.daily : null;
+
+        // Fallback to session scores
+        const highScore = game.player_data.high_score[game.difficulty_level];
+        const lastScore = game.player_data.last_score[game.difficulty_level];
+
+        // Determine what to show
+        const hasAllTime = allTime && allTime.score > 0;
+        const hasDaily = daily && daily.score > 0;
+        const hasSessionScores = highScore.value > 0 || lastScore.value > 0;
+
+        // Only show if there's something to display
+        if (!hasAllTime && !hasDaily && !hasSessionScores) return;
+
+        context.save();
+
+        // Calculate panel height based on content (2x scale)
+        let panelH = 120; // Base height for title (2x)
+        if (hasAllTime) panelH += 160;
+        if (hasDaily) panelH += 160;
+        if (!hasLeaderboardData && hasSessionScores) panelH += 240;
+
+        // Panel background
+        context.fillStyle = 'rgba(0, 20, 40, 0.85)';
+        context.strokeStyle = game.playerName ? '#00ff88' : '#00ffff';
+        context.lineWidth = 4 * rX;  // 2x
+        context.shadowColor = game.playerName ? '#00ff88' : '#00ffff';
+        context.shadowBlur = 30 * rX;  // 2x
+
+        this.drawRoundedRect(context, panelX * rX, panelY * rY, panelW * rX, panelH * rY, 20 * rX);  // 2x corner radius
+        context.fill();
+        context.stroke();
+        context.shadowBlur = 0;
+
+        // Title
+        context.fillStyle = game.playerName ? '#00ff88' : '#00ffff';
+        context.font = `bold ${44 * rX}px Arial`;  // 2x
+        context.textAlign = 'center';
+        const title = game.playerName ? `${game.playerName}'s ${difficulty} SCORES` : `${difficulty} SCORES`;
+        context.fillText(title, centerX * rX, (panelY + 64) * rY);  // 2x
+
+        // Divider line
+        context.strokeStyle = game.playerName ? 'rgba(0, 255, 136, 0.3)' : 'rgba(0, 255, 255, 0.3)';
+        context.lineWidth = 2 * rX;  // 2x
+        context.beginPath();
+        context.moveTo((panelX + 40) * rX, (panelY + 96) * rY);  // 2x
+        context.lineTo((panelX + panelW - 40) * rX, (panelY + 96) * rY);  // 2x
+        context.stroke();
+
+        let yOffset = panelY + 156;  // 2x
+
+        // If logged in and has leaderboard data, show that
+        if (hasLeaderboardData) {
+            // All-Time Score
+            if (hasAllTime) {
+                this.drawScoreRow(context, panelX, panelW, yOffset, rX, rY,
+                    'ALL-TIME', allTime.score, `Rank #${allTime.rank}`, '#00ff88', '#ffdd00');
+                yOffset += lineHeight * 1.8;
+            }
+
+            // Daily Score
+            if (hasDaily) {
+                this.drawScoreRow(context, panelX, panelW, yOffset, rX, rY,
+                    'TODAY', daily.score, `Rank #${daily.rank}`, '#ffaa00', '#ff8800');
+                yOffset += lineHeight * 1.8;
+            }
+
+            // Show message if no scores yet
+            if (!hasAllTime && !hasDaily) {
+                context.fillStyle = '#666666';
+                context.font = `${32 * rX}px Arial`;  // 2x
+                context.textAlign = 'center';
+                context.fillText('No scores recorded yet', centerX * rX, yOffset * rY);
+                context.fillText('Play a game to get on the leaderboard!', centerX * rX, (yOffset + 50) * rY);  // 2x
+            }
+
+            // Loading indicator
+            if (this.fetchingScores) {
+                context.fillStyle = '#888888';
+                context.font = `${24 * rX}px Arial`;  // 2x
+                context.textAlign = 'right';
+                context.fillText('Updating...', (panelX + panelW - 40) * rX, (panelY + 64) * rY);  // 2x
+            }
+        } else {
+            // Not logged in - show session scores
+            if (highScore.value > 0) {
+                context.fillStyle = '#888888';
+                context.font = `${28 * rX}px Arial`;  // 2x
+                context.textAlign = 'left';
+                context.fillText('SESSION HIGH', (panelX + 60) * rX, yOffset * rY);  // 2x
+
+                context.fillStyle = '#00ff88';
+                context.font = `bold ${56 * rX}px Arial`;  // 2x
+                context.textAlign = 'right';
+                context.fillText(highScore.value.toLocaleString(), (panelX + panelW - 60) * rX, yOffset * rY);  // 2x
+
+                yOffset += lineHeight - 10;
+
+                // Stats
+                context.font = `${26 * rX}px Arial`;  // 2x
+                context.textAlign = 'left';
+                context.fillStyle = '#ff6666';
+                context.fillText(`Kills: ${highScore.kills}`, (panelX + 60) * rX, yOffset * rY);  // 2x
+                context.fillStyle = '#ffaa00';
+                context.textAlign = 'right';
+                context.fillText(`Streak: ${highScore.best_streak}`, (panelX + panelW - 60) * rX, yOffset * rY);  // 2x
+            }
+
+            // Hint to login
+            context.fillStyle = '#555555';
+            context.font = `${22 * rX}px Arial`;  // 2x
+            context.textAlign = 'center';
+            context.fillText('Login to save scores to leaderboard', centerX * rX, (panelY + panelH - 24) * rY);  // 2x
         }
+
+        context.restore();
+    }
+
+    /**
+     * Helper to draw a score row with label, value, and rank (2x scale)
+     */
+    drawScoreRow(context, panelX, panelW, y, rX, rY, label, score, rankText, scoreColor, rankColor) {
+        // Label
+        context.fillStyle = '#888888';
+        context.font = `${28 * rX}px Arial`;  // 2x
+        context.textAlign = 'left';
+        context.fillText(label, (panelX + 60) * rX, y * rY);  // 2x
+
+        // Score value
+        context.fillStyle = scoreColor;
+        context.font = `bold ${56 * rX}px Arial`;  // 2x
+        context.textAlign = 'right';
+        context.fillText(score.toLocaleString(), (panelX + panelW - 60) * rX, y * rY);  // 2x
+
+        // Rank badge
+        context.fillStyle = rankColor;
+        context.font = `bold ${32 * rX}px Arial`;  // 2x
+        context.textAlign = 'left';
+        context.fillText(rankText, (panelX + 60) * rX, (y + 50) * rY);  // 2x
+    }
+
+    /**
+     * Helper to draw rounded rectangle path
+     */
+    drawRoundedRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
     }
 }

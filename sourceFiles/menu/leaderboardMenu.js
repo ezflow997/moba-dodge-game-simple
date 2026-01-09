@@ -88,19 +88,22 @@ export class LeaderboardMenu {
     }
 
     handleKeyPress(e) {
-        if (!this.isVisible || !this.searchActive) return;
+        if (!this.isVisible) return;
+
+        // Handle Escape to close leaderboard
+        if (e.key === 'Escape') {
+            this.hide();
+            e.preventDefault();
+            return;
+        }
+
+        // Search input only when search is active
+        if (!this.searchActive) return;
 
         // Handle backspace
         if (e.key === 'Backspace') {
             this.searchQuery = this.searchQuery.slice(0, -1);
             this.triggerSearchDebounce();
-            e.preventDefault();
-            return;
-        }
-
-        // Handle escape - deactivate search field
-        if (e.key === 'Escape') {
-            this.searchActive = false;
             e.preventDefault();
             return;
         }

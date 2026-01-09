@@ -12,10 +12,10 @@ export class PowerupHUD {
         this.abilitySize = 100;      // Ability icon diameter
         this.weaponSlotWidth = 170;  // Weapon slot width
         this.weaponSlotHeight = 140; // Weapon slot height
-        this.powerupSize = 72;       // Active powerup icon diameter
-        this.badgeSize = 44;         // Permanent upgrade badge size
+        this.powerupSize = 56;       // Active powerup icon diameter (reduced)
+        this.badgeSize = 56;         // Permanent upgrade badge size (increased)
         this.padding = 30;           // Edge padding
-        this.gap = 16;               // Gap between elements
+        this.gap = 24;               // Gap between elements (increased for badges)
 
         // Colors for abilities
         this.abilityColors = {
@@ -35,10 +35,10 @@ export class PowerupHUD {
         // Extra padding (25px) for keybind labels below icons
         const actionBarY = window.innerHeight - this.padding * rX - this.abilitySize * rX - 25 * rX;
 
-        // Draw sections from bottom to top
+        // Draw sections from bottom to top (with proper vertical spacing)
         this.drawActionBar(ctx, game, rX, actionBarY);
-        this.drawPermanentUpgrades(ctx, game, rX, actionBarY - 35 * rX);
-        this.drawActiveTimers(ctx, game, rX, actionBarY - 90 * rX);
+        this.drawPermanentUpgrades(ctx, game, rX, actionBarY - 50 * rX);
+        this.drawActiveTimers(ctx, game, rX, actionBarY - 130 * rX);
     }
 
     /**
@@ -303,24 +303,30 @@ export class PowerupHUD {
         upgrades.forEach((upgrade, i) => {
             const x = startX + i * (size + this.gap * rX) + size / 2;
 
-            // Background circle
-            ctx.fillStyle = 'rgba(30, 30, 30, 0.8)';
+            // Background circle with colored ring
+            ctx.fillStyle = 'rgba(20, 20, 25, 0.9)';
             ctx.beginPath();
             ctx.arc(x, y, size / 2, 0, Math.PI * 2);
             ctx.fill();
 
-            // Icon
-            upgrade.icon(ctx, x, y, size * 0.55, upgrade.color);
+            // Colored ring border
+            ctx.strokeStyle = upgrade.color;
+            ctx.lineWidth = 2 * rX;
+            ctx.globalAlpha = 0.6;
+            ctx.beginPath();
+            ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.globalAlpha = 1;
 
-            // Badge
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
-            ctx.font = `bold ${8 * rX}px Arial`;
-            const badgeWidth = ctx.measureText(upgrade.badge).width + 4 * rX;
-            ctx.fillRect(x - badgeWidth / 2, y + size / 2 - 2 * rX, badgeWidth, 10 * rX);
+            // Icon (centered)
+            upgrade.icon(ctx, x, y, size * 0.5, upgrade.color);
+
+            // Badge text below icon
+            ctx.font = `bold ${9 * rX}px Arial`;
             ctx.fillStyle = upgrade.color;
             ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(upgrade.badge, x, y + size / 2 + 3 * rX);
+            ctx.textBaseline = 'top';
+            ctx.fillText(upgrade.badge, x, y + size / 2 + 4 * rX);
         });
 
         ctx.restore();
@@ -341,8 +347,9 @@ export class PowerupHUD {
         if (timedRewards.length === 0) return;
 
         const size = this.powerupSize * rX;
+        const timerGap = this.gap * rX + 8 * rX;  // Extra gap for timer icons
         const maxPerRow = 4;
-        const startX = window.innerWidth - this.padding * rX - (maxPerRow * (size + this.gap * rX));
+        const startX = window.innerWidth - this.padding * rX - (maxPerRow * (size + timerGap));
 
         ctx.save();
 
@@ -350,14 +357,14 @@ export class PowerupHUD {
         ctx.fillStyle = '#888888';
         ctx.font = `bold ${8 * rX}px Arial`;
         ctx.textAlign = 'right';
-        ctx.fillText('ACTIVE', startX - 8 * rX, baseY + size / 2);
+        ctx.fillText('ACTIVE', startX - 12 * rX, baseY + size / 2);
 
         // Draw timer icons
         timedRewards.slice(0, 8).forEach((active, i) => {
             const row = Math.floor(i / maxPerRow);
             const col = i % maxPerRow;
-            const x = startX + col * (size + this.gap * rX) + size / 2;
-            const y = baseY - row * (size + this.gap * rX);
+            const x = startX + col * (size + timerGap) + size / 2;
+            const y = baseY - row * (size + timerGap + 20 * rX);
 
             const elapsed = now - active.startTime;
             const remaining = active.duration - elapsed;

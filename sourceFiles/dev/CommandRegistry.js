@@ -1,3 +1,5 @@
+import { REWARDS, CATEGORY } from '../controller/rewardTypes.js';
+
 /**
  * CommandRegistry - Manages all debug console commands
  */
@@ -6,7 +8,10 @@ export class CommandRegistry {
         this.game = game;
         this.devMode = devMode;
         this.commands = new Map();
-        
+
+        // Cache pickup IDs for suggestions
+        this.pickupIds = Object.values(REWARDS).map(r => r.id);
+
         // Register all commands
         this.registerAllCommands();
     }
@@ -158,10 +163,47 @@ export class CommandRegistry {
     }
     
     /**
-     * Get suggestions for partial command
+     * Get suggestions for partial command or arguments
      */
     getSuggestions(partial) {
         const lowerPartial = partial.toLowerCase();
+        const parts = lowerPartial.split(/\s+/);
+
+        // If we have a space, check if this is a command that needs argument suggestions
+        if (parts.length >= 2) {
+            const command = parts[0];
+            const argPartial = parts[parts.length - 1];
+
+            // Provide pickup suggestions for spawnpickup command
+            if (command === 'spawnpickup') {
+                // Show "list" as first suggestion, then pickup IDs
+                const suggestions = ['list', ...this.pickupIds];
+                if (argPartial.length === 0) {
+                    return suggestions.slice(0, 10);  // Show first 10 if no partial
+                }
+                return suggestions.filter(id => id.startsWith(argPartial)).slice(0, 10);
+            }
+
+            // Provide boss type suggestions
+            if (command === 'boss' || command === 'spawnboss') {
+                const bossTypes = ['shooter', 'charger', 'vortex'];
+                if (argPartial.length === 0) {
+                    return bossTypes;
+                }
+                return bossTypes.filter(t => t.startsWith(argPartial));
+            }
+
+            // Provide tp landmark suggestions
+            if (command === 'tp') {
+                const landmarks = ['center', 'spawn', 'topleft', 'topright', 'bottomleft', 'bottomright'];
+                if (argPartial.length === 0) {
+                    return landmarks;
+                }
+                return landmarks.filter(l => l.startsWith(argPartial));
+            }
+        }
+
+        // Default: suggest command names
         return this.getCommandNames().filter(name => name.startsWith(lowerPartial));
     }
     
@@ -302,20 +344,66 @@ export class CommandRegistry {
     
     cmdSpawnPickup(args) {
         if (args.length === 0) {
-            return { success: false, message: 'Usage: spawnpickup <type>' };
+            return { success: false, message: 'Usage: spawnpickup <type> or spawnpickup list [category]' };
+        }
+
+        // Handle "list" command
+        if (args[0].toLowerCase() === 'list') {
+            return this.listPickups(args.slice(1));
         }
 
         if (this.game.rewardManager) {
+            // Verify pickup type exists
+            const pickupId = args[0].toLowerCase();
+            const reward = Object.values(REWARDS).find(r => r.id === pickupId);
+            if (!reward) {
+                return { success: false, message: `Unknown pickup: ${args[0]}. Use 'spawnpickup list' to see available types.` };
+            }
+
             // Spawn reward drop at player position
-            this.game.rewardManager.spawnDrop(
+            this.game.rewardManager.spawnReward(
                 this.game.player.x + 100,
                 this.game.player.y,
-                args[0]
+                reward
             );
-            return { success: true, message: `Spawned pickup: ${args[0]}` };
+            return { success: true, message: `Spawned pickup: ${reward.name} (${reward.rarity.name})` };
         }
 
         return { success: false, message: 'Reward system not available' };
+    }
+
+    /**
+     * List available pickups, optionally filtered by category
+     */
+    listPickups(args) {
+        const categories = Object.values(CATEGORY);
+
+        // If category specified, filter by it
+        if (args.length > 0) {
+            const catArg = args[0].toLowerCase();
+            const matchedCat = categories.find(c => c === catArg);
+
+            if (!matchedCat) {
+                return { success: false, message: `Unknown category: ${args[0]}. Categories: ${categories.join(', ')}` };
+            }
+
+            const rewards = Object.values(REWARDS).filter(r => r.category === matchedCat);
+            let msg = `Pickups in ${matchedCat}:\n`;
+            rewards.forEach(r => {
+                msg += `  ${r.id} - ${r.name} (${r.rarity.name})\n`;
+            });
+            return { success: true, message: msg };
+        }
+
+        // List all categories and their pickup counts
+        let msg = 'Available pickup categories:\n';
+        for (const cat of categories) {
+            const count = Object.values(REWARDS).filter(r => r.category === cat).length;
+            msg += `  ${cat} (${count} pickups)\n`;
+        }
+        msg += `\nTotal pickups: ${this.pickupIds.length}\n`;
+        msg += 'Use: spawnpickup list <category> to see pickups in a category';
+        return { success: true, message: msg };
     }
 
     async cmdBoss(args) {
