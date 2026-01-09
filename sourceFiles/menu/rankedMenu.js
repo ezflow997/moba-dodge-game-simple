@@ -65,6 +65,9 @@ export class RankedMenu {
         // Queue view page navigation buttons
         this.prevPageButton = new Button(0, 0, 150, 50, "My Queue", 20, 0, 0, false, true, 'white', 'white');
         this.nextPageButton = new Button(0, 0, 150, 50, "All Queues", 20, 0, 0, false, true, 'white', 'white');
+
+        // Admin button for fixing stuck queues
+        this.fixQueuesButton = new Button(0, 0, 180, 50, "Fix Queues", 18, 0, 0, false, true, 'white', 'white');
     }
 
     show(state = 'confirm') {
@@ -237,9 +240,11 @@ export class RankedMenu {
             this.prevPageButton.update(inX, inY);
             this.nextPageButton.update(inX, inY);
 
-            // Back button
-            setButtonPos(this.backButton, refCenterX - 100, buttonY, 200, 70);
+            // Back button and Fix Queues button
+            setButtonPos(this.backButton, refCenterX - 200, buttonY, 180, 70);
+            setButtonPos(this.fixQueuesButton, refCenterX + 20, buttonY, 180, 70);
             this.backButton.update(inX, inY);
+            this.fixQueuesButton.update(inX, inY);
 
             // Page navigation
             if (this.prevPageButton.isHovered && clicking && !this.clicked) {
@@ -322,6 +327,12 @@ export class RankedMenu {
                 this.scrollOffset = 0;
                 this.state = 'confirm';
                 return true;
+            }
+
+            if (this.fixQueuesButton.isHovered && clicking && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                return 'fix_stuck_queues';
             }
         } else if (this.state === 'queued') {
             const closeBtnW = 280;
@@ -549,8 +560,9 @@ export class RankedMenu {
             this.drawAllQueuesPage(context, centerX, panelY, rX, rY);
         }
 
-        // Draw back button
+        // Draw back button and fix queues button
         this.backButton.draw(context);
+        this.fixQueuesButton.draw(context);
     }
 
     // Calculate live time remaining based on fetch time

@@ -615,6 +615,27 @@ window.addEventListener('load', function () {
 						game.rankedMenu.setQueueStatus(status);
 					});
 				}
+
+				// Handle fix stuck queues (admin action)
+				if (rankedResult === 'fix_stuck_queues') {
+					const adminPassword = prompt('Enter admin password to force-resolve all stuck queues:');
+					if (adminPassword) {
+						game.supabase.fixStuckQueues(adminPassword).then(result => {
+							if (result.success) {
+								const resolvedCount = result.resolved ? result.resolved.length : 0;
+								alert(`Successfully resolved ${resolvedCount} queue(s).`);
+								// Refresh the queue status
+								game.supabase.getRankedStatus(game.playerName).then(status => {
+									game.rankedMenu.setQueueStatus(status);
+								});
+							} else {
+								alert('Failed: ' + (result.error || 'Unknown error'));
+							}
+						}).catch(err => {
+							alert('Error: ' + err.message);
+						});
+					}
+				}
 			}
 
 			// Draw and update name input menu if visible

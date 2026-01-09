@@ -324,6 +324,31 @@ export class SupabaseLeaderboard {
         }
     }
 
+    // Admin: Force resolve all stuck ranked queues
+    async fixStuckQueues(adminPassword) {
+        try {
+            const response = await fetch(`${this.apiBase}/ranked-admin`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    adminPassword,
+                    action: 'force_resolve_all'
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                return { error: data.error || `HTTP ${response.status}` };
+            }
+
+            return data;
+        } catch (error) {
+            console.error('fixStuckQueues error:', error);
+            return { error: error.message };
+        }
+    }
+
     // Set security question for existing account (one-time only)
     async setSecurityQuestion(playerName, password, securityQuestion, securityAnswer) {
         try {

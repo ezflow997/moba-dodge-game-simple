@@ -296,11 +296,17 @@ async function resolveTournament(allEntries) {
     // Sort entries by score descending (each entry is already one per player with best score)
     const sortedEntries = [...allEntries].sort((a, b) => b.score - a.score);
 
-    // Fetch all player ELOs first for the calculation
-    const eloMap = {};
+    // Fetch all player ELO records first for the calculation
+    const eloRecordMap = {};
     for (const entry of sortedEntries) {
         const eloRecord = await getOrCreatePlayerElo(entry.player_name);
-        eloMap[entry.player_name] = eloRecord.elo;
+        eloRecordMap[entry.player_name] = eloRecord;
+    }
+
+    // Create simple elo map for calculation function
+    const eloMap = {};
+    for (const [name, record] of Object.entries(eloRecordMap)) {
+        eloMap[name] = record.elo;
     }
 
     // Calculate ELO changes using dynamic system
@@ -309,7 +315,8 @@ async function resolveTournament(allEntries) {
 
     // Process each player
     for (const result of results) {
-        const eloBefore = eloMap[result.player_name];
+        const playerEloRecord = eloRecordMap[result.player_name];
+        const eloBefore = playerEloRecord.elo;
         const eloAfter = eloBefore + result.eloChange;
 
         // Update player ELO
@@ -318,7 +325,7 @@ async function resolveTournament(allEntries) {
             headers: getHeaders(),
             body: JSON.stringify({
                 elo: eloAfter,
-                games_played: eloRecord.games_played + 1,
+                games_played: (playerEloRecord.games_played || 0) + 1,
                 updated_at: new Date().toISOString()
             })
         });

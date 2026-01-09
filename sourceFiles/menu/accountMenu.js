@@ -511,7 +511,12 @@ export class AccountMenu {
 
         // Set security question mode
         if (this.mode === 'setSecurityQuestion') {
-            // Question navigation buttons
+            // Question navigation buttons - temporarily adjust y for this mode
+            const origPrevY = this.prevQuestionButton.y;
+            const origNextY = this.nextQuestionButton.y;
+            this.prevQuestionButton.y = 450;
+            this.nextQuestionButton.y = 450;
+
             this.prevQuestionButton.update(inX, inY);
             if (this.prevQuestionButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
                 this.clicked = true;
@@ -525,6 +530,10 @@ export class AccountMenu {
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.selectedQuestionIndex = (this.selectedQuestionIndex + 1) % SECURITY_QUESTIONS.length;
             }
+
+            // Restore original positions
+            this.prevQuestionButton.y = origPrevY;
+            this.nextQuestionButton.y = origNextY;
 
             // Submit button
             this.submitButton.update(inX, inY);
@@ -552,6 +561,8 @@ export class AccountMenu {
         let panelHeight = 480;
         if (this.mode === 'main') {
             panelHeight = !this.hasSecurityQuestion ? 480 : 400;
+        } else if (this.mode === 'setSecurityQuestion') {
+            panelHeight = 520;
         }
         context.save();
         context.fillStyle = 'rgba(10, 20, 40, 0.95)';
@@ -684,31 +695,37 @@ export class AccountMenu {
 
     drawSetSecurityQuestion(context, rX, rY) {
         this.super.drawGlowText(context, 800, 340, "SET SECURITY QUESTION", 36, '#ffffff', '#00ffff', 12);
-        this.super.drawGlowText(context, 700, 390, "This is a one-time setup for password recovery", 20, '#888888', '#666666', 5);
+        this.super.drawGlowText(context, 700, 380, "This is a one-time setup for password recovery", 20, '#888888', '#666666', 5);
 
         // Security question selector
-        this.super.drawGlowText(context, 660, 430, "Select Question:", 24, '#888888', '#666666', 5);
+        this.super.drawGlowText(context, 660, 420, "Select Question:", 24, '#888888', '#666666', 5);
 
         // Question display box
         context.save();
         context.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        context.fillRect(720 * rX, 440 * rY, 420 * rX, 50 * rY);
+        context.fillRect(720 * rX, 450 * rY, 420 * rX, 50 * rY);
         context.strokeStyle = '#00ffff';
         context.lineWidth = 2 * rY;
-        context.strokeRect(720 * rX, 440 * rY, 420 * rX, 50 * rY);
+        context.strokeRect(720 * rX, 450 * rY, 420 * rX, 50 * rY);
         context.restore();
 
         // Draw current question
         const currentQuestion = SECURITY_QUESTIONS[this.selectedQuestionIndex];
-        this.super.drawGlowText(context, 735, 478, currentQuestion, 22, '#ffaa00', '#ff8800', 5);
+        this.super.drawGlowText(context, 735, 488, currentQuestion, 22, '#ffaa00', '#ff8800', 5);
 
-        // Navigation buttons
+        // Navigation buttons - temporarily adjust y position for this mode
+        const origPrevY = this.prevQuestionButton.y;
+        const origNextY = this.nextQuestionButton.y;
+        this.prevQuestionButton.y = 450;
+        this.nextQuestionButton.y = 450;
         this.prevQuestionButton.draw(context);
         this.nextQuestionButton.draw(context);
+        this.prevQuestionButton.y = origPrevY;
+        this.nextQuestionButton.y = origNextY;
 
         // Answer field
-        this.super.drawGlowText(context, 660, 530, "Your Answer:", 24, '#888888', '#666666', 5);
-        this.drawInputField(context, rX, rY, 650, 540, 560, 'securityAnswer', this.securityAnswer, false);
+        this.super.drawGlowText(context, 660, 550, "Your Answer:", 24, '#888888', '#666666', 5);
+        this.drawInputField(context, rX, rY, 650, 560, 560, 'securityAnswer', this.securityAnswer, false);
 
         // Submit button (dim if no answer)
         if (this.securityAnswer.trim().length > 0) {
