@@ -33,6 +33,7 @@ export class RankedMenu {
         this.timeRemaining = null;
         this.allQueuesSummary = [];
         this.dataFetchTime = null; // Timestamp when queue data was fetched
+        this.isQueued = false; // Whether player is actually in a queue
 
         // Queue view pagination
         this.queueViewPage = 0; // 0 = current queue, 1 = all queues
@@ -111,6 +112,7 @@ export class RankedMenu {
         }
         this.playersReady = status.playersReady || 0;
         this.totalQueuedPlayers = status.totalQueuedPlayers || this.queueSize;
+        this.isQueued = status.isQueued || false;
         // Time remaining and all queues summary
         this.timeRemaining = status.timeRemaining !== undefined ? status.timeRemaining : null;
         if (status.allQueuesSummary) {
@@ -139,6 +141,7 @@ export class RankedMenu {
         }
         this.playersReady = queueInfo.playersReady || 0;
         this.totalQueuedPlayers = queueInfo.totalQueuedPlayers || this.queueSize;
+        this.isQueued = true; // Player just submitted, so they're now in queue
         this.state = 'queued';
     }
 
@@ -485,7 +488,12 @@ export class RankedMenu {
         context.fillStyle = '#ffaa00';
         context.shadowColor = '#ffaa00';
         context.shadowBlur = 10 * rX;
-        const title = this.queueViewPage === 0 ? 'MY QUEUE' : 'ALL QUEUES';
+        let title;
+        if (this.queueViewPage === 0) {
+            title = this.isQueued ? 'MY QUEUE' : 'AVAILABLE QUEUE';
+        } else {
+            title = 'ALL QUEUES';
+        }
         context.fillText(title, centerX, panelY + 60 * rY);
         context.shadowBlur = 0;
 
@@ -542,6 +550,14 @@ export class RankedMenu {
     }
 
     drawMyQueuePage(context, centerX, panelY, rX, rY) {
+        // Show notice if player is not yet in the queue
+        if (!this.isQueued && this.queueStandings.length > 0) {
+            context.font = `${20 * rX}px Arial`;
+            context.textAlign = 'center';
+            context.fillStyle = '#ffaa00';
+            context.fillText('You will join this queue when you play a ranked game', centerX, panelY + 130 * rY);
+        }
+
         // Time remaining display (live countdown) - only shows when minimum players reached
         const liveTimeRemaining = this.getLiveTimeRemaining(this.timeRemaining);
         context.font = `${22 * rX}px Arial`;
@@ -560,7 +576,8 @@ export class RankedMenu {
         // Queue status
         context.font = `${24 * rX}px Arial`;
         context.fillStyle = '#aaaaaa';
-        context.fillText(`${this.queueSize}/${this.maxPlayers} players | ${this.playersReady} ready`, centerX, panelY + 195 * rY);
+        const queueLabel = this.isQueued ? 'Your queue:' : 'Available queue:';
+        context.fillText(`${queueLabel} ${this.queueSize}/${this.maxPlayers} players | ${this.playersReady} ready`, centerX, panelY + 195 * rY);
 
         // Column headers
         const startY = 230;
