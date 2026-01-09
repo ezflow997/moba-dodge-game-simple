@@ -17,16 +17,16 @@ export class Menu{
         const btnH = 70;
         const btnSpacing = 90;
 
-        this.challengeButton = new Button(btnX, 80, btnW, btnH, "Skill Mode: NORMAL", 28, 0, 0, false, true, 'white', 'white');
-        this.difficultyButton = new Button(btnX, 80 + btnSpacing, btnW, btnH, "Difficulty: EASY", 28, 0, 0, false, true, 'white', 'white');
-        this.startButton = new Button(btnX, 80 + btnSpacing * 2, btnW, btnH, "New Game", 32, 0, 0, false, true, 'white', 'white');
-        this.leaderboardButton = new Button(btnX, 80 + btnSpacing * 3, btnW, btnH, "Leaderboard", 32, 0, 0, false, true, 'white', 'white');
-        this.loginButton = new Button(btnX, 80 + btnSpacing * 4, btnW, btnH, "Login", 32, 0, 0, false, true, 'white', 'white');
-        this.logoutButton = new Button(btnX + btnW + 20, 80 + btnSpacing * 4, 120, 50, "Logout", 24, 0, 0, false, true, 'white', 'white');
-
-        // Help panel state
+        // Help button at top
         this.showHelp = false;
-        this.helpButton = new Button(btnX, 80 + btnSpacing * 5, btnW, btnH, "How to Play", 32, 0, 0, false, true, 'white', 'white');
+        this.helpButton = new Button(btnX, 80, btnW, btnH, "How to Play", 32, 0, 0, false, true, 'white', 'white');
+
+        this.challengeButton = new Button(btnX, 80 + btnSpacing, btnW, btnH, "Skill Mode: NORMAL", 28, 0, 0, false, true, 'white', 'white');
+        this.difficultyButton = new Button(btnX, 80 + btnSpacing * 2, btnW, btnH, "Difficulty: EASY", 28, 0, 0, false, true, 'white', 'white');
+        this.startButton = new Button(btnX, 80 + btnSpacing * 3, btnW, btnH, "New Game", 32, 0, 0, false, true, 'white', 'white');
+        this.leaderboardButton = new Button(btnX, 80 + btnSpacing * 4, btnW, btnH, "Leaderboard", 32, 0, 0, false, true, 'white', 'white');
+        this.loginButton = new Button(btnX, 80 + btnSpacing * 5, btnW, btnH, "Login", 32, 0, 0, false, true, 'white', 'white');
+        this.logoutButton = new Button(btnX + btnW + 20, 80 + btnSpacing * 5, 120, 50, "Logout", 24, 0, 0, false, true, 'white', 'white');
 
         // Player leaderboard data cache
         this.playerLeaderboardData = null;
@@ -222,7 +222,7 @@ export class Menu{
 
         // Show login button or player name based on login state
         if(game.playerName) {
-            this.super.drawGlowText(context, 80, 475, "Playing as: " + game.playerName, 26, '#00ff88', '#00ff00', 5);
+            this.super.drawGlowText(context, 80, 565, "Playing as: " + game.playerName, 26, '#00ff88', '#00ff00', 5);
             this.logoutButton.draw(context);
         } else {
             this.loginButton.draw(context);
@@ -244,15 +244,15 @@ export class Menu{
      * Draw the help/controls panel on the right side
      */
     drawHelpPanel(context, rX, rY) {
-        const panelX = 1580;
+        const panelX = 1750;
         const panelY = 80;
-        const panelW = 620;
-        const panelH = 750;
+        const panelW = 720;
+        const panelH = 900;
 
         context.save();
 
         // Panel background
-        context.fillStyle = 'rgba(0, 20, 40, 0.92)';
+        context.fillStyle = 'rgba(0, 20, 40, 0.95)';
         context.strokeStyle = '#00ffff';
         context.lineWidth = 3 * rX;
         context.shadowColor = '#00ffff';
@@ -279,7 +279,7 @@ export class Menu{
 
         const leftX = panelX + 40;
         let y = panelY + 110;
-        const lineH = 38;
+        const lineH = 36;
 
         // Objective section
         context.fillStyle = '#ffaa00';
@@ -289,13 +289,13 @@ export class Menu{
         y += lineH;
 
         context.fillStyle = '#cccccc';
-        context.font = `${20 * rX}px Arial`;
+        context.font = `${19 * rX}px Arial`;
         context.fillText('Survive as long as possible!', leftX * rX, y * rY);
-        y += lineH - 8;
+        y += lineH - 6;
         context.fillText('Dodge enemies and projectiles.', leftX * rX, y * rY);
-        y += lineH - 8;
+        y += lineH - 6;
         context.fillText('Shoot enemies to gain points.', leftX * rX, y * rY);
-        y += lineH + 10;
+        y += lineH + 8;
 
         // Controls section - Mouse
         context.fillStyle = '#00ff88';
@@ -304,17 +304,17 @@ export class Menu{
         y += lineH;
 
         context.fillStyle = '#cccccc';
-        context.font = `${20 * rX}px Arial`;
+        context.font = `${19 * rX}px Arial`;
         context.fillText('Right Click - Move to position', leftX * rX, y * rY);
-        y += lineH - 8;
+        y += lineH - 6;
         context.fillText('Q - Shoot', leftX * rX, y * rY);
-        y += lineH - 8;
+        y += lineH - 6;
         context.fillText('E - Dash (short invincibility)', leftX * rX, y * rY);
-        y += lineH - 8;
+        y += lineH - 6;
         context.fillText('F - Ultimate (long dash)', leftX * rX, y * rY);
-        y += lineH - 8;
+        y += lineH - 6;
         context.fillText('G - Stop moving', leftX * rX, y * rY);
-        y += lineH + 10;
+        y += lineH + 8;
 
         // Controls section - WASD
         context.fillStyle = '#ff8800';
@@ -323,15 +323,15 @@ export class Menu{
         y += lineH;
 
         context.fillStyle = '#cccccc';
-        context.font = `${20 * rX}px Arial`;
+        context.font = `${19 * rX}px Arial`;
         context.fillText('WASD - Move directly', leftX * rX, y * rY);
-        y += lineH - 8;
+        y += lineH - 6;
         context.fillText('Left Click - Shoot', leftX * rX, y * rY);
-        y += lineH - 8;
+        y += lineH - 6;
         context.fillText('E - Dash toward mouse', leftX * rX, y * rY);
-        y += lineH - 8;
+        y += lineH - 6;
         context.fillText('Q - Ultimate toward mouse', leftX * rX, y * rY);
-        y += lineH + 10;
+        y += lineH + 8;
 
         // Tips section
         context.fillStyle = '#ff44ff';
@@ -340,15 +340,15 @@ export class Menu{
         y += lineH;
 
         context.fillStyle = '#cccccc';
-        context.font = `${20 * rX}px Arial`;
+        context.font = `${19 * rX}px Arial`;
         context.fillText('Dashing costs points but saves lives!', leftX * rX, y * rY);
-        y += lineH - 8;
+        y += lineH - 6;
         context.fillText('Kill streaks give bonus points.', leftX * rX, y * rY);
-        y += lineH - 8;
+        y += lineH - 6;
         context.fillText('Collect powerups from boss drops.', leftX * rX, y * rY);
-        y += lineH - 8;
+        y += lineH - 6;
         context.fillText('TAB switches weapon slots.', leftX * rX, y * rY);
-        y += lineH - 8;
+        y += lineH - 6;
         context.fillText('ESC opens settings menu.', leftX * rX, y * rY);
 
         context.restore();
