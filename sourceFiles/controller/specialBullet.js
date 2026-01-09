@@ -273,6 +273,9 @@ export class SpecialBullet {
     }
 
     checkCollision(enemies, onChain = null) {
+        if (this.gunType === 'ricochet') {
+            console.log('[RICOCHET] checkCollision called. bouncesRemaining:', this.bouncesRemaining, 'enemies:', enemies.length, 'destroy:', this.destroy, 'enemyCollision:', this.enemyCollision);
+        }
         for (let i = 0; i < enemies.length; i++) {
             const enemy = enemies[i];
 
@@ -289,7 +292,9 @@ export class SpecialBullet {
 
                 // Ricochet - bounce off enemy if we have bounces left
                 if (this.gunType === 'ricochet' && this.bouncesRemaining > 0) {
+                    console.log('[RICOCHET] HIT! Calling bounceOffEnemy. bouncesRemaining:', this.bouncesRemaining);
                     this.bounceOffEnemy(enemy);
+                    console.log('[RICOCHET] After bounce. bouncesRemaining:', this.bouncesRemaining, 'new dir:', this.dirX.toFixed(2), this.dirY.toFixed(2));
                     // Don't set enemyCollision - bullet continues without interruption
 
                     // Chain lightning effect

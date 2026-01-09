@@ -146,7 +146,13 @@ export class Bullets {
                     if(this.bulletsSpawned == true && this.bulletsHitTarget == false){
                         for(let i = this.bulletsList.length - 1; i >= 0; i--){
                             const bullet = this.bulletsList[i];
+                            if (bullet.gunType === 'ricochet') {
+                                console.log('[RICOCHET bullets.js] Bullet state: destroy=', bullet.destroy, 'enemyCollision=', bullet.enemyCollision, 'bouncesRemaining=', bullet.bouncesRemaining);
+                            }
                             if(bullet.destroy == true || bullet.enemyCollision == true){
+                                if (bullet.gunType === 'ricochet') {
+                                    console.log('[RICOCHET bullets.js] Entering destruction branch. destroy=', bullet.destroy, 'enemyCollision=', bullet.enemyCollision);
+                                }
                                 if(bullet.enemyCollision == true){
                                     // Check if bullet type should be independent (not clear all on hit)
                                     const independentTypes = ['shotgun', 'nova', 'twin', 'homing'];
