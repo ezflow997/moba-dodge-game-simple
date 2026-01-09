@@ -333,6 +333,20 @@ export default async function handler(req, res) {
             });
         }
 
+        // Check if queue is full (10 players) and player is not already in it
+        if (attemptsUsed === 0) {
+            const currentQueue = await getUnresolvedQueue();
+            const uniquePlayers = new Set(currentQueue.map(e => e.player_name));
+
+            if (uniquePlayers.size >= MIN_PLAYERS_FOR_TOURNAMENT) {
+                return res.status(400).json({
+                    error: 'Queue is full',
+                    queueSize: uniquePlayers.size,
+                    message: 'Tournament queue is full. Please wait for it to resolve before joining.'
+                });
+            }
+        }
+
         // Submit to queue
         await submitToQueue(name, score, kills, bestStreak);
         const newAttemptsUsed = attemptsUsed + 1;
