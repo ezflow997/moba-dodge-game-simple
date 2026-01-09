@@ -442,9 +442,10 @@ export class PauseMenu {
         }
         // Volume submenu
         else if (this.showVolume) {
-            // Update sliders
-            this.musicVolumeSlider.update(inX, inY, input.buttons.indexOf(0) > -1);
-            this.sfxVolumeSlider.update(inX, inY, input.buttons.indexOf(0) > -1);
+            // Update sliders (only if not just opened - prevents click-through)
+            const mouseDown = input.buttons.indexOf(0) > -1 && !this.clicked;
+            this.musicVolumeSlider.update(inX, inY, mouseDown);
+            this.sfxVolumeSlider.update(inX, inY, mouseDown);
 
             // Apply volume changes in real-time
             if (window.gameSound) {
