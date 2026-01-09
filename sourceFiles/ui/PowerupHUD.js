@@ -8,14 +8,14 @@ import { CATEGORY } from '../controller/rewardTypes.js';
 
 export class PowerupHUD {
     constructor() {
-        // Layout configuration
-        this.abilitySize = 50;      // Ability icon diameter
-        this.weaponSlotWidth = 85;  // Weapon slot width
-        this.weaponSlotHeight = 70; // Weapon slot height
-        this.powerupSize = 36;      // Active powerup icon diameter
-        this.badgeSize = 22;        // Permanent upgrade badge size
-        this.padding = 15;          // Edge padding
-        this.gap = 8;               // Gap between elements
+        // Layout configuration (scaled 2x for visibility)
+        this.abilitySize = 100;      // Ability icon diameter
+        this.weaponSlotWidth = 170;  // Weapon slot width
+        this.weaponSlotHeight = 140; // Weapon slot height
+        this.powerupSize = 72;       // Active powerup icon diameter
+        this.badgeSize = 44;         // Permanent upgrade badge size
+        this.padding = 30;           // Edge padding
+        this.gap = 16;               // Gap between elements
 
         // Colors for abilities
         this.abilityColors = {
