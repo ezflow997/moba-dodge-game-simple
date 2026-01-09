@@ -263,10 +263,10 @@ export class RankedMenu {
                 this.maxScrollOffset = Math.max(0, totalHeight - viewHeight);
 
                 // Scrollbar dimensions (in reference coordinates)
-                const scrollbarX = refCenterX + 460;
+                const scrollbarX = refCenterX + 530;
                 const scrollbarY = 720 - refPanelH / 2 + 180;
                 const scrollbarHeight = 420;
-                const scrollbarWidth = 20;
+                const scrollbarWidth = 25;
 
                 // Calculate thumb size and position
                 const thumbHeight = this.maxScrollOffset > 0
@@ -346,7 +346,7 @@ export class RankedMenu {
         context.fillRect(0, 0, window.innerWidth, window.innerHeight);
 
         // Panel dimensions
-        const panelW = 1000 * rX;
+        const panelW = 1150 * rX;
         const panelH = 800 * rY;
         const panelX = centerX - panelW / 2;
         const panelY = centerY - panelH / 2;
@@ -614,7 +614,7 @@ export class RankedMenu {
     }
 
     drawAllQueuesPage(context, centerX, panelY, rX, rY) {
-        const panelW = 1000 * rX;
+        const panelW = 1150 * rX;
         const panelH = 800 * rY;
 
         // Queue count info
@@ -725,10 +725,10 @@ export class RankedMenu {
         const viewHeight = 400;
 
         if (totalContentHeight > viewHeight && this.maxScrollOffset > 0) {
-            const scrollbarX = centerX + 460 * rX;
+            const scrollbarX = centerX + 530 * rX;
             const scrollbarY = clipY;
             const scrollbarHeight = clipH;
-            const scrollbarWidth = 18 * rX;
+            const scrollbarWidth = 25 * rX;
 
             // Draw scrollbar track
             context.beginPath();
