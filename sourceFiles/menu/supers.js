@@ -109,39 +109,268 @@ export class superFunctions {
     drawMessageWindow(context, menu){
         let rX = window.innerWidth/2560;
         let rY = window.innerHeight/1440;
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
 
-        // Draw semi-transparent overlay
+        // Animated time for effects
+        const time = performance.now() / 1000;
+
         context.save();
-        context.fillStyle = 'rgba(0, 0, 0, 0.7)';
+
+        // Draw semi-transparent overlay with vignette effect
+        const vignetteGradient = context.createRadialGradient(
+            centerX, centerY, 0,
+            centerX, centerY, Math.max(window.innerWidth, window.innerHeight) * 0.7
+        );
+        vignetteGradient.addColorStop(0, 'rgba(0, 0, 0, 0.6)');
+        vignetteGradient.addColorStop(0.5, 'rgba(0, 0, 0, 0.75)');
+        vignetteGradient.addColorStop(1, 'rgba(0, 0, 0, 0.9)');
+        context.fillStyle = vignetteGradient;
         context.fillRect(0, 0, window.innerWidth, window.innerHeight);
-        context.restore();
 
-        // Draw main window background with glow effect
-        context.save();
-        context.fillStyle = 'rgba(10, 20, 40, 0.95)';
-        context.fillRect(300*rX, 300*rY, 1500*rX, 380*rY);
-        
-        // Draw glowing border
-        context.strokeStyle = '#00ffff';
-        context.shadowColor = '#00ffff';
-        context.shadowBlur = 20 * rX;
-        context.lineWidth = 4 * rX;
-        context.strokeRect(300*rX, 300*rY, 1500*rX, 380*rY);
-        context.restore();
+        // Panel dimensions
+        const panelW = 900 * rX;
+        const panelH = 500 * rY;
+        const panelX = centerX - panelW / 2;
+        const panelY = centerY - panelH / 2;
+        const cornerRadius = 20 * rX;
 
-        // Draw title with glow
-        this.drawGlowText(context, 1050, 380, 'GAME OVER', 70, '#ff4444', '#ff0000', 15);
+        // Draw panel background with gradient
+        const bgGradient = context.createLinearGradient(panelX, panelY, panelX, panelY + panelH);
+        bgGradient.addColorStop(0, 'rgba(15, 25, 45, 0.98)');
+        bgGradient.addColorStop(0.5, 'rgba(10, 20, 40, 0.98)');
+        bgGradient.addColorStop(1, 'rgba(5, 15, 35, 0.98)');
 
-        // Draw messages with glow
+        this.drawRoundedRectPath(context, panelX, panelY, panelW, panelH, cornerRadius);
+        context.fillStyle = bgGradient;
+        context.fill();
+
+        // Animated glowing border
+        const glowPulse = 0.7 + Math.sin(time * 2) * 0.3;
+        context.shadowColor = '#ff4444';
+        context.shadowBlur = 25 * rX * glowPulse;
+        context.strokeStyle = `rgba(255, 68, 68, ${0.8 + glowPulse * 0.2})`;
+        context.lineWidth = 3 * rX;
+        context.stroke();
+
+        // Inner border
+        context.shadowBlur = 0;
+        context.strokeStyle = 'rgba(255, 100, 100, 0.3)';
+        context.lineWidth = 1 * rX;
+        this.drawRoundedRectPath(context, panelX + 8 * rX, panelY + 8 * rY, panelW - 16 * rX, panelH - 16 * rY, cornerRadius - 5 * rX);
+        context.stroke();
+
+        // Draw skull icon at top
+        this.drawGameOverSkull(context, centerX, panelY + 85 * rY, 50 * rX, time);
+
+        // "GAME OVER" title with animated glow
+        context.font = `bold ${56 * rX}px Arial`;
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.shadowColor = '#ff0000';
+        context.shadowBlur = 20 * rX * glowPulse;
+        context.fillStyle = '#ff4444';
+        context.fillText('GAME OVER', centerX, panelY + 160 * rY);
+
+        // Divider line
+        context.shadowBlur = 0;
+        const dividerGradient = context.createLinearGradient(panelX + 50 * rX, 0, panelX + panelW - 50 * rX, 0);
+        dividerGradient.addColorStop(0, 'rgba(255, 68, 68, 0)');
+        dividerGradient.addColorStop(0.5, 'rgba(255, 68, 68, 0.6)');
+        dividerGradient.addColorStop(1, 'rgba(255, 68, 68, 0)');
+        context.strokeStyle = dividerGradient;
+        context.lineWidth = 2 * rX;
+        context.beginPath();
+        context.moveTo(panelX + 50 * rX, panelY + 195 * rY);
+        context.lineTo(panelX + panelW - 50 * rX, panelY + 195 * rY);
+        context.stroke();
+
+        // Main message (score info)
+        let messageY = panelY + 260 * rY;
+
         if(menu.showMessage != ''){
-            this.drawGlowText(context, 360, 480, ''+menu.showMessage, 50, '#ffffff', '#00ffff', 10);
+            // Check if it's a high score message
+            const isHighScore = menu.showMessage.toLowerCase().includes('high score');
+
+            context.font = `bold ${38 * rX}px Arial`;
+            context.textAlign = 'center';
+
+            if (isHighScore) {
+                // High score celebration
+                context.shadowColor = '#ffdd00';
+                context.shadowBlur = 15 * rX;
+                context.fillStyle = '#ffdd00';
+
+                // Draw star decorations
+                this.drawStar(context, centerX - 200 * rX, messageY, 15 * rX, time);
+                this.drawStar(context, centerX + 200 * rX, messageY, 15 * rX, time + 1);
+            } else {
+                context.shadowColor = '#00ffff';
+                context.shadowBlur = 10 * rX;
+                context.fillStyle = '#ffffff';
+            }
+
+            context.fillText(menu.showMessage, centerX, messageY);
+            messageY += 55 * rY;
         }
+
+        // Additional message rows
+        context.shadowBlur = 8 * rX;
+        context.font = `${32 * rX}px Arial`;
+
         if(menu.showMessageRow2 != '' && menu.showMessageRow2 != undefined){
-            this.drawGlowText(context, 360, 540, ''+menu.showMessageRow2, 50, '#00ff88', '#00ffff', 10);
-        }        
-        if(menu.showMessageRow3 != '' && menu.showMessageRow3 != undefined){
-            this.drawGlowText(context, 360, 600, ''+menu.showMessageRow3, 50, '#00ff88', '#00ffff', 10);
+            context.shadowColor = '#00ff88';
+            context.fillStyle = '#00ff88';
+            context.fillText(menu.showMessageRow2, centerX, messageY);
+            messageY += 48 * rY;
         }
+
+        if(menu.showMessageRow3 != '' && menu.showMessageRow3 != undefined){
+            context.shadowColor = '#00ffff';
+            context.fillStyle = '#88ffff';
+            context.fillText(menu.showMessageRow3, centerX, messageY);
+        }
+
+        // "Click to continue" prompt with pulsing animation
+        context.shadowBlur = 0;
+        const promptAlpha = 0.5 + Math.sin(time * 3) * 0.3;
+        context.font = `${22 * rX}px Arial`;
+        context.fillStyle = `rgba(150, 150, 150, ${promptAlpha})`;
+        context.fillText('Click anywhere to continue', centerX, panelY + panelH - 35 * rY);
+
+        context.restore();
+    }
+
+    /**
+     * Draw a decorative skull for game over screen
+     */
+    drawGameOverSkull(context, x, y, size, time) {
+        context.save();
+
+        const pulse = 1 + Math.sin(time * 2) * 0.05;
+        const s = size * pulse;
+
+        // Glow effect
+        context.shadowColor = '#ff4444';
+        context.shadowBlur = 15;
+
+        context.fillStyle = '#ff6666';
+        context.strokeStyle = '#cc0000';
+        context.lineWidth = s * 0.06;
+
+        // Skull head
+        context.beginPath();
+        context.arc(x, y - s * 0.1, s * 0.8, Math.PI, 0, false);
+        context.lineTo(x + s * 0.8, y + s * 0.3);
+        context.quadraticCurveTo(x + s * 0.8, y + s * 0.7, x + s * 0.45, y + s * 0.75);
+        context.lineTo(x - s * 0.45, y + s * 0.75);
+        context.quadraticCurveTo(x - s * 0.8, y + s * 0.7, x - s * 0.8, y + s * 0.3);
+        context.closePath();
+        context.fill();
+        context.stroke();
+
+        // Eye sockets
+        context.shadowBlur = 0;
+        context.fillStyle = '#330000';
+        context.beginPath();
+        context.ellipse(x - s * 0.32, y + s * 0.05, s * 0.2, s * 0.25, 0, 0, Math.PI * 2);
+        context.fill();
+        context.beginPath();
+        context.ellipse(x + s * 0.32, y + s * 0.05, s * 0.2, s * 0.25, 0, 0, Math.PI * 2);
+        context.fill();
+
+        // Glowing red eyes
+        const eyeGlow = 0.5 + Math.sin(time * 4) * 0.5;
+        context.fillStyle = `rgba(255, 0, 0, ${eyeGlow})`;
+        context.shadowColor = '#ff0000';
+        context.shadowBlur = 10 * eyeGlow;
+        context.beginPath();
+        context.arc(x - s * 0.32, y + s * 0.05, s * 0.08, 0, Math.PI * 2);
+        context.fill();
+        context.beginPath();
+        context.arc(x + s * 0.32, y + s * 0.05, s * 0.08, 0, Math.PI * 2);
+        context.fill();
+
+        // Nose
+        context.shadowBlur = 0;
+        context.fillStyle = '#330000';
+        context.beginPath();
+        context.moveTo(x, y + s * 0.2);
+        context.lineTo(x - s * 0.12, y + s * 0.4);
+        context.lineTo(x + s * 0.12, y + s * 0.4);
+        context.closePath();
+        context.fill();
+
+        // Teeth
+        context.fillStyle = '#ff6666';
+        const teethY = y + s * 0.75;
+        for (let i = -3; i <= 3; i++) {
+            context.fillRect(x + i * s * 0.12 - s * 0.05, teethY, s * 0.09, s * 0.2);
+        }
+
+        // Teeth lines
+        context.strokeStyle = '#cc0000';
+        context.lineWidth = 1;
+        for (let i = -3; i <= 3; i++) {
+            context.beginPath();
+            context.moveTo(x + i * s * 0.12, teethY);
+            context.lineTo(x + i * s * 0.12, teethY + s * 0.18);
+            context.stroke();
+        }
+
+        context.restore();
+    }
+
+    /**
+     * Draw a decorative star
+     */
+    drawStar(context, x, y, size, time) {
+        context.save();
+
+        const rotation = time * 0.5;
+        const pulse = 1 + Math.sin(time * 3) * 0.2;
+
+        context.translate(x, y);
+        context.rotate(rotation);
+        context.scale(pulse, pulse);
+
+        context.fillStyle = '#ffdd00';
+        context.shadowColor = '#ffaa00';
+        context.shadowBlur = 10;
+
+        context.beginPath();
+        for (let i = 0; i < 5; i++) {
+            const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+            const radius = i === 0 ? size : size;
+            if (i === 0) {
+                context.moveTo(Math.cos(angle) * size, Math.sin(angle) * size);
+            } else {
+                context.lineTo(Math.cos(angle) * size, Math.sin(angle) * size);
+            }
+            const innerAngle = angle + Math.PI / 5;
+            context.lineTo(Math.cos(innerAngle) * size * 0.4, Math.sin(innerAngle) * size * 0.4);
+        }
+        context.closePath();
+        context.fill();
+
+        context.restore();
+    }
+
+    /**
+     * Helper to draw rounded rectangle path
+     */
+    drawRoundedRectPath(context, x, y, w, h, r) {
+        context.beginPath();
+        context.moveTo(x + r, y);
+        context.lineTo(x + w - r, y);
+        context.quadraticCurveTo(x + w, y, x + w, y + r);
+        context.lineTo(x + w, y + h - r);
+        context.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        context.lineTo(x + r, y + h);
+        context.quadraticCurveTo(x, y + h, x, y + h - r);
+        context.lineTo(x, y + r);
+        context.quadraticCurveTo(x, y, x + r, y);
+        context.closePath();
     }
     createJSONAccount(user, pass, high_score, birth_date, gender, email, date, time, last_score, isBanned, 
             remember_me, device_id, daily_score, weekly_score, total_kills, total_q_presses, total_e_presses, 
