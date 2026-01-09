@@ -103,9 +103,11 @@ window.addEventListener('load', function () {
 				this.scorePrev = 0;
 				this.gameOver = true;
 				this.showMessage = '';
+				this.showMessageRow2 = '';
 				this.showMessageNow = window.performance.now();
 
 				this.difficulties = ['EASY', 'MEDIUM', 'HARD', 'EXPERT', 'INSANE'];
+				this.difficultyPointMultipliers = { 'EASY': 0.5, 'MEDIUM': 1, 'HARD': 1.5, 'EXPERT': 2, 'INSANE': 3 };
 				this.difficulty_level = 0;
 
 				this.challenges = ['NORMAL', 'CHALLENGING'];
@@ -286,11 +288,18 @@ window.addEventListener('load', function () {
 				score.e_presses = this.player.ePresses;
 				score.f_presses = this.player.fPresses;
 			}
+			calculateShopPoints(score, difficulty) {
+				const basePoints = 10;
+				const scorePoints = Math.floor(score / 500);
+				const multiplier = this.difficultyPointMultipliers[difficulty] || 1;
+				return Math.floor((basePoints + scorePoints) * multiplier);
+			}
 			reset(){
 				this.score = 0;
 				this.scorePrev = 0;
 				this.gameOver = true;
 				this.showMessage = '';
+				this.showMessageRow2 = '';
 				this.showMessageNow = window.performance.now();
 
 				this.loggedIn = false;
@@ -399,6 +408,7 @@ window.addEventListener('load', function () {
 					// Check if dev mode was used this session - don't save scores
 					if (game.devMode && game.devMode.wasUsedThisSession()) {
 						game.showMessage = 'Dev Mode - Score not saved (' + game.score + ')';
+						game.showMessageRow2 = '';
 						game.showMessageNow = window.performance.now();
 						game.pendingScore = null;
 						game.pendingRankedScore = null;
@@ -412,6 +422,7 @@ window.addEventListener('load', function () {
 							bestStreak: game.enemies.best_streak
 						};
 						game.showMessage = 'Ranked Score: ' + game.score;
+						game.showMessageRow2 = 'Ranked games do not award Shop Points';
 						game.showMessageNow = window.performance.now();
 						game.pendingScore = null; // Don't submit to regular leaderboard
 					} else {
@@ -422,6 +433,10 @@ window.addEventListener('load', function () {
 							bestStreak: game.enemies.best_streak,
 							difficulty: game.difficulties[game.difficulty_level]
 						};
+
+						// Calculate and show shop points earned
+						const pointsEarned = game.calculateShopPoints(game.score, game.difficulties[game.difficulty_level]);
+						game.showMessageRow2 = '+' + pointsEarned + ' Shop Points';
 
 						// Check for high score
 						if(game.score > parseInt(game.player_data.high_score[game.difficulty_level].value) || !(parseInt(game.player_data.high_score[game.difficulty_level].value) > 0)){
