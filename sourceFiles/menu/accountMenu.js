@@ -44,16 +44,18 @@ export class AccountMenu {
         this.successMessage = '';
         this.isLoading = false;
 
-        // Buttons
-        this.changePasswordButton = new Button(830, 400, 400, 70, "Change Password", 32, 0, 0, false, true, 'white', 'white');
-        this.setSecurityButton = new Button(830, 480, 400, 70, "Set Security Question", 28, 0, 0, false, true, 'white', 'white');
-        this.forgotPasswordButton = new Button(830, 560, 400, 70, "Forgot Password", 32, 0, 0, false, true, 'white', 'white');
-        this.backButton = new Button(830, 640, 400, 70, "Back", 32, 0, 0, false, true, 'white', 'white');
+        // Buttons - Main menu
+        this.changePasswordButton = new Button(830, 420, 400, 70, "Change Password", 32, 0, 0, false, true, 'white', 'white');
+        this.setSecurityButton = new Button(830, 500, 400, 70, "Set Security Question", 28, 0, 0, false, true, 'white', 'white');
+        this.backButton = new Button(830, 580, 400, 70, "Back", 32, 0, 0, false, true, 'white', 'white');
+
+        // Buttons - Sub-menus
         this.submitButton = new Button(1050, 680, 200, 60, "Submit", 28, 0, 0, false, true, 'white', 'white');
         this.cancelButton = new Button(810, 680, 200, 60, "Cancel", 28, 0, 0, false, true, 'white', 'white');
-        this.nextButton = new Button(1050, 680, 200, 60, "Next", 28, 0, 0, false, true, 'white', 'white');
-        this.prevQuestionButton = new Button(650, 430, 60, 50, "<", 32, 0, 0, false, true, 'white', 'white');
-        this.nextQuestionButton = new Button(1150, 430, 60, 50, ">", 32, 0, 0, false, true, 'white', 'white');
+
+        // Security question selector buttons
+        this.prevQuestionButton = new Button(650, 440, 60, 50, "<", 32, 0, 0, false, true, 'white', 'white');
+        this.nextQuestionButton = new Button(1150, 440, 60, 50, ">", 32, 0, 0, false, true, 'white', 'white');
 
         // Keyboard handler
         this.keyHandler = this.handleKeyPress.bind(this);
@@ -379,42 +381,29 @@ export class AccountMenu {
 
         // Main menu
         if (this.mode === 'main') {
-            if (this.isLoggedIn) {
-                this.changePasswordButton.update(inX, inY);
-                if (this.changePasswordButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+            this.changePasswordButton.update(inX, inY);
+            if (this.changePasswordButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.mode = 'changePassword';
+                this.activeField = 'currentPassword';
+                this.errorMessage = '';
+                this.successMessage = '';
+            }
+
+            // Set security question button (only if no security question set)
+            if (!this.hasSecurityQuestion) {
+                this.setSecurityButton.update(inX, inY);
+                if (this.setSecurityButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
                     this.clicked = true;
                     if (window.gameSound) window.gameSound.playMenuClick();
-                    this.mode = 'changePassword';
-                    this.activeField = 'currentPassword';
+                    this.mode = 'setSecurityQuestion';
+                    this.activeField = 'securityAnswer';
+                    this.selectedQuestionIndex = 0;
+                    this.securityAnswer = '';
                     this.errorMessage = '';
                     this.successMessage = '';
                 }
-
-                // Set security question button (only if no security question set)
-                if (!this.hasSecurityQuestion) {
-                    this.setSecurityButton.update(inX, inY);
-                    if (this.setSecurityButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
-                        this.clicked = true;
-                        if (window.gameSound) window.gameSound.playMenuClick();
-                        this.mode = 'setSecurityQuestion';
-                        this.activeField = 'securityAnswer';
-                        this.selectedQuestionIndex = 0;
-                        this.securityAnswer = '';
-                        this.errorMessage = '';
-                        this.successMessage = '';
-                    }
-                }
-            }
-
-            this.forgotPasswordButton.update(inX, inY);
-            if (this.forgotPasswordButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
-                this.clicked = true;
-                if (window.gameSound) window.gameSound.playMenuClick();
-                this.mode = 'enterUsername';
-                this.activeField = 'username';
-                if (!this.isLoggedIn) this.username = '';
-                this.errorMessage = '';
-                this.successMessage = '';
             }
 
             this.backButton.update(inX, inY);
@@ -546,10 +535,10 @@ export class AccountMenu {
         context.fillRect(0, 0, game.width, game.height);
         context.restore();
 
-        // Panel - taller for main menu when security button is shown
+        // Panel height based on mode
         let panelHeight = 480;
         if (this.mode === 'main') {
-            panelHeight = (this.isLoggedIn && !this.hasSecurityQuestion) ? 480 : 400;
+            panelHeight = !this.hasSecurityQuestion ? 400 : 320;
         }
         context.save();
         context.fillStyle = 'rgba(10, 20, 40, 0.95)';
@@ -594,20 +583,20 @@ export class AccountMenu {
 
     drawMainMenu(context, rX, rY) {
         this.super.drawGlowText(context, 880, 350, "ACCOUNT", 50, '#ffffff', '#00ffff', 12);
+        this.super.drawGlowText(context, 860, 390, "Logged in as: " + this.username, 24, '#00ff88', '#00ff00', 5);
 
-        if (this.isLoggedIn) {
-            this.super.drawGlowText(context, 860, 390, "Logged in as: " + this.username, 24, '#00ff88', '#00ff00', 5);
-            this.changePasswordButton.draw(context);
+        this.changePasswordButton.draw(context);
 
-            // Show "Set Security Question" button if user doesn't have one
-            if (!this.hasSecurityQuestion) {
-                this.setSecurityButton.draw(context);
-            }
+        // Show "Set Security Question" button if user doesn't have one
+        if (!this.hasSecurityQuestion) {
+            this.setSecurityButton.draw(context);
+            // Back button at lower position
+            this.backButton.y = 580;
         } else {
-            this.super.drawGlowText(context, 900, 390, "Not logged in", 24, '#888888', '#666666', 5);
+            // Back button shifts up when no security button
+            this.backButton.y = 500;
         }
 
-        this.forgotPasswordButton.draw(context);
         this.backButton.draw(context);
     }
 

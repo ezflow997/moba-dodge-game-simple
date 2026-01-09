@@ -230,13 +230,13 @@ export class Menu{
             }
         }
 
-        // Account button - show for both logged in (change password) and logged out (forgot password)
-        if(!game.leaderboardMenu.isVisible && !game.accountMenu.isVisible && !game.rankedMenu.isVisible) {
+        // Account button - only show when logged in
+        if(game.playerName && !game.leaderboardMenu.isVisible && !game.accountMenu.isVisible && !game.rankedMenu.isVisible) {
             this.accountButton.update(inX, inY);
             if(this.accountButton.isHovered == true && game.input.buttons.indexOf(0) > -1 && this.clicked == false){
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
-                game.accountMenu.show(!!game.playerName, game.playerName, game.hasSecurityQuestion);
+                game.accountMenu.show(true, game.playerName, game.hasSecurityQuestion);
             }
         }
 
@@ -288,8 +288,10 @@ export class Menu{
             this.loginButton.draw(context);
         }
 
-        // Draw Account button
-        this.accountButton.draw(context);
+        // Draw Account button (only when logged in)
+        if (game.playerName) {
+            this.accountButton.draw(context);
+        }
 
         // Draw Help button
         this.helpButton.draw(context);
