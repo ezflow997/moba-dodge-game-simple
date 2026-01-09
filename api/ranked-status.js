@@ -84,15 +84,40 @@ export default async function handler(req, res) {
         // Get current queue
         const queue = await getUnresolvedQueue();
 
-        // Count unique players in queue
-        const uniquePlayers = new Set(queue.map(e => e.player_name)).size;
+        // Build queue standings (best score per player, sorted by score)
+        const playerData = {};
+        for (const entry of queue) {
+            const name = entry.player_name;
+            if (!playerData[name]) {
+                playerData[name] = {
+                    player_name: name,
+                    score: entry.score,
+                    attempts: 1
+                };
+            } else {
+                playerData[name].attempts++;
+                if (entry.score > playerData[name].score) {
+                    playerData[name].score = entry.score;
+                }
+            }
+        }
+
+        // Sort by score descending
+        const queueStandings = Object.values(playerData).sort((a, b) => b.score - a.score);
+        const uniquePlayers = queueStandings.length;
+
+        // Count players who have completed all attempts
+        const playersReady = queueStandings.filter(p => p.attempts >= MAX_ATTEMPTS_PER_PLAYER).length;
 
         // Basic response without player info
         if (!playerName) {
             return res.status(200).json({
                 queueSize: uniquePlayers,
                 totalEntries: queue.length,
-                playersNeeded: Math.max(0, 10 - uniquePlayers)
+                playersNeeded: Math.max(0, 10 - uniquePlayers),
+                queueStandings,
+                playersReady,
+                totalQueuedPlayers: uniquePlayers
             });
         }
 
@@ -139,6 +164,9 @@ export default async function handler(req, res) {
             attemptsRemaining,
             maxAttempts: MAX_ATTEMPTS_PER_PLAYER,
             bestScore,
+            queueStandings,
+            playersReady,
+            totalQueuedPlayers: uniquePlayers,
             recentHistory: history.map(h => ({
                 placement: h.placement,
                 totalPlayers: h.total_players,

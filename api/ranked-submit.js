@@ -129,27 +129,39 @@ async function getUnresolvedQueue() {
     return await response.json();
 }
 
-// Get unique players with their best scores from queue entries
+// Get unique players with their best scores and attempt counts from queue entries
 function getPlayerBestScores(entries) {
     const playerBests = {};
 
     for (const entry of entries) {
         const name = entry.player_name;
-        if (!playerBests[name] || entry.score > playerBests[name].score) {
+        if (!playerBests[name]) {
             playerBests[name] = {
                 player_name: name,
                 score: entry.score,
                 kills: entry.kills,
                 best_streak: entry.best_streak,
-                entryIds: playerBests[name] ? [...playerBests[name].entryIds, entry.id] : [entry.id]
+                entryIds: [entry.id],
+                attempts: 1
             };
         } else {
+            playerBests[name].attempts++;
             playerBests[name].entryIds.push(entry.id);
+            if (entry.score > playerBests[name].score) {
+                playerBests[name].score = entry.score;
+                playerBests[name].kills = entry.kills;
+                playerBests[name].best_streak = entry.best_streak;
+            }
         }
     }
 
     // Sort by score descending
     return Object.values(playerBests).sort((a, b) => b.score - a.score);
+}
+
+// Check if all players have completed their max attempts
+function allPlayersReady(playerBests) {
+    return playerBests.every(player => player.attempts >= MAX_ATTEMPTS_PER_PLAYER);
 }
 
 // Calculate ELO changes for tournament
@@ -313,10 +325,13 @@ export default async function handler(req, res) {
         // Get current queue state
         const queue = await getUnresolvedQueue();
 
-        // Count unique players
-        const uniquePlayers = new Set(queue.map(e => e.player_name)).size;
+        // Get player standings with attempt counts
+        const playerBests = getPlayerBestScores(queue);
+        const uniquePlayers = playerBests.length;
+        const playersReady = playerBests.filter(p => p.attempts >= MAX_ATTEMPTS_PER_PLAYER).length;
 
-        if (uniquePlayers >= MIN_PLAYERS_FOR_TOURNAMENT) {
+        // Tournament resolves when: 10+ players AND all players have completed all attempts
+        if (uniquePlayers >= MIN_PLAYERS_FOR_TOURNAMENT && allPlayersReady(playerBests)) {
             // Resolve tournament!
             const tournamentResult = await resolveTournament(queue);
 
@@ -343,7 +358,7 @@ export default async function handler(req, res) {
                 }))
             });
         } else {
-            // Not enough players yet - find player's best score
+            // Not ready yet - find player's best score
             const updatedAttempts = await getPlayerAttempts(name);
             const bestScore = Math.max(...updatedAttempts.map(a => a.score));
 
@@ -356,7 +371,9 @@ export default async function handler(req, res) {
                 bestScore: bestScore,
                 currentScore: score,
                 uniquePlayers: uniquePlayers,
-                playersNeeded: MIN_PLAYERS_FOR_TOURNAMENT - uniquePlayers
+                playersNeeded: Math.max(0, MIN_PLAYERS_FOR_TOURNAMENT - uniquePlayers),
+                playersReady: playersReady,
+                totalQueuedPlayers: uniquePlayers
             });
         }
     } catch (error) {

@@ -543,6 +543,15 @@ window.addEventListener('load', function () {
 					game.rankedMenu.hide();
 					game.leaderboardMenu.showRanked();
 				}
+
+				// Check if player wants to view queue standings
+				if (rankedResult === 'view_queue') {
+					// Fetch fresh queue standings
+					game.supabase.getRankedStatus(game.playerName).then(status => {
+						game.rankedMenu.setQueueStatus(status);
+						game.rankedMenu.state = 'queue_view';
+					});
+				}
 			}
 
 			// Draw and update name input menu if visible
