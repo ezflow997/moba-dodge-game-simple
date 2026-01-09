@@ -10,6 +10,18 @@ const CATEGORY_INFO = {
     [CATEGORY.OFFENSE]: { name: 'Offense', icon: 'O' }
 };
 
+// Gun type display names and order
+const GUN_TYPE_INFO = {
+    'shotgun': { name: 'Shotguns', order: 0 },
+    'rapidfire': { name: 'Rapid Fire', order: 1 },
+    'piercing': { name: 'Piercing', order: 2 },
+    'ricochet': { name: 'Ricochet', order: 3 },
+    'homing': { name: 'Homing', order: 4 },
+    'twin': { name: 'Twin Shot', order: 5 },
+    'nova': { name: 'Nova', order: 6 },
+    'chain': { name: 'Chain Lightning', order: 7 }
+};
+
 export class LoadoutMenu {
     constructor() {
         this.super = new superFunctions();
@@ -70,22 +82,56 @@ export class LoadoutMenu {
     }
 
     // Get available items for current category (owned quantity > 0 or permanently unlocked)
+    // For weapons, groups items by gun type with separators
     getAvailableItems() {
-        const available = [];
+        const items = [];
         for (const [rewardId, data] of Object.entries(this.inventory)) {
             if (data.permanentUnlock || data.quantity > 0) {
                 const reward = Object.values(REWARDS).find(r => r.id === rewardId);
                 // Filter by selected category
                 if (reward && reward.category === this.selectedCategory) {
-                    available.push({
+                    items.push({
                         reward,
                         quantity: data.quantity,
-                        isPermanent: data.permanentUnlock
+                        isPermanent: data.permanentUnlock,
+                        isSeparator: false
                     });
                 }
             }
         }
-        return available;
+
+        // For weapons category, group by gun type with separators
+        if (this.selectedCategory === CATEGORY.GUN && items.length > 0) {
+            // Group by gun type
+            const groups = {};
+            for (const item of items) {
+                const gunType = item.reward.gunType || 'other';
+                if (!groups[gunType]) groups[gunType] = [];
+                groups[gunType].push(item);
+            }
+
+            // Sort groups by order and build result with separators
+            const result = [];
+            const sortedTypes = Object.keys(groups).sort((a, b) => {
+                const orderA = GUN_TYPE_INFO[a]?.order ?? 99;
+                const orderB = GUN_TYPE_INFO[b]?.order ?? 99;
+                return orderA - orderB;
+            });
+
+            for (const gunType of sortedTypes) {
+                const typeName = GUN_TYPE_INFO[gunType]?.name || gunType;
+                // Add separator
+                result.push({
+                    isSeparator: true,
+                    separatorName: typeName
+                });
+                // Add items in this group
+                result.push(...groups[gunType]);
+            }
+            return result;
+        }
+
+        return items;
     }
 
     // Count how many times a reward is selected
@@ -224,13 +270,19 @@ export class LoadoutMenu {
         // Handle scrolling
         const available = this.getAvailableItems();
         const itemHeight = 70;
+        const separatorHeight = 35;
+
+        // Calculate total content height accounting for separators
+        let contentHeight = 0;
+        for (const item of available) {
+            contentHeight += item.isSeparator ? separatorHeight : itemHeight;
+        }
 
         // Grid coordinates (matching draw function)
         const gridLeft = refPanelLeft + 30;    // List starts at panelX + 30
-        const gridTop = refPanelTop + 150;
+        const gridTop = refPanelTop + 160;     // Adjusted for category tabs
         const gridWidth = 730;
-        const gridHeight = refPanelH - 280;
-        const contentHeight = available.length * itemHeight;
+        const gridHeight = refPanelH - 300;
         this.maxScrollOffset = Math.max(0, contentHeight - gridHeight);
 
         // Convert to screen pixels
@@ -282,19 +334,31 @@ export class LoadoutMenu {
         // Handle item clicks (don't process when dragging scrollbar)
         if (clicking && !this.clicked && !this.isDraggingScrollbar &&
             inX >= gridLeftPx && inX <= gridRightPx && inY >= gridTopPx && inY <= gridBottomPx) {
-            const relY = inY - gridTopPx + this.scrollOffset * rY;
-            const itemIndex = Math.floor(relY / (itemHeight * rY));
+            const relY = (inY - gridTopPx) / rY + this.scrollOffset;
 
-            if (itemIndex >= 0 && itemIndex < available.length) {
+            // Find which item was clicked accounting for different heights
+            let accumulatedHeight = 0;
+            let clickedItem = null;
+            for (const item of available) {
+                const thisHeight = item.isSeparator ? separatorHeight : itemHeight;
+                if (relY >= accumulatedHeight && relY < accumulatedHeight + thisHeight) {
+                    if (!item.isSeparator) {
+                        clickedItem = item;
+                    }
+                    break;
+                }
+                accumulatedHeight += thisHeight;
+            }
+
+            if (clickedItem) {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
 
-                const item = available[itemIndex];
                 // Toggle: if selected, remove; if not selected, try to add
-                if (this.getSelectedCount(item.reward.id) > 0) {
-                    this.removeReward(item.reward.id);
+                if (this.getSelectedCount(clickedItem.reward.id) > 0) {
+                    this.removeReward(clickedItem.reward.id);
                 } else {
-                    this.addReward(item.reward);
+                    this.addReward(clickedItem.reward);
                 }
             }
         }
@@ -437,16 +501,10 @@ export class LoadoutMenu {
         const listX = panelX + 30 * rX;
         const listY = panelY + 145 * rY;
         const listW = 730 * rX;
-        const listH = panelH - 270 * rY;
+        const listH = panelH - 290 * rY;
 
-        // List header - show current category
-        const categoryName = CATEGORY_INFO[this.selectedCategory].name;
-        context.font = `bold ${20 * rX}px Arial`;
-        context.textAlign = 'left';
-        context.fillStyle = '#00ffaa';
-        context.fillText(categoryName, listX + 10 * rX, listY);
-
-        const gridTop = listY + 15 * rY;
+        // List header removed - category tabs show the current category
+        const gridTop = listY;
 
         // Clip region
         context.save();
@@ -456,6 +514,7 @@ export class LoadoutMenu {
 
         const available = this.getAvailableItems();
         const itemHeight = 70 * rY;
+        const separatorHeight = 35 * rY;
 
         if (available.length === 0) {
             context.font = `${18 * rX}px Arial`;
@@ -465,68 +524,102 @@ export class LoadoutMenu {
             context.fillText('Visit the Shop to purchase!', listX + listW / 2, gridTop + 90 * rY);
         }
 
+        // Calculate Y positions accounting for separators
+        let currentY = gridTop - this.scrollOffset * rY;
+
         for (let i = 0; i < available.length; i++) {
             const item = available[i];
-            const itemY = gridTop + i * itemHeight - this.scrollOffset * rY;
+            const thisHeight = item.isSeparator ? separatorHeight : itemHeight;
 
-            if (itemY + itemHeight < gridTop || itemY > gridTop + listH) continue;
-
-            const isSelected = this.getSelectedCount(item.reward.id) > 0;
-            const canAdd = this.canAddReward(item.reward.id);
-            const isDisabled = !isSelected && !canAdd;
-
-            // Item background
-            context.beginPath();
-            context.roundRect(listX + 5 * rX, itemY + 5 * rY, listW - 10 * rX, itemHeight - 10 * rY, 8 * rX);
-
-            if (isSelected) {
-                context.fillStyle = 'rgba(0, 255, 170, 0.15)';
-                context.strokeStyle = '#00ffaa';
-            } else if (isDisabled) {
-                context.fillStyle = 'rgba(20, 20, 30, 0.6)';
-                context.strokeStyle = '#444444';
-            } else {
-                context.fillStyle = 'rgba(30, 40, 60, 0.6)';
-                context.strokeStyle = item.reward.rarity.color;
+            // Skip if outside visible area
+            if (currentY + thisHeight < gridTop) {
+                currentY += thisHeight;
+                continue;
             }
-            context.fill();
-            context.lineWidth = isSelected ? 2 * rX : 1 * rX;
-            context.stroke();
+            if (currentY > gridTop + listH) break;
 
-            // Rarity bar
-            context.fillStyle = isDisabled ? '#444444' : item.reward.rarity.color;
-            context.fillRect(listX + 5 * rX, itemY + 5 * rY, 5 * rX, itemHeight - 10 * rY);
-
-            // Item name
-            context.font = `bold ${18 * rX}px Arial`;
-            context.textAlign = 'left';
-            context.fillStyle = isDisabled ? '#666666' : item.reward.rarity.color;
-            context.fillText(item.reward.name, listX + 22 * rX, itemY + 28 * rY);
-
-            // Description
-            context.font = `${14 * rX}px Arial`;
-            context.fillStyle = isDisabled ? '#555555' : '#aaaaaa';
-            context.fillText(item.reward.description, listX + 22 * rX, itemY + 50 * rY);
-
-            // Quantity/status
-            context.font = `${16 * rX}px Arial`;
-            context.textAlign = 'right';
-            if (item.isPermanent) {
-                context.fillStyle = isDisabled ? '#555555' : '#00ff88';
-                context.fillText('UNLIMITED', listX + listW - 20 * rX, itemY + 28 * rY);
-            } else {
-                context.fillStyle = isDisabled ? '#555555' : '#88ffff';
-                context.fillText(`x${item.quantity}`, listX + listW - 20 * rX, itemY + 28 * rY);
-            }
-
-            // Selected indicator or disabled reason
-            if (isSelected) {
+            if (item.isSeparator) {
+                // Draw separator header
                 context.fillStyle = '#00ffaa';
-                context.fillText('SELECTED', listX + listW - 20 * rX, itemY + 50 * rY);
-            } else if (isDisabled && item.reward.category === CATEGORY.GUN) {
-                context.fillStyle = '#ff6666';
-                context.fillText('Gun already selected', listX + listW - 20 * rX, itemY + 50 * rY);
+                context.font = `bold ${16 * rX}px Arial`;
+                context.textAlign = 'left';
+                context.fillText(item.separatorName, listX + 15 * rX, currentY + 24 * rY);
+
+                // Draw line
+                context.strokeStyle = 'rgba(0, 255, 170, 0.3)';
+                context.lineWidth = 1 * rX;
+                context.beginPath();
+                context.moveTo(listX + 15 * rX, currentY + 30 * rY);
+                context.lineTo(listX + listW - 15 * rX, currentY + 30 * rY);
+                context.stroke();
+            } else {
+                // Draw regular item
+                const isSelected = this.getSelectedCount(item.reward.id) > 0;
+                const canAdd = this.canAddReward(item.reward.id);
+                const isDisabled = !isSelected && !canAdd;
+
+                // Item background
+                context.beginPath();
+                context.roundRect(listX + 5 * rX, currentY + 3 * rY, listW - 10 * rX, itemHeight - 6 * rY, 8 * rX);
+
+                if (isSelected) {
+                    context.fillStyle = 'rgba(0, 255, 170, 0.15)';
+                    context.strokeStyle = '#00ffaa';
+                } else if (isDisabled) {
+                    context.fillStyle = 'rgba(20, 20, 30, 0.6)';
+                    context.strokeStyle = '#444444';
+                } else {
+                    context.fillStyle = 'rgba(30, 40, 60, 0.6)';
+                    context.strokeStyle = item.reward.rarity.color;
+                }
+                context.fill();
+                context.lineWidth = isSelected ? 2 * rX : 1 * rX;
+                context.stroke();
+
+                // Rarity bar
+                context.fillStyle = isDisabled ? '#444444' : item.reward.rarity.color;
+                context.fillRect(listX + 5 * rX, currentY + 3 * rY, 5 * rX, itemHeight - 6 * rY);
+
+                // Item name
+                context.font = `bold ${16 * rX}px Arial`;
+                context.textAlign = 'left';
+                context.fillStyle = isDisabled ? '#666666' : item.reward.rarity.color;
+                context.fillText(item.reward.name, listX + 20 * rX, currentY + 25 * rY);
+
+                // Description (truncated)
+                context.font = `${13 * rX}px Arial`;
+                context.fillStyle = isDisabled ? '#555555' : '#aaaaaa';
+                const desc = item.reward.description.length > 45
+                    ? item.reward.description.substring(0, 42) + '...'
+                    : item.reward.description;
+                context.fillText(desc, listX + 20 * rX, currentY + 45 * rY);
+
+                // Right side info - quantity and status on separate lines
+                context.font = `${14 * rX}px Arial`;
+                context.textAlign = 'right';
+
+                // Status indicator
+                if (isSelected) {
+                    context.fillStyle = '#00ffaa';
+                    context.fillText('SELECTED', listX + listW - 15 * rX, currentY + 25 * rY);
+                } else if (isDisabled && item.reward.category === CATEGORY.GUN) {
+                    context.fillStyle = '#ff6666';
+                    context.fillText('Locked', listX + listW - 15 * rX, currentY + 25 * rY);
+                } else if (item.isPermanent) {
+                    context.fillStyle = '#00ff88';
+                    context.fillText('UNLIMITED', listX + listW - 15 * rX, currentY + 25 * rY);
+                } else {
+                    context.fillStyle = '#88ffff';
+                    context.fillText(`x${item.quantity}`, listX + listW - 15 * rX, currentY + 25 * rY);
+                }
+
+                // Rarity on second line
+                context.font = `${12 * rX}px Arial`;
+                context.fillStyle = isDisabled ? '#444444' : item.reward.rarity.color;
+                context.fillText(item.reward.rarity.name, listX + listW - 15 * rX, currentY + 45 * rY);
             }
+
+            currentY += thisHeight;
         }
 
         context.restore();
