@@ -23,33 +23,171 @@ export class LeaderboardMenu {
         // Daily filter state
         this.isDaily = false;
 
+        // Search state
+        this.searchQuery = '';
+        this.maxSearchLength = 12;
+        this.searchActive = false;
+        this.cursorBlink = 0;
+        this.searchDebounceTimer = null;
+
+        // Search results navigation
+        this.searchResults = [];      // Array of {player_name, rank}
+        this.currentResultIndex = 0;  // Which result is selected
+        this.highlightedPlayer = null; // Player name to highlight
+
         this.clicked = false;
 
-        // Navigation buttons - difficulty
-        this.prevDiffButton = new Button(830, 220, 100, 70, "<", 50, 30, 50, false, true, 'white', 'white');
-        this.nextDiffButton = new Button(1630, 220, 100, 70, ">", 50, 30, 50, false, true, 'white', 'white');
+        // Bind keyboard handler
+        this.keyHandler = this.handleKeyPress.bind(this);
 
-        // Daily/All toggle button
-        this.dailyToggleButton = new Button(1180, 280, 200, 50, "All Time", 30, 55, 35, false, true, 'white', 'white');
+        // Navigation buttons - difficulty (row at y=220)
+        this.prevDiffButton = new Button(900, 220, 80, 60, "<", 45, 22, 44, false, true, 'white', 'white');
+        this.nextDiffButton = new Button(1580, 220, 80, 60, ">", 45, 22, 44, false, true, 'white', 'white');
+
+        // Daily/All toggle button - right side of difficulty row
+        this.dailyToggleButton = new Button(1680, 220, 160, 60, "All Time", 26, 30, 42, false, true, 'white', 'white');
+
+        // Search navigation buttons - on search row (y=330)
+        this.prevResultButton = new Button(1500, 330, 50, 40, "<", 28, 12, 30, false, true, 'white', 'white');
+        this.nextResultButton = new Button(1680, 330, 50, 40, ">", 28, 12, 30, false, true, 'white', 'white');
+        this.clearSearchButton = new Button(1740, 330, 50, 40, "X", 28, 12, 30, false, true, 'white', 'white');
 
         // Pagination buttons
-        this.prevPageButton = new Button(1050, 930, 100, 60, "<", 40, 30, 45, false, true, 'white', 'white');
-        this.nextPageButton = new Button(1410, 930, 100, 60, ">", 40, 30, 45, false, true, 'white', 'white');
+        this.firstPageButton = new Button(940, 960, 80, 60, "<<", 34, 14, 44, false, true, 'white', 'white');
+        this.prevPageButton = new Button(1030, 960, 80, 60, "<", 40, 20, 45, false, true, 'white', 'white');
+        this.nextPageButton = new Button(1450, 960, 80, 60, ">", 40, 20, 45, false, true, 'white', 'white');
+        this.lastPageButton = new Button(1540, 960, 80, 60, ">>", 34, 14, 44, false, true, 'white', 'white');
 
         // Bottom buttons
-        this.refreshButton = new Button(900, 1010, 280, 70, "Refresh", 40, 60, 50, false, true, 'white', 'white');
-        this.backButton = new Button(1380, 1010, 280, 70, "Back", 40, 80, 50, false, true, 'white', 'white');
+        this.refreshButton = new Button(900, 1060, 280, 70, "Refresh", 40, 60, 50, false, true, 'white', 'white');
+        this.backButton = new Button(1380, 1060, 280, 70, "Back", 40, 80, 50, false, true, 'white', 'white');
     }
 
     async show(initialDifficulty = 0) {
         this.isVisible = true;
         this.currentDifficulty = initialDifficulty;
         this.currentPage = 1;
+        this.searchQuery = '';
+        this.searchActive = false;
+        this.searchResults = [];
+        this.currentResultIndex = 0;
+        this.highlightedPlayer = null;
+        document.addEventListener('keydown', this.keyHandler);
         await this.loadLeaderboard();
     }
 
     hide() {
         this.isVisible = false;
+        this.searchActive = false;
+        this.highlightedPlayer = null;
+        document.removeEventListener('keydown', this.keyHandler);
+        if (this.searchDebounceTimer) {
+            clearTimeout(this.searchDebounceTimer);
+            this.searchDebounceTimer = null;
+        }
+    }
+
+    handleKeyPress(e) {
+        if (!this.isVisible || !this.searchActive) return;
+
+        // Handle backspace
+        if (e.key === 'Backspace') {
+            this.searchQuery = this.searchQuery.slice(0, -1);
+            this.triggerSearchDebounce();
+            e.preventDefault();
+            return;
+        }
+
+        // Handle escape - deactivate search field
+        if (e.key === 'Escape') {
+            this.searchActive = false;
+            e.preventDefault();
+            return;
+        }
+
+        // Handle enter - go to next result
+        if (e.key === 'Enter') {
+            if (this.searchResults.length > 0) {
+                this.nextSearchResult();
+            }
+            e.preventDefault();
+            return;
+        }
+
+        // Handle regular characters
+        if (e.key.length === 1 && this.searchQuery.length < this.maxSearchLength) {
+            if (/^[a-zA-Z0-9_\-]$/.test(e.key)) {
+                this.searchQuery += e.key;
+                this.triggerSearchDebounce();
+            }
+            e.preventDefault();
+        }
+    }
+
+    triggerSearchDebounce() {
+        if (this.searchDebounceTimer) {
+            clearTimeout(this.searchDebounceTimer);
+        }
+        this.searchDebounceTimer = setTimeout(() => {
+            this.performSearch();
+            this.searchDebounceTimer = null;
+        }, 300);
+    }
+
+    async performSearch() {
+        if (this.searchQuery.trim().length === 0) {
+            this.searchResults = [];
+            this.currentResultIndex = 0;
+            this.highlightedPlayer = null;
+            return;
+        }
+
+        try {
+            const result = await this.supabase.searchPlayers(
+                this.difficulties[this.currentDifficulty],
+                this.searchQuery.trim(),
+                this.isDaily
+            );
+            this.searchResults = result.matches || [];
+            this.currentResultIndex = 0;
+
+            // If we have results, navigate to the first one
+            if (this.searchResults.length > 0) {
+                this.goToResult(0);
+            } else {
+                this.highlightedPlayer = null;
+            }
+        } catch (error) {
+            console.error('[Search] Error:', error);
+            this.searchResults = [];
+        }
+    }
+
+    goToResult(index) {
+        if (this.searchResults.length === 0) return;
+
+        this.currentResultIndex = index;
+        const result = this.searchResults[index];
+        this.highlightedPlayer = result.player_name;
+
+        // Calculate which page this rank is on
+        const page = Math.ceil(result.rank / this.entriesPerPage);
+        if (page !== this.currentPage) {
+            this.currentPage = page;
+            this.loadLeaderboard();
+        }
+    }
+
+    nextSearchResult() {
+        if (this.searchResults.length === 0) return;
+        const nextIndex = (this.currentResultIndex + 1) % this.searchResults.length;
+        this.goToResult(nextIndex);
+    }
+
+    prevSearchResult() {
+        if (this.searchResults.length === 0) return;
+        const prevIndex = (this.currentResultIndex - 1 + this.searchResults.length) % this.searchResults.length;
+        this.goToResult(prevIndex);
     }
 
     async loadLeaderboard() {
@@ -84,9 +222,60 @@ export class LeaderboardMenu {
         const inX = game.input.mouseX;
         const inY = game.input.mouseY;
 
+        // Update cursor blink
+        this.cursorBlink = (this.cursorBlink + 1) % 60;
+
         // Handle click release
         if (this.clicked && game.input.buttons.indexOf(0) == -1) {
             this.clicked = false;
+        }
+
+        const rX = window.innerWidth / 2560;
+        const rY = window.innerHeight / 1440;
+
+        // Search field click detection (positioned at 730, 325, width 750, height 45)
+        const searchX = 730 * rX;
+        const searchY = 325 * rY;
+        const searchW = 750 * rX;
+        const searchH = 45 * rY;
+        const inSearchBox = inX >= searchX && inX <= searchX + searchW && inY >= searchY && inY <= searchY + searchH;
+
+        if (game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+            if (inSearchBox) {
+                this.searchActive = true;
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+            }
+        }
+
+        // Search result navigation buttons
+        if (this.searchResults.length > 1) {
+            this.prevResultButton.update(inX, inY);
+            if (this.prevResultButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.prevSearchResult();
+            }
+
+            this.nextResultButton.update(inX, inY);
+            if (this.nextResultButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.nextSearchResult();
+            }
+        }
+
+        // Clear search button
+        if (this.searchQuery.length > 0) {
+            this.clearSearchButton.update(inX, inY);
+            if (this.clearSearchButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.searchQuery = '';
+                this.searchResults = [];
+                this.currentResultIndex = 0;
+                this.highlightedPlayer = null;
+            }
         }
 
         // Previous difficulty
@@ -96,7 +285,10 @@ export class LeaderboardMenu {
             if (window.gameSound) window.gameSound.playMenuClick();
             this.currentDifficulty = (this.currentDifficulty - 1 + 5) % 5;
             this.currentPage = 1;
+            this.searchResults = [];
+            this.highlightedPlayer = null;
             this.loadLeaderboard();
+            if (this.searchQuery.length > 0) this.performSearch();
         }
 
         // Next difficulty
@@ -106,7 +298,10 @@ export class LeaderboardMenu {
             if (window.gameSound) window.gameSound.playMenuClick();
             this.currentDifficulty = (this.currentDifficulty + 1) % 5;
             this.currentPage = 1;
+            this.searchResults = [];
+            this.highlightedPlayer = null;
             this.loadLeaderboard();
+            if (this.searchQuery.length > 0) this.performSearch();
         }
 
         // Daily toggle
@@ -117,7 +312,21 @@ export class LeaderboardMenu {
             this.isDaily = !this.isDaily;
             this.dailyToggleButton.text = this.isDaily ? "Today" : "All Time";
             this.currentPage = 1;
+            this.searchResults = [];
+            this.highlightedPlayer = null;
             this.loadLeaderboard();
+            if (this.searchQuery.length > 0) this.performSearch();
+        }
+
+        // First page
+        this.firstPageButton.update(inX, inY);
+        if (this.firstPageButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+            this.clicked = true;
+            if (this.currentPage > 1) {
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.currentPage = 1;
+                this.loadLeaderboard();
+            }
         }
 
         // Previous page
@@ -138,6 +347,17 @@ export class LeaderboardMenu {
             if (this.currentPage < this.totalPages) {
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.currentPage++;
+                this.loadLeaderboard();
+            }
+        }
+
+        // Last page
+        this.lastPageButton.update(inX, inY);
+        if (this.lastPageButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+            this.clicked = true;
+            if (this.currentPage < this.totalPages) {
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.currentPage = this.totalPages;
                 this.loadLeaderboard();
             }
         }
@@ -178,7 +398,7 @@ export class LeaderboardMenu {
         const panelX = 680;
         const panelY = 100;
         const panelW = 1200;
-        const panelH = 1000;
+        const panelH = 1080;
 
         context.save();
         context.fillStyle = 'rgba(10, 20, 40, 0.95)';
@@ -222,6 +442,9 @@ export class LeaderboardMenu {
         // Daily toggle button
         this.dailyToggleButton.draw(context);
 
+        // Search input field
+        this.drawSearchField(context, rX, rY);
+
         // Loading/error state
         if (this.isLoading) {
             this.super.drawGlowText(context, 1150, 600, "Loading...", 50, '#ffff00', '#ffaa00', 10);
@@ -240,12 +463,74 @@ export class LeaderboardMenu {
         this.backButton.draw(context);
     }
 
+    drawSearchField(context, rX, rY) {
+        const x = 730;
+        const y = 325;
+        const width = 750;
+        const height = 45;
+
+        // Label
+        this.super.drawGlowText(context, 730, 315, "Find Player:", 22, '#888888', '#666666', 4);
+
+        // Input field background
+        context.save();
+        context.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        context.fillRect(x * rX, y * rY, width * rX, height * rY);
+        context.strokeStyle = this.searchActive ? '#00ffff' : '#444444';
+        context.shadowColor = this.searchActive ? '#00ffff' : '#444444';
+        context.shadowBlur = this.searchActive ? 8 * rX : 3 * rX;
+        context.lineWidth = 2 * rY;
+        context.strokeRect(x * rX, y * rY, width * rX, height * rY);
+        context.restore();
+
+        // Display text or placeholder
+        const showCursor = this.searchActive && this.cursorBlink < 30;
+        if (this.searchQuery.length > 0) {
+            const displayText = this.searchQuery + (showCursor ? '|' : '');
+            this.super.drawGlowText(context, x + 15, y + 33, displayText, 26, '#00ff88', '#00ff00', 6);
+        } else {
+            const placeholder = showCursor ? '|' : 'Type name to search...';
+            const color = this.searchActive ? '#00ff88' : '#555555';
+            this.super.drawGlowText(context, x + 15, y + 33, placeholder, 22, color, color, 3);
+        }
+
+        // Show search results info and navigation
+        if (this.searchQuery.length > 0) {
+            if (this.searchResults.length > 0) {
+                // Show "X of Y" results
+                const resultText = `${this.currentResultIndex + 1} of ${this.searchResults.length}`;
+                this.super.drawGlowText(context, 1560, y + 33, resultText, 22, '#00ffff', '#00ffff', 4);
+
+                // Draw navigation buttons if more than 1 result
+                if (this.searchResults.length > 1) {
+                    this.prevResultButton.draw(context);
+                    this.nextResultButton.draw(context);
+                }
+            } else {
+                // No results found
+                this.super.drawGlowText(context, 1560, y + 33, "No matches", 22, '#ff6666', '#ff4444', 4);
+            }
+
+            // Clear button
+            this.clearSearchButton.draw(context);
+        }
+    }
+
     drawPagination(context, rX, rY) {
+        // First page button (gray out if on first page)
+        if (this.currentPage > 1) {
+            this.firstPageButton.draw(context);
+        } else {
+            context.save();
+            context.globalAlpha = 0.3;
+            this.firstPageButton.draw(context);
+            context.restore();
+        }
+
         // Previous page button (gray out if on first page)
         if (this.currentPage > 1) {
             this.prevPageButton.draw(context);
         } else {
-            // Draw grayed out button
             context.save();
             context.globalAlpha = 0.3;
             this.prevPageButton.draw(context);
@@ -254,11 +539,11 @@ export class LeaderboardMenu {
 
         // Total entries count (above pagination buttons)
         const totalText = `${this.totalEntries} total entries`;
-        this.super.drawGlowText(context, 1200, 920, totalText, 24, '#888888', '#666666', 4);
+        this.super.drawGlowText(context, 1240, 955, totalText, 24, '#888888', '#666666', 4);
 
         // Page indicator
         const pageText = `Page ${this.currentPage} of ${this.totalPages}`;
-        this.super.drawGlowText(context, 1180, 980, pageText, 32, '#ffffff', '#00ffff', 6);
+        this.super.drawGlowText(context, 1200, 1010, pageText, 32, '#ffffff', '#00ffff', 6);
 
         // Next page button (gray out if on last page)
         if (this.currentPage < this.totalPages) {
@@ -269,11 +554,21 @@ export class LeaderboardMenu {
             this.nextPageButton.draw(context);
             context.restore();
         }
+
+        // Last page button (gray out if on last page)
+        if (this.currentPage < this.totalPages) {
+            this.lastPageButton.draw(context);
+        } else {
+            context.save();
+            context.globalAlpha = 0.3;
+            this.lastPageButton.draw(context);
+            context.restore();
+        }
     }
 
     drawLeaderboardEntries(context, rX, rY) {
-        const startY = 380;
-        const rowHeight = 52;
+        const startY = 420;
+        const rowHeight = 50;
 
         // Column positions - spread across the wider panel
         const colRank = 730;
@@ -294,8 +589,8 @@ export class LeaderboardMenu {
         context.strokeStyle = 'rgba(0, 255, 255, 0.4)';
         context.lineWidth = 2;
         context.beginPath();
-        context.moveTo(710 * rX, (startY + 25) * rY);
-        context.lineTo(1850 * rX, (startY + 25) * rY);
+        context.moveTo(710 * rX, (startY + 18) * rY);
+        context.lineTo(1850 * rX, (startY + 18) * rY);
         context.stroke();
         context.restore();
 
@@ -316,6 +611,10 @@ export class LeaderboardMenu {
             // Calculate actual rank based on page
             const actualRank = (this.currentPage - 1) * this.entriesPerPage + i + 1;
 
+            // Check if this entry is highlighted from search
+            const isHighlighted = this.highlightedPlayer &&
+                entry.player_name.toLowerCase() === this.highlightedPlayer.toLowerCase();
+
             // Rank coloring (gold/silver/bronze for top 3 overall)
             let rankColor = '#ffffff';
             let glowColor = '#00ffff';
@@ -323,22 +622,45 @@ export class LeaderboardMenu {
             else if (actualRank === 2) { rankColor = '#c0c0c0'; glowColor = '#888888'; }
             else if (actualRank === 3) { rankColor = '#cd7f32'; glowColor = '#aa5500'; }
 
-            // Row background for top 3
-            if (actualRank <= 3) {
+            // Row background - highlighted search result or top 3
+            if (isHighlighted && actualRank <= 3) {
+                // Searched player who is also top 3 - show medal color with bright border
+                context.save();
+                context.fillStyle = `rgba(${actualRank === 1 ? '255,215,0' : actualRank === 2 ? '192,192,192' : '205,127,50'}, 0.3)`;
+                context.fillRect(710 * rX, (y - 32) * rY, 1140 * rX, 48 * rY);
+                context.strokeStyle = '#00ff00';
+                context.shadowColor = '#00ff00';
+                context.shadowBlur = 10;
+                context.lineWidth = 3;
+                context.strokeRect(710 * rX, (y - 32) * rY, 1140 * rX, 48 * rY);
+                context.restore();
+            } else if (isHighlighted) {
+                // Highlighted search result - bright cyan background
+                context.save();
+                context.fillStyle = 'rgba(0, 255, 255, 0.25)';
+                context.fillRect(710 * rX, (y - 32) * rY, 1140 * rX, 48 * rY);
+                context.strokeStyle = '#00ffff';
+                context.lineWidth = 2;
+                context.strokeRect(710 * rX, (y - 32) * rY, 1140 * rX, 48 * rY);
+                context.restore();
+            } else if (actualRank <= 3) {
                 context.save();
                 context.fillStyle = `rgba(${actualRank === 1 ? '255,215,0' : actualRank === 2 ? '192,192,192' : '205,127,50'}, 0.12)`;
-                context.fillRect(710 * rX, (y - 28) * rY, 1140 * rX, 48 * rY);
+                context.fillRect(710 * rX, (y - 32) * rY, 1140 * rX, 48 * rY);
                 context.restore();
             }
 
             // Rank
             this.super.drawGlowText(context, colRank, y, actualRank.toString(), 34, rankColor, glowColor, 8);
 
-            // Name (truncate to 12 chars)
+            // Name (truncate to 12 chars) - brighter if highlighted
             const displayName = entry.player_name.length > 12
                 ? entry.player_name.substring(0, 12) + '...'
                 : entry.player_name;
-            this.super.drawGlowText(context, colName, y, displayName, 34, '#ffffff', '#00ffff', 8);
+            const nameColor = isHighlighted ? '#00ffff' : '#ffffff';
+            const nameGlow = isHighlighted ? '#00ffff' : '#00ffff';
+            const nameGlowSize = isHighlighted ? 15 : 8;
+            this.super.drawGlowText(context, colName, y, displayName, 34, nameColor, nameGlow, nameGlowSize);
 
             // Score
             this.super.drawGlowText(context, colScore, y, entry.score.toString(), 34, '#00ff88', '#00ff00', 8);

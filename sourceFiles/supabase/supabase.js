@@ -83,6 +83,28 @@ export class SupabaseLeaderboard {
         }
     }
 
+    // Search for players by name and get their ranks
+    async searchPlayers(difficulty, searchQuery, daily = false) {
+        try {
+            let url = `${this.apiBase}/search-players?difficulty=${encodeURIComponent(difficulty)}&search=${encodeURIComponent(searchQuery)}`;
+            if (daily) {
+                url += '&daily=true';
+            }
+
+            console.log('[Supabase] Searching:', url);
+            const response = await fetch(url, { method: 'GET' });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('[Supabase] searchPlayers error:', error);
+            return { matches: [] };
+        }
+    }
+
     // Get leaderboard for a specific difficulty with pagination and daily filter
     async getLeaderboard(difficulty, limit = 10, page = 1, daily = false) {
         try {
