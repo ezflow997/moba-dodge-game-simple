@@ -471,7 +471,7 @@ export class Menu{
 
         context.fillStyle = '#cccccc';
         context.font = `${17 * rX}px Arial`;
-        context.fillText('Competitive mode - INSANE difficulty.', leftX * rX, y * rY);
+        context.fillText('Competitive mode - fixed HARD difficulty.', leftX * rX, y * rY);
         y += lineH - 6;
         context.fillText('No loadouts allowed - pure skill only.', leftX * rX, y * rY);
         y += lineH - 6;
