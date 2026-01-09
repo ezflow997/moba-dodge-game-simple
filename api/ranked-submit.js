@@ -6,8 +6,9 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 
-const MIN_PLAYERS_FOR_TOURNAMENT = 10;
+const MIN_PLAYERS_FOR_TOURNAMENT = 2;
 const MAX_ATTEMPTS_PER_PLAYER = 5;
+const QUEUE_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour in milliseconds
 const BASE_ELO_GAIN = 25;
 const BASE_ELO_LOSS = 20;
 
@@ -383,9 +384,17 @@ export default async function handler(req, res) {
         const uniquePlayers = queue.length;
         const playersReady = queue.filter(p => (p.attempts || 1) >= MAX_ATTEMPTS_PER_PLAYER).length;
 
-        // Tournament resolves when: 10 players AND all players have completed all attempts
+        // Check if queue has timed out (1 hour since first entry)
+        const oldestEntry = queue.reduce((oldest, entry) => {
+            const entryTime = new Date(entry.submitted_at).getTime();
+            return entryTime < oldest ? entryTime : oldest;
+        }, Date.now());
+        const queueAge = Date.now() - oldestEntry;
+        const isTimedOut = queueAge >= QUEUE_TIMEOUT_MS;
+
+        // Tournament resolves when: min players AND (all attempts complete OR timed out)
         const allReady = queue.every(p => (p.attempts || 1) >= MAX_ATTEMPTS_PER_PLAYER);
-        if (uniquePlayers >= MIN_PLAYERS_FOR_TOURNAMENT && allReady) {
+        if (uniquePlayers >= MIN_PLAYERS_FOR_TOURNAMENT && (allReady || isTimedOut)) {
             // Resolve tournament for this queue!
             const tournamentResult = await resolveTournament(queue);
 

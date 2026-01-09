@@ -3,7 +3,9 @@
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
+const MIN_PLAYERS_FOR_TOURNAMENT = 2;
 const MAX_ATTEMPTS_PER_PLAYER = 5;
+const QUEUE_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour in milliseconds
 
 function setCorsHeaders(res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -56,9 +58,9 @@ function findPlayerQueue(queues, playerName) {
         }
     }
 
-    // Find an available queue (< 10 players)
+    // Find an available queue (< MIN_PLAYERS_FOR_TOURNAMENT)
     for (const [queueId, entries] of Object.entries(queues)) {
-        if (entries.length < 10) {
+        if (entries.length < MIN_PLAYERS_FOR_TOURNAMENT) {
             return { queueId, entries, isPlayerQueue: false };
         }
     }
@@ -113,7 +115,7 @@ export default async function handler(req, res) {
         if (!playerName) {
             // Get first queue (prefer available, but show full if none available)
             const queueList = Object.values(queues);
-            let targetQueue = queueList.find(entries => entries.length < 10) || queueList[0] || [];
+            let targetQueue = queueList.find(entries => entries.length < MIN_PLAYERS_FOR_TOURNAMENT) || queueList[0] || [];
 
             const queueStandings = targetQueue
                 .map(entry => ({
@@ -126,14 +128,27 @@ export default async function handler(req, res) {
             const uniquePlayers = targetQueue.length;
             const playersReady = targetQueue.filter(p => (p.attempts || 1) >= MAX_ATTEMPTS_PER_PLAYER).length;
 
+            // Calculate queue timeout info
+            let timeRemaining = null;
+            if (targetQueue.length > 0) {
+                const oldestEntry = targetQueue.reduce((oldest, entry) => {
+                    const entryTime = new Date(entry.submitted_at).getTime();
+                    return entryTime < oldest ? entryTime : oldest;
+                }, Date.now());
+                const queueAge = Date.now() - oldestEntry;
+                timeRemaining = Math.max(0, QUEUE_TIMEOUT_MS - queueAge);
+            }
+
             return res.status(200).json({
                 queueSize: uniquePlayers,
                 totalEntries: uniquePlayers,
-                playersNeeded: Math.max(0, 10 - uniquePlayers),
+                playersNeeded: Math.max(0, MIN_PLAYERS_FOR_TOURNAMENT - uniquePlayers),
                 queueStandings,
                 playersReady,
                 totalQueuedPlayers: uniquePlayers,
-                totalQueues
+                totalQueues,
+                timeRemaining,
+                maxPlayers: MIN_PLAYERS_FOR_TOURNAMENT
             });
         }
 
@@ -172,10 +187,21 @@ export default async function handler(req, res) {
         // Get player rank
         const playerRank = eloRecord ? await getPlayerRank(name, eloRecord.elo) : null;
 
+        // Calculate queue timeout info
+        let timeRemaining = null;
+        if (queue.length > 0) {
+            const oldestEntry = queue.reduce((oldest, entry) => {
+                const entryTime = new Date(entry.submitted_at).getTime();
+                return entryTime < oldest ? entryTime : oldest;
+            }, Date.now());
+            const queueAge = Date.now() - oldestEntry;
+            timeRemaining = Math.max(0, QUEUE_TIMEOUT_MS - queueAge);
+        }
+
         return res.status(200).json({
             queueSize: uniquePlayers,
             totalEntries: queue.length,
-            playersNeeded: Math.max(0, 10 - uniquePlayers),
+            playersNeeded: Math.max(0, MIN_PLAYERS_FOR_TOURNAMENT - uniquePlayers),
             player: eloRecord ? {
                 elo: eloRecord.elo,
                 gamesPlayed: eloRecord.games_played,
@@ -196,7 +222,9 @@ export default async function handler(req, res) {
             playersReady,
             totalQueuedPlayers: uniquePlayers,
             queueId,
-            totalQueues
+            totalQueues,
+            timeRemaining,
+            maxPlayers: MIN_PLAYERS_FOR_TOURNAMENT
         });
     } catch (error) {
         console.error('ranked-status error:', error);
