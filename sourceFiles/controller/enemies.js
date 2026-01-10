@@ -131,9 +131,10 @@ export class Enemies {
                                 bullets.canRecast = false;
                                 bullets.activeBolt = null;
                             }
-                            player.qPressed = false;
-                            player.qTriggered = true;
                         }
+                        // Always allow shooting again after hitting a target
+                        player.qPressed = false;
+                        player.qTriggered = true;
 
                         // Increase hit streak for boss hits
                         this.hitStreak += 1;
@@ -267,9 +268,10 @@ export class Enemies {
                                 bullets.canRecast = false;
                                 bullets.activeBolt = null;
                             }
-                            player.qPressed = false;
-                            player.qTriggered = true;
                         }
+                        // Always allow shooting again after hitting a target
+                        player.qPressed = false;
+                        player.qTriggered = true;
 
                         this.enemiesList.splice(i,1);
                         this.hitStreak += 1;
