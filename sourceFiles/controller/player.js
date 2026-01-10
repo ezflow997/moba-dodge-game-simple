@@ -147,8 +147,9 @@ export class Player {
                 }
             } else {
                 // Vel'koz mode - void bolts
-                // Use qPressed/qTriggered for state, not q_key (which conflicts with 'q' keybind in WASD mode)
-                if(this.qPressed == false && this.qTriggered == true){
+                // Use q_key <= 30 check to prevent double-firing when cooldown resets while button held
+                if(this.qPressed == false && this.qTriggered == true && input.q_key <= 30){
+                    input.q_key += 30; // Prevent immediate re-fire
                     this.qPresses += 1;
                     this.qPressed = true;
                     this.qPressedNow = window.performance.now();
