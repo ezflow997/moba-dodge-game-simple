@@ -79,9 +79,20 @@ async function getCurrentChampion() {
     }
 }
 
-// Save the monthly champion to the champions table
+// Save the monthly champion to the champions table (overwrites existing entry for same month)
 async function saveChampion(playerName, elo, gamesPlayed, wins, yearMonth) {
     try {
+        // Extract just the month (01-12) to allow overwriting across years
+        const monthOnly = yearMonth.split('-')[1];
+
+        // First, delete any existing entry for this month (any year)
+        const deleteUrl = `${SUPABASE_URL}/rest/v1/ranked_champions?season_month=like.*-${monthOnly}`;
+        await fetch(deleteUrl, {
+            method: 'DELETE',
+            headers: getHeaders()
+        });
+
+        // Now insert the new champion
         const response = await fetch(`${SUPABASE_URL}/rest/v1/ranked_champions`, {
             method: 'POST',
             headers: getHeaders(),
@@ -99,7 +110,7 @@ async function saveChampion(playerName, elo, gamesPlayed, wins, yearMonth) {
             throw new Error(`HTTP ${response.status}`);
         }
 
-        console.log(`[CHAMPION] ${playerName} saved as champion for ${yearMonth} with ELO ${elo}`);
+        console.log(`[CHAMPION] ${playerName} saved as champion for ${yearMonth} with ELO ${elo} (overwrote any previous ${monthOnly} entries)`);
         return true;
     } catch (error) {
         console.error('saveChampion error:', error);
@@ -185,7 +196,7 @@ async function checkAndPerformMonthlyReset() {
 // Get all champions (players who won a monthly season)
 async function getAllChampions() {
     try {
-        const url = `${SUPABASE_URL}/rest/v1/ranked_champions?select=player_name,season_month,final_elo&order=awarded_at.desc`;
+        const url = `${SUPABASE_URL}/rest/v1/ranked_champions?select=player_name,season_month,final_elo&order=season_month.desc`;
         const response = await fetch(url, { method: 'GET', headers: getHeaders() });
         if (!response.ok) return [];
         return await response.json();
