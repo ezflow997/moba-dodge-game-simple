@@ -156,10 +156,34 @@ export class Enemies {
                     }
                     if (window.gameSound) window.gameSound.playBossHit();
                 } else if (collision.type === 'orbital') {
-                    // Orbital hit - counts towards streak but doesn't trigger full boss hit effects
+                    // Orbital hit - counts towards streak and refunds cooldown
                     if (game.effects) {
                         game.effects.spawnBurst(collision.x, collision.y, 'bossHit');
                     }
+
+                    // Refund cooldown for orbital hits
+                    player.qCoolDownElapsed = 0;
+                    game.input.q_key += 60;
+
+                    // Check if using a multi-hit weapon
+                    const activeGun = game.rewardManager ? game.rewardManager.activeGun : null;
+                    const isMultiHitGun = activeGun && (activeGun.gunType === 'ricochet' || activeGun.gunType === 'piercing' || activeGun.gunType === 'rapidfire');
+
+                    // Only clear bullets for single-hit weapons
+                    if (!isMultiHitGun) {
+                        if (bullets.bulletsList !== undefined) {
+                            bullets.bulletsList = [];
+                            bullets.bulletsSpawned = false;
+                        } else {
+                            bullets.bolts = [];
+                            bullets.canRecast = false;
+                            bullets.activeBolt = null;
+                        }
+                    }
+
+                    // Allow shooting again after hitting
+                    player.qPressed = false;
+                    player.qTriggered = true;
 
                     // Increase hit streak for orbital hits
                     this.hitStreak += 1;
@@ -168,6 +192,8 @@ export class Enemies {
                     }
                     game.rewardManager.addScore(game, this.enemyScoreValue * this.hitStreak);
                     game.rewardManager.onGunHit(); // Refund durability on hit
+
+                    if (window.gameSound) window.gameSound.playBossHit();
                 }
             }
 
