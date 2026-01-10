@@ -69,6 +69,9 @@ export class PauseMenu {
             ult: 'q'
         };
 
+        // Update keybind button text based on loaded control scheme
+        this.updateKeybindButtons();
+
         // Volume submenu
         this.musicVolumeSlider = new Slider(700, 350, 800, 30, 0, 1);
         this.sfxVolumeSlider = new Slider(700, 500, 800, 30, 0, 1);

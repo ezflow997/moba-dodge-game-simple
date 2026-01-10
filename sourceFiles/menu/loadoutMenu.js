@@ -373,7 +373,7 @@ export class LoadoutMenu {
 
         // Handle mouse wheel scroll
         if (game.input.wheelDelta) {
-            this.scrollOffset += game.input.wheelDelta > 0 ? -50 : 50;
+            this.scrollOffset += game.input.wheelDelta > 0 ? 50 : -50;
             this.scrollOffset = Math.max(0, Math.min(this.maxScrollOffset, this.scrollOffset));
         }
 

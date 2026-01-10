@@ -316,7 +316,7 @@ export class ShopMenu {
 
         // Handle mouse wheel scroll
         if (game.input.wheelDelta) {
-            this.scrollOffset += game.input.wheelDelta > 0 ? -60 : 60;
+            this.scrollOffset += game.input.wheelDelta > 0 ? 60 : -60;
             this.scrollOffset = Math.max(0, Math.min(this.maxScrollOffset, this.scrollOffset));
         }
 
