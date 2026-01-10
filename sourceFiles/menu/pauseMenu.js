@@ -571,10 +571,13 @@ export class PauseMenu {
             this.musicVolumeSlider.update(inX, inY, mouseDown);
             this.sfxVolumeSlider.update(inX, inY, mouseDown);
 
-            // Apply volume changes in real-time
+            // Apply volume changes in real-time and save to localStorage
             if (window.gameSound) {
                 window.gameSound.setBgMusicVolume(this.musicVolumeSlider.value);
                 window.gameSound.setSfxVolume(this.sfxVolumeSlider.value);
+                // Save to localStorage
+                localStorage.setItem('musicVolume', this.musicVolumeSlider.value.toString());
+                localStorage.setItem('sfxVolume', this.sfxVolumeSlider.value.toString());
             }
 
             this.volumeBackButton.update(inX, inY);

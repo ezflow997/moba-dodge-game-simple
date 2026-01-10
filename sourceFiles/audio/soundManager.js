@@ -2,7 +2,6 @@
 export class SoundManager {
     constructor() {
         this.audioContext = null;
-        this.sfxVolume = 0.05;
         this.enabled = true;
         this.initialized = false;
         this.musicInterval = null;
@@ -14,9 +13,14 @@ export class SoundManager {
         this.menuMusic = null;
         this.gameMusic = null;
         this.currentMusic = null;
-        this.bgMusicVolume = 0.01;
         this.musicUnlocked = false;
         this.pendingMusic = null; // Store which music to play after unlock
+
+        // Load saved volume settings from localStorage or use defaults
+        const savedSfxVolume = localStorage.getItem('sfxVolume');
+        const savedMusicVolume = localStorage.getItem('musicVolume');
+        this.sfxVolume = savedSfxVolume !== null ? parseFloat(savedSfxVolume) : 0.05;
+        this.bgMusicVolume = savedMusicVolume !== null ? parseFloat(savedMusicVolume) : 0.01;
     }
 
     init() {

@@ -615,6 +615,8 @@ window.addEventListener('load', function () {
 				if(game.showMessage == 'None' && game.score == 0 && !game.awaitingNameInput){
 					game.menu.mainMenuShow = true;
 					game.showMessage = '';
+					// Clear escape flag to prevent pause menu from opening after closing name input
+					game.input.escapePressed = false;
 
 					// Force refresh leaderboard scores when returning to menu
 					game.menu.forceRefreshScores();
