@@ -167,7 +167,7 @@ export class Player {
         
         // Mouse mode: move towards clicked position
         if (controlScheme === 'mouse') {
-            if((this.desiredX != this.x || this.desiredY != this.y) && (game.challenge_level === 1 && performance.now() - this.qPressedNow > 70 || performance.now() - this.qPressedNow > 130)){
+            if(this.desiredX != this.x || this.desiredY != this.y){
                 var values = move.make(this.x, this.y, this.speed, this.desiredX, this.desiredY);
                 this.x = values[0];
                 this.y = values[1];
