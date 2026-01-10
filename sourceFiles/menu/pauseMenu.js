@@ -52,14 +52,18 @@ export class PauseMenu {
         this.keybindFButton = new Button(700, 500, 600, 80, "Ultimate: F", 50, 100, 60, false, true, 'white', 'white');
         this.keybindBackButton = new Button(880, 620, 400, 80, "Back", 50, 140, 60, false, true, 'white', 'white');
         this.waitingForKey = null; // 'q', 'e', or 'f'
-        this.customKeys = { q: 'q', e: 'e', f: 'f' };
+
+        // Load custom keys from localStorage or use defaults
+        const savedCustomKeys = localStorage.getItem('customKeys');
+        this.customKeys = savedCustomKeys ? JSON.parse(savedCustomKeys) : { q: 'q', e: 'e', f: 'f' };
 
         // Control scheme: 'mouse' or 'wasd' - load from localStorage
         this.controlScheme = localStorage.getItem('controlScheme') || 'mouse';
         this.controlSchemeButton.text = `Controls: ${this.controlScheme === 'mouse' ? 'Mouse' : 'WASD'}`;
 
-        // WASD mode keybinds (shoot=right-click, dash=e, ult=q)
-        this.wasdKeys = {
+        // WASD mode keybinds - load from localStorage or use defaults
+        const savedWasdKeys = localStorage.getItem('wasdKeys');
+        this.wasdKeys = savedWasdKeys ? JSON.parse(savedWasdKeys) : {
             shoot: 0,  // Left click (mouse button 0)
             dash: 'e',
             ult: 'q'
@@ -259,10 +263,12 @@ export class PauseMenu {
                 // Valid key, assign it
                 if (this.controlScheme === 'mouse') {
                     this.customKeys[this.waitingForKey] = pressedKey;
+                    localStorage.setItem('customKeys', JSON.stringify(this.customKeys));
                 } else {
-                    const wasdSlot = this.waitingForKey === 'q' ? 'shoot' : 
+                    const wasdSlot = this.waitingForKey === 'q' ? 'shoot' :
                                 this.waitingForKey === 'e' ? 'dash' : 'ult';
                     this.wasdKeys[wasdSlot] = pressedKey;
+                    localStorage.setItem('wasdKeys', JSON.stringify(this.wasdKeys));
                 }
                 this.waitingForKey = null;
                 this.updateKeybindButtons();
@@ -420,13 +426,13 @@ export class PauseMenu {
                 // Save to localStorage
                 localStorage.setItem('controlScheme', this.controlScheme);
 
-                // Reset keybinds to defaults when switching
+                // Load saved keybinds for the new mode, or use defaults
                 if (this.controlScheme === 'mouse') {
-                    // Reset to mouse mode defaults
-                    this.customKeys = { q: 'q', e: 'e', f: 'f' };
+                    const savedCustomKeys = localStorage.getItem('customKeys');
+                    this.customKeys = savedCustomKeys ? JSON.parse(savedCustomKeys) : { q: 'q', e: 'e', f: 'f' };
                 } else {
-                    // Reset to WASD mode defaults
-                    this.wasdKeys = {
+                    const savedWasdKeys = localStorage.getItem('wasdKeys');
+                    this.wasdKeys = savedWasdKeys ? JSON.parse(savedWasdKeys) : {
                         shoot: 0,  // Left click
                         dash: 'e',
                         ult: 'q'
