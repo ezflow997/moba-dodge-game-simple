@@ -853,26 +853,27 @@ export class LeaderboardMenu {
 
     // Draw the champions history page (Hall of Fame)
     drawChampionsHistory(context, rX, rY) {
-        const startY = 380;
-        const rowHeight = 70;
+        const startY = 420;
+        const rowHeight = 58;
 
-        // Column positions
-        const colSeason = 750;
-        const colName = 1000;
-        const colElo = 1450;
+        // Column positions - adjusted to prevent overlap
+        const colTrophy = 740;
+        const colSeason = 800;
+        const colName = 1050;
+        const colElo = 1500;
 
         // Header
-        this.super.drawGlowText(context, colSeason, startY, "SEASON", 38, '#888888', '#666666', 6);
-        this.super.drawGlowText(context, colName, startY, "CHAMPION", 38, '#888888', '#666666', 6);
-        this.super.drawGlowText(context, colElo, startY, "FINAL ELO", 38, '#888888', '#666666', 6);
+        this.super.drawGlowText(context, colSeason, startY, "SEASON", 32, '#888888', '#666666', 6);
+        this.super.drawGlowText(context, colName, startY, "CHAMPION", 32, '#888888', '#666666', 6);
+        this.super.drawGlowText(context, colElo, startY, "FINAL ELO", 32, '#888888', '#666666', 6);
 
         // Separator line
         context.save();
         context.strokeStyle = 'rgba(255, 215, 0, 0.4)';
         context.lineWidth = 2;
         context.beginPath();
-        context.moveTo(730 * rX, (startY + 18) * rY);
-        context.lineTo(1830 * rX, (startY + 18) * rY);
+        context.moveTo(720 * rX, (startY + 18) * rY);
+        context.lineTo(1850 * rX, (startY + 18) * rY);
         context.stroke();
         context.restore();
 
@@ -914,35 +915,34 @@ export class LeaderboardMenu {
 
             // Row background with golden tint
             context.save();
-            context.fillStyle = `rgba(255, 215, 0, ${0.08 + (i % 2) * 0.04})`;
-            context.fillRect(730 * rX, (y - 42) * rY, 1100 * rX, 60 * rY);
+            context.fillStyle = `rgba(255, 215, 0, ${0.06 + (i % 2) * 0.04})`;
+            context.fillRect(720 * rX, (y - 35) * rY, 1130 * rX, 50 * rY);
+            context.restore();
+
+            // Trophy icon first
+            const trophyHue = (this.animationTime * 60 + i * 40) % 360;
+            context.save();
+            context.font = `${28 * rX}px Arial`;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.shadowColor = `hsl(${trophyHue}, 100%, 50%)`;
+            context.shadowBlur = 10 * rX;
+            context.fillStyle = `hsl(${trophyHue}, 100%, 70%)`;
+            context.fillText('🏆', colTrophy * rX, y * rY);
             context.restore();
 
             // Format season month (e.g., "2025-01" -> "January 2025")
             const seasonMonth = this.formatSeasonMonth(champion.season_month);
-            this.super.drawGlowText(context, colSeason, y, seasonMonth, 32, '#ffd700', '#ffaa00', 8);
+            this.super.drawGlowText(context, colSeason, y, seasonMonth, 28, '#ffd700', '#ffaa00', 6);
 
             // Champion name with animated rainbow effect
             const playerName = champion.player_name || 'Unknown';
-            const displayName = playerName.length > 14 ? playerName.substring(0, 14) + '...' : playerName;
-            this.drawChampionName(context, colName, y, displayName, 36, rX, false);
+            const displayName = playerName.length > 12 ? playerName.substring(0, 12) + '...' : playerName;
+            this.drawChampionName(context, colName, y, displayName, 30, rX, false);
 
             // Final ELO
             const elo = champion.final_elo || 1000;
-            this.super.drawGlowText(context, colElo, y, elo.toString(), 32, '#00ff88', '#00ff00', 8);
-
-            // Trophy icon
-            const trophyX = colSeason - 50;
-            const trophyHue = (this.animationTime * 60 + i * 40) % 360;
-            context.save();
-            context.font = `${32 * rX}px Arial`;
-            context.textAlign = 'center';
-            context.textBaseline = 'middle';
-            context.shadowColor = `hsl(${trophyHue}, 100%, 50%)`;
-            context.shadowBlur = 12 * rX;
-            context.fillStyle = `hsl(${trophyHue}, 100%, 70%)`;
-            context.fillText('🏆', trophyX * rX, y * rY);
-            context.restore();
+            this.super.drawGlowText(context, colElo, y, elo.toString(), 28, '#00ff88', '#00ff00', 6);
         }
 
         // Draw pagination for champions
