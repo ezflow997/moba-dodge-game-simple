@@ -87,7 +87,8 @@ async function getOrCreatePlayerElo(playerName) {
         body: JSON.stringify({
             player_name: playerName,
             elo: 1000,
-            games_played: 0
+            games_played: 0,
+            wins: 0
         })
     });
 
@@ -319,15 +320,22 @@ async function resolveTournament(allEntries) {
         const eloBefore = playerEloRecord.elo;
         const eloAfter = eloBefore + result.eloChange;
 
-        // Update player ELO
+        // Update player ELO (and increment wins if 1st place)
+        const updateData = {
+            elo: eloAfter,
+            games_played: (playerEloRecord.games_played || 0) + 1,
+            updated_at: new Date().toISOString()
+        };
+
+        // Increment wins for 1st place finish
+        if (result.placement === 1) {
+            updateData.wins = (playerEloRecord.wins || 0) + 1;
+        }
+
         await fetch(`${SUPABASE_URL}/rest/v1/player_elo?player_name=eq.${encodeURIComponent(result.player_name)}`, {
             method: 'PATCH',
             headers: getHeaders(),
-            body: JSON.stringify({
-                elo: eloAfter,
-                games_played: (playerEloRecord.games_played || 0) + 1,
-                updated_at: new Date().toISOString()
-            })
+            body: JSON.stringify(updateData)
         });
 
         // Upsert history record (one entry per player, updated each tournament)

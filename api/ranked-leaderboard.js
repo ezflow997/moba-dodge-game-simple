@@ -53,8 +53,8 @@ export default async function handler(req, res) {
             if (match) totalEntries = parseInt(match[1]);
         }
 
-        // Get leaderboard entries
-        const url = `${SUPABASE_URL}/rest/v1/player_elo?select=player_name,elo,games_played&order=elo.desc,games_played.desc&limit=${limit}&offset=${offset}`;
+        // Get leaderboard entries (include wins for winrate calculation)
+        const url = `${SUPABASE_URL}/rest/v1/player_elo?select=player_name,elo,games_played,wins&order=elo.desc,games_played.desc&limit=${limit}&offset=${offset}`;
         const response = await fetch(url, { method: 'GET', headers: getHeaders() });
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -66,7 +66,8 @@ export default async function handler(req, res) {
             rank: offset + index + 1,
             playerName: entry.player_name,
             elo: entry.elo,
-            gamesPlayed: entry.games_played
+            gamesPlayed: entry.games_played,
+            wins: entry.wins || 0
         }));
 
         return res.status(200).json({

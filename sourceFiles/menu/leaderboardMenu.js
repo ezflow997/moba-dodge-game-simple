@@ -633,8 +633,9 @@ export class LeaderboardMenu {
         // Column positions - spread across the wider panel
         const colRank = 730;
         const colName = 820;
-        const colScore = 1200;  // ELO for ranked
-        const colKills = 1450;  // Games for ranked
+        const colScore = 1150;  // ELO for ranked
+        const colKills = 1350;  // Games for ranked
+        const colWinrate = 1550; // Winrate for ranked
         const colStreak = 1680; // Not used for ranked
 
         // Header row
@@ -643,6 +644,7 @@ export class LeaderboardMenu {
         if (isRanked) {
             this.super.drawGlowText(context, colScore, startY, "ELO", 38, '#888888', '#666666', 6);
             this.super.drawGlowText(context, colKills, startY, "GAMES", 38, '#888888', '#666666', 6);
+            this.super.drawGlowText(context, colWinrate, startY, "WINS", 38, '#888888', '#666666', 6);
         } else {
             this.super.drawGlowText(context, colScore, startY, "SCORE", 38, '#888888', '#666666', 6);
             this.super.drawGlowText(context, colKills, startY, "KILLS", 38, '#888888', '#666666', 6);
@@ -748,6 +750,12 @@ export class LeaderboardMenu {
                 // Games played
                 const games = entry.games_played || entry.gamesPlayed || 0;
                 this.super.drawGlowText(context, colKills, y, games.toString(), 34, '#88ffff', '#00ffff', 8);
+
+                // Wins (1st place finishes)
+                const wins = entry.wins || 0;
+                const winColor = wins > 0 ? '#ffdd00' : '#888888';
+                const winGlow = wins > 0 ? '#ffaa00' : '#666666';
+                this.super.drawGlowText(context, colWinrate, y, wins.toString(), 34, winColor, winGlow, 8);
             } else {
                 // Score
                 this.super.drawGlowText(context, colScore, y, entry.score.toString(), 34, '#00ff88', '#00ff00', 8);

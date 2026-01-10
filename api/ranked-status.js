@@ -10,6 +10,7 @@ const MIN_PLAYERS_FOR_TOURNAMENT = 2;
 const MAX_ATTEMPTS_PER_PLAYER = 5;
 const QUEUE_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour in milliseconds
 const K_FACTOR = 32; // ELO sensitivity factor
+const DEFAULT_ELO = 1000; // Starting ELO for all players
 
 function setCorsHeaders(res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
