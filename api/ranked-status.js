@@ -26,6 +26,105 @@ function getHeaders() {
     };
 }
 
+// Get current year-month string (e.g., "2026-01")
+function getCurrentYearMonth() {
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+}
+
+// Get the last ELO reset month from system settings
+async function getLastResetMonth() {
+    try {
+        const url = `${SUPABASE_URL}/rest/v1/system_settings?key=eq.last_elo_reset_month&limit=1`;
+        const response = await fetch(url, { method: 'GET', headers: getHeaders() });
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data.length > 0 ? data[0].value : null;
+    } catch (error) {
+        console.error('getLastResetMonth error:', error);
+        return null;
+    }
+}
+
+// Update the last ELO reset month in system settings
+async function setLastResetMonth(yearMonth) {
+    try {
+        // Try to update first
+        const updateUrl = `${SUPABASE_URL}/rest/v1/system_settings?key=eq.last_elo_reset_month`;
+        const updateResponse = await fetch(updateUrl, {
+            method: 'PATCH',
+            headers: { ...getHeaders(), 'Prefer': 'return=representation' },
+            body: JSON.stringify({ value: yearMonth, updated_at: new Date().toISOString() })
+        });
+
+        // If no rows updated, insert new record
+        if (updateResponse.ok) {
+            const updated = await updateResponse.json();
+            if (updated.length === 0) {
+                await fetch(`${SUPABASE_URL}/rest/v1/system_settings`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ key: 'last_elo_reset_month', value: yearMonth })
+                });
+            }
+        }
+    } catch (error) {
+        console.error('setLastResetMonth error:', error);
+    }
+}
+
+// Reset all player ELO to default (1000) for monthly reset
+async function resetAllPlayerElo() {
+    try {
+        // Reset all player_elo records to default ELO, reset games_played and wins
+        const url = `${SUPABASE_URL}/rest/v1/player_elo`;
+        const response = await fetch(url, {
+            method: 'PATCH',
+            headers: { ...getHeaders(), 'Prefer': 'return=minimal' },
+            body: JSON.stringify({
+                elo: DEFAULT_ELO,
+                games_played: 0,
+                wins: 0,
+                last_opponent: null,
+                consecutive_opponent_count: 0,
+                updated_at: new Date().toISOString()
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        console.log('[ELO RESET] All player ELO reset to', DEFAULT_ELO);
+        return true;
+    } catch (error) {
+        console.error('resetAllPlayerElo error:', error);
+        return false;
+    }
+}
+
+// Check if monthly reset is needed and perform it
+async function checkAndPerformMonthlyReset() {
+    const currentMonth = getCurrentYearMonth();
+    const lastResetMonth = await getLastResetMonth();
+
+    // If no reset recorded or different month, perform reset
+    if (!lastResetMonth || lastResetMonth !== currentMonth) {
+        console.log(`[ELO RESET] New month detected. Last reset: ${lastResetMonth}, Current: ${currentMonth}`);
+
+        const resetSuccess = await resetAllPlayerElo();
+        if (resetSuccess) {
+            await setLastResetMonth(currentMonth);
+            console.log(`[ELO RESET] Monthly reset complete for ${currentMonth}`);
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // Get player ELO record
 async function getPlayerElo(playerName) {
     const url = `${SUPABASE_URL}/rest/v1/player_elo?player_name=eq.${encodeURIComponent(playerName)}&limit=1`;
@@ -294,6 +393,9 @@ export default async function handler(req, res) {
     }
 
     try {
+        // Check for monthly ELO reset at the start of each status check
+        await checkAndPerformMonthlyReset();
+
         const { playerName } = req.query;
 
         // Get all queue entries
