@@ -276,6 +276,10 @@ export class Bullets {
                 return activeGun.bulletCount || 12;
             case 'rapidfire':
                 return activeGun.bulletCount || this.bulletsMax;
+            case 'ricochet':
+                return 3;  // Ricochet always creates 3 bullets
+            case 'homing':
+                return 3;  // Homing always creates 3 bullets
             default:
                 return this.bulletsMax;
         }
