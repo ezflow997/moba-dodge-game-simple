@@ -1,4 +1,5 @@
 import { Button, superFunctions } from "./supers.js";
+import { performanceMode, setPerformanceMode } from "../controller/enemy.js";
 
 export class PauseMenu {
     constructor() {
@@ -21,9 +22,17 @@ export class PauseMenu {
         this.keybindsButton = new Button(btnX, 280 + btnSpace, btnW, btnH, "Keybinds", fontSize, 0, 0, false, true, 'white', 'white');
         this.volumeButton = new Button(btnX, 280 + btnSpace * 2, btnW, btnH, "Volume", fontSize, 0, 0, false, true, 'white', 'white');
         this.controlSchemeButton = new Button(btnX, 280 + btnSpace * 3, btnW, btnH, "Controls: Mouse", fontSize, 0, 0, false, true, 'white', 'white');
-        this.devModeButton = new Button(btnX, 280 + btnSpace * 4, btnW, btnH, "Dev Mode: OFF", fontSize, 0, 0, false, true, 'white', 'white');
-        this.exitTestRoomButton = new Button(btnX, 280 + btnSpace * 5, btnW, btnH, "Exit Test Room", fontSize, 0, 0, false, true, 'white', 'white');
-        this.quitButton = new Button(btnX, 280 + btnSpace * 6, btnW, btnH, "Quit to Menu", fontSize, 0, 0, false, true, 'white', 'white');
+        this.performanceButton = new Button(btnX, 280 + btnSpace * 4, btnW, btnH, "Performance Mode: OFF", fontSize, 0, 0, false, true, 'white', 'white');
+        this.devModeButton = new Button(btnX, 280 + btnSpace * 5, btnW, btnH, "Dev Mode: OFF", fontSize, 0, 0, false, true, 'white', 'white');
+        this.exitTestRoomButton = new Button(btnX, 280 + btnSpace * 6, btnW, btnH, "Exit Test Room", fontSize, 0, 0, false, true, 'white', 'white');
+        this.quitButton = new Button(btnX, 280 + btnSpace * 7, btnW, btnH, "Quit to Menu", fontSize, 0, 0, false, true, 'white', 'white');
+
+        // Load performance mode setting from localStorage
+        const savedPerfMode = localStorage.getItem('performanceMode') === 'true';
+        if (savedPerfMode) {
+            setPerformanceMode(true);
+            this.performanceButton.text = "Performance Mode: ON";
+        }
 
         // Dev mode visibility - hidden by default, revealed with konami code
         this.devModeVisible = false;
@@ -417,6 +426,21 @@ export class PauseMenu {
                 this.updateKeybindButtons();
             }
 
+            // Performance Mode button
+            this.performanceButton.update(inX, inY);
+            if (this.performanceButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+
+                // Toggle performance mode
+                const newMode = !performanceMode;
+                setPerformanceMode(newMode);
+                this.performanceButton.text = `Performance Mode: ${newMode ? 'ON' : 'OFF'}`;
+
+                // Save to localStorage
+                localStorage.setItem('performanceMode', newMode.toString());
+            }
+
             // Dev Mode button (only visible if konami code entered or dev mode is ON)
             if (game.devMode) {
                 // Keep visible if dev mode is ON, otherwise need konami code
@@ -606,6 +630,7 @@ export class PauseMenu {
             this.keybindsButton.draw(context);
             this.volumeButton.draw(context);
             this.controlSchemeButton.draw(context);
+            this.performanceButton.draw(context);
             // Only draw dev mode button if visible (konami code entered or dev mode ON)
             if (game.devMode && (this.devModeVisible || game.devMode.isEnabled())) {
                 this.devModeButton.draw(context);
@@ -615,10 +640,10 @@ export class PauseMenu {
                 if (inTestRoom) {
                     this.exitTestRoomButton.draw(context);
                     // Move quit button down when exit test room button is visible
-                    this.quitButton.y = 280 + 85 * 6;  // Below exit test room button
+                    this.quitButton.y = 280 + 85 * 7;  // Below exit test room button
                 } else {
                     // Normal position when not in test room
-                    this.quitButton.y = 280 + 85 * 5;  // Normal position (where exit test room button would be)
+                    this.quitButton.y = 280 + 85 * 6;  // Normal position (where exit test room button would be)
                 }
                 this.quitButton.draw(context);
             }
