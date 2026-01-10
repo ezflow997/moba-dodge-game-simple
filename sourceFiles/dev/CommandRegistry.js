@@ -83,6 +83,7 @@ export class CommandRegistry {
         // Shop/points commands
         this.register('points', this.cmdPoints.bind(this), 'Set shop points <amount> or add points: points add <amount>', ['setpoints']);
         this.register('addpoints', this.cmdAddPoints.bind(this), 'Add shop points <amount>');
+        this.register('showpoints', this.cmdShowPoints.bind(this), 'Show current shop points balance', ['balance', 'mypoints']);
     }
     
     /**
@@ -832,6 +833,14 @@ export class CommandRegistry {
         } else {
             return { success: true, message: `Removed ${Math.abs(amount).toLocaleString()} points (${oldPoints.toLocaleString()} → ${newPoints.toLocaleString()})` };
         }
+    }
+
+    cmdShowPoints(args) {
+        if (!this.game.shopMenu) {
+            return { success: false, message: 'Shop system not available' };
+        }
+
+        return { success: true, message: `Current points: ${this.game.shopMenu.playerPoints.toLocaleString()}` };
     }
 
     async cmdLeaderboard(args) {
