@@ -72,8 +72,8 @@ export class LeaderboardMenu {
         this.refreshButton = new Button(900, 1060, 280, 70, "Refresh", 40, 60, 50, false, true, 'white', 'white');
         this.backButton = new Button(1380, 1060, 280, 70, "Back", 40, 80, 50, false, true, 'white', 'white');
 
-        // Champions toggle button (for ranked mode) - positioned next to title
-        this.championsToggleButton = new Button(1680, 220, 180, 60, "Champions", 26, 30, 42, false, true, 'white', 'white');
+        // Champions toggle button (for ranked mode) - positioned next to title with golden styling
+        this.championsToggleButton = new Button(1680, 220, 200, 60, "Hall of Fame", 24, 20, 42, false, true, '#ffd700', '#ffd700');
     }
 
     async show(initialDifficulty = 0) {
@@ -392,7 +392,7 @@ export class LeaderboardMenu {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.showChampionsView = !this.showChampionsView;
-                this.championsToggleButton.text = this.showChampionsView ? "Rankings" : "Champions";
+                this.championsToggleButton.text = this.showChampionsView ? "Rankings" : "Hall of Fame";
             }
         }
 
@@ -532,8 +532,8 @@ export class LeaderboardMenu {
             const subtitleColor = this.showChampionsView ? '#ffd700' : '#ffaa00';
             this.super.drawGlowText(context, 1160, 275, subtitle, 50, subtitleColor, subtitleColor, 12);
 
-            // Champions toggle button
-            this.championsToggleButton.draw(context);
+            // Champions toggle button with trophy icon
+            this.drawChampionsButton(context, rX, rY);
         }
 
         // Search input field (hide in champions view)
@@ -967,6 +967,63 @@ export class LeaderboardMenu {
         context.fillStyle = `hsl(${crownHue}, 100%, 70%)`;
         context.font = `${scaledSize * 0.8}px Arial`;
         context.fillText('★', crownX, scaledY);
+
+        context.restore();
+    }
+
+    // Draw custom champions button with trophy icon and golden glow
+    drawChampionsButton(context, rX, rY) {
+        const btn = this.championsToggleButton;
+        const x = btn.x * rX;
+        const y = btn.y * rY;
+        const w = btn.w * rX;
+        const h = btn.h * rY;
+
+        context.save();
+
+        // Golden glow effect
+        const glowPulse = 0.6 + Math.sin(this.animationTime * 2) * 0.4;
+        context.shadowColor = '#ffd700';
+        context.shadowBlur = (btn.isHovered ? 25 : 15) * glowPulse * rX;
+
+        // Button background with golden gradient
+        const gradient = context.createLinearGradient(x, y, x, y + h);
+        if (btn.isHovered) {
+            gradient.addColorStop(0, 'rgba(255, 215, 0, 0.4)');
+            gradient.addColorStop(0.5, 'rgba(255, 180, 0, 0.3)');
+            gradient.addColorStop(1, 'rgba(255, 140, 0, 0.4)');
+        } else {
+            gradient.addColorStop(0, 'rgba(255, 215, 0, 0.2)');
+            gradient.addColorStop(0.5, 'rgba(255, 180, 0, 0.15)');
+            gradient.addColorStop(1, 'rgba(255, 140, 0, 0.2)');
+        }
+        context.fillStyle = gradient;
+        context.fillRect(x, y, w, h);
+
+        // Golden border
+        context.strokeStyle = btn.isHovered ? '#ffdd00' : '#ffd700';
+        context.lineWidth = (btn.isHovered ? 3 : 2) * rX;
+        context.strokeRect(x, y, w, h);
+
+        // Trophy icon
+        const trophyX = x + 25 * rX;
+        const trophyY = y + h / 2;
+        const trophyHue = (this.animationTime * 40) % 360;
+        context.font = `${24 * rX}px Arial`;
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.shadowColor = `hsl(${trophyHue}, 100%, 50%)`;
+        context.shadowBlur = 10 * rX;
+        context.fillStyle = `hsl(${trophyHue}, 100%, 70%)`;
+        context.fillText('🏆', trophyX, trophyY);
+
+        // Button text
+        context.shadowColor = '#ffd700';
+        context.shadowBlur = (btn.isHovered ? 15 : 8) * rX;
+        context.font = `bold ${22 * rX}px Arial`;
+        context.textAlign = 'left';
+        context.fillStyle = btn.isHovered ? '#ffffff' : '#ffd700';
+        context.fillText(btn.text, x + 45 * rX, y + h / 2 + 2 * rY);
 
         context.restore();
     }
