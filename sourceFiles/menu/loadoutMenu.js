@@ -410,17 +410,17 @@ export class LoadoutMenu {
         this.clearButton.y = refPanelTop + 45;
         this.clearButton.update(inX, inY);
 
-        // Position preset buttons (in Selected header area)
-        this.savePresetButton.x = refCenterX + 280;
-        this.savePresetButton.y = refPanelTop + 105;
-        this.savePresetButton.w = 100;
-        this.savePresetButton.h = 32;
+        // Position preset buttons (top row, left of Clear All)
+        this.savePresetButton.x = refCenterX + 205;
+        this.savePresetButton.y = refPanelTop + 45;
+        this.savePresetButton.w = 90;
+        this.savePresetButton.h = 40;
         this.savePresetButton.update(inX, inY);
 
-        this.loadPresetButton.x = refCenterX + 390;
-        this.loadPresetButton.y = refPanelTop + 105;
-        this.loadPresetButton.w = 100;
-        this.loadPresetButton.h = 32;
+        this.loadPresetButton.x = refCenterX + 305;
+        this.loadPresetButton.y = refPanelTop + 45;
+        this.loadPresetButton.w = 90;
+        this.loadPresetButton.h = 40;
         this.loadPresetButton.update(inX, inY);
 
         // Handle preset menu interactions first if open
@@ -623,10 +623,10 @@ export class LoadoutMenu {
 
     updatePresetMenu(game, inX, inY, clicking, rX, rY, refCenterX, refPanelTop) {
         // Preset menu dimensions
-        const menuW = 320;
-        const menuH = this.presetMenuMode === 'save' ? 180 : Math.min(350, 100 + this.getSavedPresets().length * 50);
-        const menuX = refCenterX + 200;
-        const menuY = refPanelTop + 145;
+        const menuW = 300;
+        const menuH = this.presetMenuMode === 'save' ? 180 : Math.min(300, 100 + this.getSavedPresets().length * 50);
+        const menuX = refCenterX + 205;
+        const menuY = refPanelTop + 95;
 
         // Convert to screen coords
         const menuXPx = menuX * rX;
@@ -825,21 +825,21 @@ export class LoadoutMenu {
         context.lineWidth = 1.5 * rX;
         context.stroke();
 
-        context.font = `${14 * rX}px Arial`;
+        context.font = `${12 * rX}px Arial`;
         context.textAlign = 'center';
         context.fillStyle = disabled ? '#666666' : (button.isHovered ? '#ffcc44' : '#ffaa00');
-        context.fillText(button.text, bx + bw / 2, by + bh / 2 + 5 * rY);
+        context.fillText(button.text, bx + bw / 2, by + bh / 2 + 4 * rY);
     }
 
     drawPresetMenu(context, rX, rY, panelX, panelY) {
         const refCenterX = 1280;
         const refPanelTop = 720 - 400;
 
-        const menuW = 320;
+        const menuW = 300;
         const presets = this.getSavedPresets();
         const menuH = this.presetMenuMode === 'save' ? 180 : Math.max(120, 60 + presets.length * 50);
-        const menuX = refCenterX + 200;
-        const menuY = refPanelTop + 145;
+        const menuX = refCenterX + 205;
+        const menuY = refPanelTop + 95;
 
         const mx = menuX * rX;
         const my = menuY * rY;
