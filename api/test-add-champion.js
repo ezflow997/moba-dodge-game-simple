@@ -31,31 +31,61 @@ export default async function handler(req, res) {
     }
 
     try {
-        // Insert test champion data for ezflow997
+        // First, delete ALL existing champion data to start fresh
+        const deleteResponse = await fetch(`${SUPABASE_URL}/rest/v1/ranked_champions?player_name=neq.NEVER_MATCH`, {
+            method: 'DELETE',
+            headers: getHeaders()
+        });
+
+        // Insert test champion data with different months and players
         const testChampions = [
             {
                 player_name: 'ezflow997',
-                final_elo: 1247,
-                games_played: 15,
-                wins: 9,
-                season_month: '2024-12',
-                awarded_at: new Date('2025-01-01T00:00:00Z').toISOString()
+                final_elo: 1456,
+                games_played: 28,
+                wins: 18,
+                season_month: '2025-12',
+                awarded_at: new Date('2026-01-01T00:00:00Z').toISOString()
             },
             {
                 player_name: 'ezflow997',
+                final_elo: 1389,
+                games_played: 25,
+                wins: 16,
+                season_month: '2025-11',
+                awarded_at: new Date('2025-12-01T00:00:00Z').toISOString()
+            },
+            {
+                player_name: 'ProGamer99',
                 final_elo: 1312,
                 games_played: 22,
                 wins: 14,
-                season_month: '2025-01',
-                awarded_at: new Date('2025-02-01T00:00:00Z').toISOString()
+                season_month: '2025-10',
+                awarded_at: new Date('2025-11-01T00:00:00Z').toISOString()
             },
             {
                 player_name: 'ezflow997',
-                final_elo: 1189,
+                final_elo: 1278,
+                games_played: 20,
+                wins: 12,
+                season_month: '2025-09',
+                awarded_at: new Date('2025-10-01T00:00:00Z').toISOString()
+            },
+            {
+                player_name: 'ShadowKing',
+                final_elo: 1245,
                 games_played: 18,
-                wins: 10,
-                season_month: '2025-12',
-                awarded_at: new Date('2026-01-01T00:00:00Z').toISOString()
+                wins: 11,
+                season_month: '2025-08',
+                awarded_at: new Date('2025-09-01T00:00:00Z').toISOString()
+            },
+            {
+                player_name: 'ezflow997',
+                final_elo: 1198,
+                games_played: 15,
+                wins: 9,
+                season_month: '2025-07',
+                awarded_at: new Date('2025-08-01T00:00:00Z').toISOString()
             }
         ];
 
@@ -70,7 +100,7 @@ export default async function handler(req, res) {
 
             if (response.ok) {
                 const data = await response.json();
-                results.push({ success: true, data: data[0] });
+                results.push({ success: true, season: champion.season_month, player: champion.player_name });
             } else {
                 const error = await response.text();
                 results.push({ success: false, error, season: champion.season_month });
@@ -78,7 +108,8 @@ export default async function handler(req, res) {
         }
 
         return res.status(200).json({
-            message: 'Test champion data inserted for ezflow997',
+            message: 'Test champion data reset and inserted',
+            deleted: deleteResponse.ok,
             results
         });
     } catch (error) {
