@@ -91,6 +91,15 @@ export class Bullets {
         const rewardManager = game.rewardManager;
         const activeGun = rewardManager ? rewardManager.activeGun : null;
 
+        // Build combined target list for homing (includes boss if active)
+        const homingTargets = [...enemies.enemiesList];
+        if (enemies.bossActive) {
+            // Add the active boss to homing targets
+            if (enemies.boss) homingTargets.push(enemies.boss);
+            if (enemies.chargeBoss) homingTargets.push(enemies.chargeBoss);
+            if (enemies.vortexBoss) homingTargets.push(enemies.vortexBoss);
+        }
+
         if(player.qPressed == true){
             let msNow = window.performance.now();
             // Apply time scale from dev mode if available
@@ -174,7 +183,7 @@ export class Bullets {
                                 }
                             }
                             else{
-                                bullet.update(enemies.enemiesList);
+                                bullet.update(homingTargets);
                                 bullet.checkCollision(enemies.enemiesList, this.onChain.bind(this));
                             }
                         }
@@ -205,7 +214,7 @@ export class Bullets {
                                 }
                             }
                             else{
-                                bullet.update(enemies.enemiesList);
+                                bullet.update(homingTargets);
                                 bullet.checkCollision(enemies.enemiesList, this.onChain.bind(this));
                             }
                         }
