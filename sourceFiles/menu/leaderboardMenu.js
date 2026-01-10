@@ -855,8 +855,14 @@ export class LeaderboardMenu {
             return;
         }
 
-        // Sort champions by season month (newest first)
-        const sortedChampions = [...this.championsData].sort((a, b) => {
+        // Deduplicate by season_month (keep first occurrence) and sort newest first
+        const seenMonths = new Set();
+        const uniqueChampions = this.championsData.filter(c => {
+            if (seenMonths.has(c.season_month)) return false;
+            seenMonths.add(c.season_month);
+            return true;
+        });
+        const sortedChampions = uniqueChampions.sort((a, b) => {
             return b.season_month.localeCompare(a.season_month);
         });
 
