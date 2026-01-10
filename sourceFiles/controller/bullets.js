@@ -109,7 +109,7 @@ export class Bullets {
             if(this.bulletsCreated == true){
                 // Check if this is an independent bullet type that shouldn't block cooldown
                 const firstBullet = this.bulletsList.length > 0 ? this.bulletsList[0] : null;
-                const independentTypes = ['shotgun', 'nova', 'twin', 'homing', 'ricochet'];
+                const independentTypes = ['shotgun', 'nova', 'twin', 'homing', 'ricochet', 'piercing'];
                 const isIndependentGun = firstBullet && independentTypes.includes(firstBullet.gunType);
 
                 // For independent guns, allow cooldown to proceed once all bullets have spawned
@@ -170,7 +170,7 @@ export class Bullets {
                             if(bullet.destroy == true || bullet.enemyCollision == true){
                                 if(bullet.enemyCollision == true){
                                     // Check if bullet type should be independent (not clear all on hit)
-                                    const independentTypes = ['shotgun', 'nova', 'twin', 'homing', 'ricochet'];
+                                    const independentTypes = ['shotgun', 'nova', 'twin', 'homing', 'ricochet', 'piercing'];
                                     const isIndependent = independentTypes.includes(bullet.gunType || bullet.bulletType);
 
                                     // For piercing bullets, don't clear - just mark hit and continue
@@ -207,7 +207,7 @@ export class Bullets {
                             if(!bullet) continue;
                             if(bullet.enemyCollision == true){
                                 // Check if bullet type should be independent (not clear all on hit)
-                                const independentTypes = ['shotgun', 'nova', 'twin', 'homing', 'ricochet'];
+                                const independentTypes = ['shotgun', 'nova', 'twin', 'homing', 'ricochet', 'piercing'];
                                 const isIndependent = independentTypes.includes(bullet.gunType || bullet.bulletType);
 
                                 if (bullet.pierceCount > 0) {
