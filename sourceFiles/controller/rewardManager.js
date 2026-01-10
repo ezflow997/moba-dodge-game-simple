@@ -769,12 +769,12 @@ export class RewardManager {
             }
         }
 
-        // Draw loadout weapon reactivation button if available (above weapon slots)
+        // Draw loadout weapon reactivation button if available (bottom-left corner)
         if (this.loadoutWeapon) {
-            const loadoutW = slotWidth * 2 + slotGap;  // Same width as both weapon slots
+            const loadoutW = 180 * rX;
             const loadoutH = 50 * rX;
-            const loadoutX = startX;
-            const loadoutY = startY - loadoutH - 10 * rX;  // Above weapon slots with small gap
+            const loadoutX = 20 * rX;  // Bottom-left with padding
+            const loadoutY = window.innerHeight - loadoutH - 20 * rX;
 
             // Background
             const canReactivate = this.canReactivateLoadoutWeapon();
