@@ -39,6 +39,7 @@ export default async function handler(req, res) {
 
         // Insert test champion data with different months and players
         const testChampions = [
+            // 2025 Champions
             {
                 player_name: 'ezflow997',
                 final_elo: 1456,
@@ -48,10 +49,10 @@ export default async function handler(req, res) {
                 awarded_at: new Date('2026-01-01T00:00:00Z').toISOString()
             },
             {
-                player_name: 'ezflow997',
-                final_elo: 1389,
-                games_played: 25,
-                wins: 16,
+                player_name: 'NightHawk',
+                final_elo: 1423,
+                games_played: 32,
+                wins: 21,
                 season_month: '2025-11',
                 awarded_at: new Date('2025-12-01T00:00:00Z').toISOString()
             },
@@ -65,27 +66,75 @@ export default async function handler(req, res) {
             },
             {
                 player_name: 'ezflow997',
-                final_elo: 1278,
-                games_played: 20,
-                wins: 12,
+                final_elo: 1378,
+                games_played: 26,
+                wins: 17,
                 season_month: '2025-09',
                 awarded_at: new Date('2025-10-01T00:00:00Z').toISOString()
             },
             {
                 player_name: 'ShadowKing',
-                final_elo: 1245,
-                games_played: 18,
-                wins: 11,
+                final_elo: 1345,
+                games_played: 24,
+                wins: 15,
                 season_month: '2025-08',
                 awarded_at: new Date('2025-09-01T00:00:00Z').toISOString()
+            },
+            {
+                player_name: 'BlazeMaster',
+                final_elo: 1298,
+                games_played: 20,
+                wins: 12,
+                season_month: '2025-07',
+                awarded_at: new Date('2025-08-01T00:00:00Z').toISOString()
+            },
+            {
+                player_name: 'ezflow997',
+                final_elo: 1267,
+                games_played: 19,
+                wins: 11,
+                season_month: '2025-06',
+                awarded_at: new Date('2025-07-01T00:00:00Z').toISOString()
+            },
+            {
+                player_name: 'VortexPro',
+                final_elo: 1234,
+                games_played: 18,
+                wins: 10,
+                season_month: '2025-05',
+                awarded_at: new Date('2025-06-01T00:00:00Z').toISOString()
+            },
+            {
+                player_name: 'NightHawk',
+                final_elo: 1289,
+                games_played: 21,
+                wins: 13,
+                season_month: '2025-04',
+                awarded_at: new Date('2025-05-01T00:00:00Z').toISOString()
+            },
+            {
+                player_name: 'ShadowKing',
+                final_elo: 1256,
+                games_played: 17,
+                wins: 10,
+                season_month: '2025-03',
+                awarded_at: new Date('2025-04-01T00:00:00Z').toISOString()
             },
             {
                 player_name: 'ezflow997',
                 final_elo: 1198,
                 games_played: 15,
                 wins: 9,
-                season_month: '2025-07',
-                awarded_at: new Date('2025-08-01T00:00:00Z').toISOString()
+                season_month: '2025-02',
+                awarded_at: new Date('2025-03-01T00:00:00Z').toISOString()
+            },
+            {
+                player_name: 'ThunderBolt',
+                final_elo: 1167,
+                games_played: 14,
+                wins: 8,
+                season_month: '2025-01',
+                awarded_at: new Date('2025-02-01T00:00:00Z').toISOString()
             }
         ];
 
