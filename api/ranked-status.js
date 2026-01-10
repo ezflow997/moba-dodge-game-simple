@@ -152,20 +152,20 @@ async function checkAndPerformMonthlyReset() {
     const currentMonth = getCurrentYearMonth();
     const lastResetMonth = await getLastResetMonth();
 
-    // If no reset recorded or different month, perform reset
-    if (!lastResetMonth || lastResetMonth !== currentMonth) {
+    // Only proceed if we have a recorded last reset month AND it's different from current
+    // This prevents saving champions on first run or if system_settings table doesn't exist
+    if (lastResetMonth && lastResetMonth !== currentMonth) {
         console.log(`[ELO RESET] New month detected. Last reset: ${lastResetMonth}, Current: ${currentMonth}`);
 
-        // Capture the champion BEFORE resetting (use last month for the award)
-        const previousMonth = lastResetMonth || getPreviousYearMonth();
+        // Capture the champion BEFORE resetting (use last recorded month for the award)
         const champion = await getCurrentChampion();
-        if (champion) {
+        if (champion && champion.games_played > 0) {
             await saveChampion(
                 champion.player_name,
                 champion.elo,
                 champion.games_played,
                 champion.wins || 0,
-                previousMonth
+                lastResetMonth
             );
         }
 
@@ -175,18 +175,13 @@ async function checkAndPerformMonthlyReset() {
             console.log(`[ELO RESET] Monthly reset complete for ${currentMonth}`);
             return true;
         }
+    } else if (!lastResetMonth) {
+        // First time setup - just record current month without resetting or saving champion
+        console.log(`[ELO RESET] First time setup - recording current month: ${currentMonth}`);
+        await setLastResetMonth(currentMonth);
     }
 
     return false;
-}
-
-// Get previous year-month string (for awarding the champion)
-function getPreviousYearMonth() {
-    const now = new Date();
-    now.setUTCMonth(now.getUTCMonth() - 1);
-    const year = now.getUTCFullYear();
-    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-    return `${year}-${month}`;
 }
 
 // Get player ELO record
