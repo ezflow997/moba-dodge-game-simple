@@ -354,7 +354,7 @@ export class LoadoutMenu {
             if (clicking) {
                 const dragDelta = inY - this.scrollbarDragStartY;
                 const scrollRatio = dragDelta / Math.max(1, scrollbarHeight - thumbHeight);
-                this.scrollOffset = this.scrollbarDragStartOffset + scrollRatio * this.maxScrollOffset;
+                this.scrollOffset = this.scrollbarDragStartOffset - scrollRatio * this.maxScrollOffset;
                 this.scrollOffset = Math.max(0, Math.min(this.maxScrollOffset, this.scrollOffset));
             } else {
                 this.isDraggingScrollbar = false;
@@ -373,7 +373,7 @@ export class LoadoutMenu {
 
         // Handle mouse wheel scroll
         if (game.input.wheelDelta) {
-            this.scrollOffset += game.input.wheelDelta > 0 ? 50 : -50;
+            this.scrollOffset += game.input.wheelDelta > 0 ? -50 : 50;
             this.scrollOffset = Math.max(0, Math.min(this.maxScrollOffset, this.scrollOffset));
         }
 

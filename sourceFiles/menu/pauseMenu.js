@@ -703,18 +703,19 @@ export class PauseMenu {
             this.keybindQButton.draw(context);
             this.keybindEButton.draw(context);
             this.keybindFButton.draw(context);
-            this.keybindBackButton.draw(context);
 
-            // Draw waiting message
+            // Draw waiting message or back button (not both to avoid overlap)
             if (this.waitingForKey) {
                 if (this.controlScheme === 'mouse') {
-                    this.super.drawGlowText(context, 700, 570, "Press any keyboard key...", 40, '#ffff00', '#ffaa00', 8);
-                    this.super.drawGlowText(context, 700, 610, "(Mouse buttons not allowed)", 35, '#ff8888', '#ff4444', 6);
-                    this.super.drawGlowText(context, 700, 650, "Press ESC to cancel", 30, '#aaaaaa', '#888888', 6);
+                    this.super.drawGlowText(context, 700, 620, "Press any keyboard key...", 40, '#ffff00', '#ffaa00', 8);
+                    this.super.drawGlowText(context, 700, 665, "(Mouse buttons not allowed)", 32, '#ff8888', '#ff4444', 6);
+                    this.super.drawGlowText(context, 700, 705, "Press ESC to cancel", 28, '#aaaaaa', '#888888', 6);
                 } else {
-                    this.super.drawGlowText(context, 700, 570, "Press any key or mouse button...", 40, '#ffff00', '#ffaa00', 8);
-                    this.super.drawGlowText(context, 700, 610, "Press ESC to cancel", 35, '#aaaaaa', '#888888', 6);
+                    this.super.drawGlowText(context, 700, 620, "Press any key or mouse button...", 40, '#ffff00', '#ffaa00', 8);
+                    this.super.drawGlowText(context, 700, 665, "Press ESC to cancel", 32, '#aaaaaa', '#888888', 6);
                 }
+            } else {
+                this.keybindBackButton.draw(context);
             }
         }
         // Volume submenu
