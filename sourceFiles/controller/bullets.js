@@ -261,7 +261,18 @@ export class Bullets {
                 }
             }
 
-            if(player.qCoolDownElapsed >= player.qCoolDown && this.bulletsDeSpawned == true){
+            // Apply gun's cooldown multiplier (rapid fire has very short cooldown)
+            let effectiveCooldown;
+            if (activeGun && activeGun.gunType === 'rapidfire') {
+                // Rapid fire uses a very short fixed cooldown for continuous fire (50-100ms based on rarity)
+                const rarityMultiplier = activeGun.cooldownMultiplier || 0.6;
+                effectiveCooldown = 150 * rarityMultiplier;  // ~90ms for uncommon, ~45ms for legendary
+            } else {
+                const gunCooldownMult = activeGun ? (activeGun.cooldownMultiplier || 1) : 1;
+                effectiveCooldown = player.qCoolDown * gunCooldownMult;
+            }
+
+            if(player.qCoolDownElapsed >= effectiveCooldown && this.bulletsDeSpawned == true){
                 player.qPressed = false;
                 this.bulletsDeSpawned = false;
             }
@@ -270,7 +281,12 @@ export class Bullets {
                 this.super.getTravel(this, player.x, player.y, this.angle, this.bulletsMaxTravel);
                 this.super.getOffset(this, player.x, player.y, this.angle, (player.size/2));
                 player.qTriggered = true;
-                this.bulletsList = [];
+
+                // For rapid fire, don't clear existing bullets - let them keep flying
+                // For other guns, clear the list for fresh burst
+                if (!(activeGun && activeGun.gunType === 'rapidfire')) {
+                    this.bulletsList = [];
+                }
 
                 // Create bullets based on active gun type
                 this.createBullets(player, activeGun, rewardManager);
@@ -280,6 +296,33 @@ export class Bullets {
                 this.bulletsSpawnNow = window.performance.now();
             }
         }
+
+        // Update rapid fire bullets independently (they keep flying after qPressed resets)
+        // Only run when qPressed is false to avoid double-updating
+        if (!player.qPressed && activeGun && activeGun.gunType === 'rapidfire' && this.bulletsList.length > 0) {
+            for (let i = this.bulletsList.length - 1; i >= 0; i--) {
+                const bullet = this.bulletsList[i];
+                if (!bullet) continue;
+
+                // Update bullet if not already handled
+                if (!bullet.destroy && !bullet.enemyCollision) {
+                    bullet.update(homingTargets);
+                    bullet.checkCollision(enemies.enemiesList, this.onChain.bind(this));
+                }
+
+                // Handle destroy/collision
+                if (bullet.destroy || bullet.enemyCollision) {
+                    if (bullet.enemyCollision) {
+                        // Rapid fire: just remove the bullet that hit
+                        this.bulletsList.splice(i, 1);
+                    } else if (bullet.destroy) {
+                        // Bullet missed - rapid fire doesn't reset streak
+                        this.bulletsList.splice(i, 1);
+                    }
+                }
+            }
+        }
+
         this.prevWindowWidth = window.innerWidth;
         this.prevWindowHeight = window.innerHeight;
     }
@@ -566,16 +609,25 @@ export class Bullets {
             bolt.draw(context);
         }
 
-        if(this.bulletsSpawned == true){
+        // Check if we have rapid fire bullets that should always be drawn
+        const hasRapidfireBullets = this.bulletsList.length > 0 &&
+            this.bulletsList.some(b => b && b.gunType === 'rapidfire');
+
+        if(this.bulletsSpawned == true || hasRapidfireBullets){
+            // Draw all bullets (rapid fire bullets always get drawn)
             for(let i = 0; i < this.bulletsList.length; i++){
-                this.bulletsList[i].draw(context);
+                if (this.bulletsList[i]) {
+                    this.bulletsList[i].draw(context);
+                }
             }
         }
         else if(this.bulletsSpawned == false && this.bulletsSpawnCount > 0){
             let max = this.bulletsSpawnCount;
             if(max <= this.bulletsList.length){
                 for(let i = 0; i < max; i++){
-                    this.bulletsList[i].draw(context);
+                    if (this.bulletsList[i]) {
+                        this.bulletsList[i].draw(context);
+                    }
                 }
             }
         }

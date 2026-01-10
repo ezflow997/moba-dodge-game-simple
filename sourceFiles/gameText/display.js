@@ -1,3 +1,5 @@
+import { getUIScale } from '../menu/pauseMenu.js';
+
 export class Display{
     constructor(game){
         this.scoreX = game.width*0.45;
@@ -80,10 +82,13 @@ export class Display{
             return;
         }
 
-        const rX = window.innerWidth / 2560;
-        const rY = window.innerHeight / 1440;
+        const baseRX = window.innerWidth / 2560;
+        const baseRY = window.innerHeight / 1440;
+        const uiScale = getUIScale();
+        const rX = baseRX * uiScale;
+        const rY = baseRY * uiScale;
         const centerX = window.innerWidth * 0.5;
-        const topY = 45 * rY;
+        const topY = 45 * baseRY; // Keep vertical position based on screen, not UI scale
 
         context.save();
 

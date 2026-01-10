@@ -118,9 +118,9 @@ export class Enemies {
                         player.qCoolDownElapsed = 0;
                         game.input.q_key += 60;
 
-                        // Check if using a multi-hit weapon (ricochet, piercing)
+                        // Check if using a multi-hit weapon (ricochet, piercing, rapidfire)
                         const activeGun = game.rewardManager ? game.rewardManager.activeGun : null;
-                        const isMultiHitGun = activeGun && (activeGun.gunType === 'ricochet' || activeGun.gunType === 'piercing');
+                        const isMultiHitGun = activeGun && (activeGun.gunType === 'ricochet' || activeGun.gunType === 'piercing' || activeGun.gunType === 'rapidfire');
 
                         // Only clear bullets for single-hit weapons
                         if (!isMultiHitGun) {
@@ -257,9 +257,9 @@ export class Enemies {
                         player.qCoolDownElapsed = 0;
                         game.input.q_key += 60;
 
-                        // Check if using a multi-hit weapon (ricochet, piercing)
+                        // Check if using a multi-hit weapon (ricochet, piercing, rapidfire)
                         const activeGun = game.rewardManager ? game.rewardManager.activeGun : null;
-                        const isMultiHitGun = activeGun && (activeGun.gunType === 'ricochet' || activeGun.gunType === 'piercing');
+                        const isMultiHitGun = activeGun && (activeGun.gunType === 'ricochet' || activeGun.gunType === 'piercing' || activeGun.gunType === 'rapidfire');
 
                         // Only clear all bullets for single-hit weapons
                         if (!isMultiHitGun) {

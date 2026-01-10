@@ -722,10 +722,10 @@ export class PauseMenu {
             }
             if (!inMainMenu) {
                 // Calculate button positions based on what's visible
-                // Base position after Performance button (index 4)
-                let nextButtonIndex = 5;
+                // Base position after Performance button (index 5), Dev Mode is at index 6
+                let nextButtonIndex = 6;
 
-                // Dev mode takes slot 5 if visible
+                // Dev mode takes slot 6 if visible
                 if (devModeVisible) nextButtonIndex++;
 
                 // Draw Exit Test Room button when in test room
