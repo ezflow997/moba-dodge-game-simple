@@ -13,6 +13,10 @@ export class LeaderboardMenu {
         // Ranked-only mode (opened from ranked menu)
         this.rankedOnly = false;
 
+        // Champions history view (for ranked mode)
+        this.showChampionsView = false;
+        this.championsData = [];
+
         this.leaderboardData = [];
         this.isLoading = false;
         this.loadError = null;
@@ -67,6 +71,9 @@ export class LeaderboardMenu {
         // Bottom buttons
         this.refreshButton = new Button(900, 1060, 280, 70, "Refresh", 40, 60, 50, false, true, 'white', 'white');
         this.backButton = new Button(1380, 1060, 280, 70, "Back", 40, 80, 50, false, true, 'white', 'white');
+
+        // Champions toggle button (for ranked mode) - positioned next to title
+        this.championsToggleButton = new Button(1680, 220, 180, 60, "Champions", 26, 30, 42, false, true, 'white', 'white');
     }
 
     async show(initialDifficulty = 0) {
@@ -86,6 +93,7 @@ export class LeaderboardMenu {
     async showRanked() {
         this.isVisible = true;
         this.rankedOnly = true;
+        this.showChampionsView = false;
         this.currentPage = 1;
         this.searchQuery = '';
         this.searchActive = false;
@@ -99,6 +107,7 @@ export class LeaderboardMenu {
     hide() {
         this.isVisible = false;
         this.rankedOnly = false;
+        this.showChampionsView = false;
         this.searchActive = false;
         this.highlightedPlayer = null;
         document.removeEventListener('keydown', this.keyHandler);
@@ -248,6 +257,11 @@ export class LeaderboardMenu {
             this.leaderboardData = result.entries || [];
             this.totalPages = result.pagination?.totalPages || 1;
             this.totalEntries = result.pagination?.totalEntries || 0;
+
+            // Store champions data if available (for ranked mode)
+            if (result.champions) {
+                this.championsData = result.champions;
+            }
         } catch (error) {
             this.loadError = "Failed to load leaderboard";
             console.error('[Leaderboard] Load error:', error);
@@ -368,6 +382,17 @@ export class LeaderboardMenu {
                 this.highlightedPlayer = null;
                 this.loadLeaderboard();
                 if (this.searchQuery.length > 0) this.performSearch();
+            }
+        }
+
+        // Champions toggle (for ranked mode only)
+        if (this.isRankedMode()) {
+            this.championsToggleButton.update(inX, inY);
+            if (this.championsToggleButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.showChampionsView = !this.showChampionsView;
+                this.championsToggleButton.text = this.showChampionsView ? "Rankings" : "Champions";
             }
         }
 
@@ -502,25 +527,37 @@ export class LeaderboardMenu {
             // Daily toggle button
             this.dailyToggleButton.draw(context);
         } else {
-            // Show "ELO Rankings" subtitle for ranked mode
-            this.super.drawGlowText(context, 1160, 275, "ELO Rankings", 50, '#ffaa00', '#ffaa00', 12);
+            // Show subtitle for ranked mode based on current view
+            const subtitle = this.showChampionsView ? "Hall of Fame" : "ELO Rankings";
+            const subtitleColor = this.showChampionsView ? '#ffd700' : '#ffaa00';
+            this.super.drawGlowText(context, 1160, 275, subtitle, 50, subtitleColor, subtitleColor, 12);
+
+            // Champions toggle button
+            this.championsToggleButton.draw(context);
         }
 
-        // Search input field
-        this.drawSearchField(context, rX, rY);
+        // Search input field (hide in champions view)
+        if (!this.showChampionsView) {
+            this.drawSearchField(context, rX, rY);
+        }
 
         // Loading/error state
         if (this.isLoading) {
             this.super.drawGlowText(context, 1150, 600, "Loading...", 50, '#ffff00', '#ffaa00', 10);
         } else if (this.loadError) {
             this.super.drawGlowText(context, 1050, 600, this.loadError, 45, '#ff4444', '#ff0000', 10);
+        } else if (this.showChampionsView) {
+            // Draw champions history
+            this.drawChampionsHistory(context, rX, rY);
         } else {
             // Draw leaderboard entries
             this.drawLeaderboardEntries(context, rX, rY);
         }
 
-        // Pagination controls
-        this.drawPagination(context, rX, rY);
+        // Pagination controls (hide in champions view)
+        if (!this.showChampionsView) {
+            this.drawPagination(context, rX, rY);
+        }
 
         // Bottom buttons - side by side
         this.refreshButton.draw(context);
@@ -784,6 +821,102 @@ export class LeaderboardMenu {
                 this.super.drawGlowText(context, colStreak, y, entry.best_streak.toString(), 34, '#ffff88', '#ffff00', 8);
             }
         }
+    }
+
+    // Draw the champions history page (Hall of Fame)
+    drawChampionsHistory(context, rX, rY) {
+        const startY = 380;
+        const rowHeight = 70;
+
+        // Column positions
+        const colSeason = 750;
+        const colName = 1000;
+        const colElo = 1450;
+
+        // Header
+        this.super.drawGlowText(context, colSeason, startY, "SEASON", 38, '#888888', '#666666', 6);
+        this.super.drawGlowText(context, colName, startY, "CHAMPION", 38, '#888888', '#666666', 6);
+        this.super.drawGlowText(context, colElo, startY, "FINAL ELO", 38, '#888888', '#666666', 6);
+
+        // Separator line
+        context.save();
+        context.strokeStyle = 'rgba(255, 215, 0, 0.4)';
+        context.lineWidth = 2;
+        context.beginPath();
+        context.moveTo(730 * rX, (startY + 18) * rY);
+        context.lineTo(1830 * rX, (startY + 18) * rY);
+        context.stroke();
+        context.restore();
+
+        // Check if we have champions data
+        if (!this.championsData || this.championsData.length === 0) {
+            this.super.drawGlowText(context, 1050, 600, "No champions yet!", 50, '#888888', '#666666', 10);
+            this.super.drawGlowText(context, 980, 680, "Be the first to claim the throne!", 40, '#666666', '#444444', 6);
+            return;
+        }
+
+        // Sort champions by season month (newest first)
+        const sortedChampions = [...this.championsData].sort((a, b) => {
+            return b.season_month.localeCompare(a.season_month);
+        });
+
+        // Draw each champion (max 8 visible)
+        const maxVisible = 8;
+        for (let i = 0; i < Math.min(sortedChampions.length, maxVisible); i++) {
+            const champion = sortedChampions[i];
+            const y = startY + (i + 1) * rowHeight;
+
+            // Row background with golden tint
+            context.save();
+            context.fillStyle = `rgba(255, 215, 0, ${0.08 + (i % 2) * 0.04})`;
+            context.fillRect(730 * rX, (y - 42) * rY, 1100 * rX, 60 * rY);
+            context.restore();
+
+            // Format season month (e.g., "2025-01" -> "January 2025")
+            const seasonMonth = this.formatSeasonMonth(champion.season_month);
+            this.super.drawGlowText(context, colSeason, y, seasonMonth, 32, '#ffd700', '#ffaa00', 8);
+
+            // Champion name with animated rainbow effect
+            const playerName = champion.player_name || 'Unknown';
+            const displayName = playerName.length > 14 ? playerName.substring(0, 14) + '...' : playerName;
+            this.drawChampionName(context, colName, y, displayName, 36, rX, false);
+
+            // Final ELO
+            const elo = champion.final_elo || 1000;
+            this.super.drawGlowText(context, colElo, y, elo.toString(), 32, '#00ff88', '#00ff00', 8);
+
+            // Trophy icon
+            const trophyX = colSeason - 50;
+            const trophyHue = (this.animationTime * 60 + i * 40) % 360;
+            context.save();
+            context.font = `${32 * rX}px Arial`;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.shadowColor = `hsl(${trophyHue}, 100%, 50%)`;
+            context.shadowBlur = 12 * rX;
+            context.fillStyle = `hsl(${trophyHue}, 100%, 70%)`;
+            context.fillText('🏆', trophyX * rX, y * rY);
+            context.restore();
+        }
+
+        // Show "and X more..." if there are more champions
+        if (sortedChampions.length > maxVisible) {
+            const moreCount = sortedChampions.length - maxVisible;
+            const moreY = startY + (maxVisible + 1) * rowHeight;
+            this.super.drawGlowText(context, 1200, moreY, `and ${moreCount} more...`, 28, '#888888', '#666666', 6);
+        }
+    }
+
+    // Format season month (e.g., "2025-01" -> "January 2025")
+    formatSeasonMonth(seasonMonth) {
+        if (!seasonMonth) return 'Unknown';
+        const [year, month] = seasonMonth.split('-');
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const monthIndex = parseInt(month, 10) - 1;
+        if (monthIndex >= 0 && monthIndex < 12) {
+            return `${months[monthIndex]} ${year}`;
+        }
+        return seasonMonth;
     }
 
     // Draw animated rainbow name for monthly champions
