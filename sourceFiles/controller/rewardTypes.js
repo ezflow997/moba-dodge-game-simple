@@ -21,77 +21,83 @@ export const CATEGORY = {
 export const REWARDS = {
     // ============ GUN TYPES (with durability) ============
 
-    // Shotgun - Wide spread, less range
+    // Shotgun - Wide spread, less range, all pellets fire instantly with random spread
     SHOTGUN_COMMON: {
         id: 'shotgun_common',
         name: 'Shotgun',
-        description: '5 bullets, 45% range',
+        description: '5 pellets, wide spread',
         category: CATEGORY.GUN,
         rarity: RARITY.COMMON,
         gunType: 'shotgun',
         durability: 12,
         bulletCount: 5,
         spreadAngle: 40,
+        randomSpread: 0.5,  // Most random spread
         rangeMultiplier: 0.45
     },
     SHOTGUN_UNCOMMON: {
         id: 'shotgun_uncommon',
         name: 'Pump Shotgun',
-        description: '7 bullets, 50% range',
+        description: '7 pellets, better grouping',
         category: CATEGORY.GUN,
         rarity: RARITY.UNCOMMON,
         gunType: 'shotgun',
         durability: 18,
         bulletCount: 7,
         spreadAngle: 45,
+        randomSpread: 0.45,
         rangeMultiplier: 0.5
     },
     SHOTGUN_RARE: {
         id: 'shotgun_rare',
         name: 'Heavy Shotgun',
-        description: '9 bullets, 55% range',
+        description: '9 pellets, tighter spread',
         category: CATEGORY.GUN,
         rarity: RARITY.RARE,
         gunType: 'shotgun',
         durability: 25,
         bulletCount: 9,
         spreadAngle: 50,
+        randomSpread: 0.4,
         rangeMultiplier: 0.55
     },
     SHOTGUN_EPIC: {
         id: 'shotgun_epic',
         name: 'Combat Shotgun',
-        description: '11 bullets, 60% range',
+        description: '11 pellets, precise spread',
         category: CATEGORY.GUN,
         rarity: RARITY.EPIC,
         gunType: 'shotgun',
         durability: 35,
         bulletCount: 11,
         spreadAngle: 55,
+        randomSpread: 0.35,
         rangeMultiplier: 0.6
     },
     SHOTGUN_LEGENDARY: {
         id: 'shotgun_legendary',
         name: 'Devastator',
-        description: '14 bullets, 70% range',
+        description: '14 pellets, deadly accuracy',
         category: CATEGORY.GUN,
         rarity: RARITY.LEGENDARY,
         gunType: 'shotgun',
         durability: 45,
         bulletCount: 14,
         spreadAngle: 60,
+        randomSpread: 0.3,
         rangeMultiplier: 0.7
     },
     SHOTGUN_STIER: {
         id: 'shotgun_stier',
         name: 'Doomblaster',
-        description: '18 bullets, 80% range, faster fire',
+        description: '18 pellets, laser precision',
         category: CATEGORY.GUN,
         rarity: RARITY.STIER,
         gunType: 'shotgun',
         durability: 60,
         bulletCount: 18,
         spreadAngle: 70,
+        randomSpread: 0.25,  // Tightest grouping
         rangeMultiplier: 0.8,
         cooldownMultiplier: 0.7
     },

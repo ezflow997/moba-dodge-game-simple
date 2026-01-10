@@ -464,13 +464,22 @@ export class Bullets {
 
     createShotgunBullets(player, gunData, sizeMultiplier) {
         const count = gunData.bulletCount || 7;
-        const spreadAngle = (gunData.spreadAngle || 30) * Math.PI / 180;  // Tighter spread (was 45)
+        const spreadAngle = (gunData.spreadAngle || 30) * Math.PI / 180;
         const baseAngle = this.getFullAngle();
         const maxTravel = this.bulletsMaxTravel * (gunData.rangeMultiplier || 0.5);
 
+        // Random spread factor - higher tiers have tighter grouping
+        const randomSpreadFactor = gunData.randomSpread || 0.4;
+
         for (let i = 0; i < count; i++) {
-            const angleOffset = (i / (count - 1) - 0.5) * spreadAngle;
-            const bulletAngle = baseAngle + angleOffset;
+            // Base angle offset within the cone
+            const baseOffset = (i / (count - 1) - 0.5) * spreadAngle;
+            // Add randomness to each pellet's angle
+            const randomOffset = (Math.random() - 0.5) * spreadAngle * randomSpreadFactor;
+            const bulletAngle = baseAngle + baseOffset + randomOffset;
+
+            // Slight random variation in speed for more natural feel
+            const speedVariation = 0.9 + Math.random() * 0.2;
 
             const endX = player.x + Math.cos(bulletAngle) * maxTravel;
             const endY = player.y + Math.sin(bulletAngle) * maxTravel;
@@ -479,17 +488,18 @@ export class Bullets {
                 this.offX, this.offY,
                 endX, endY,
                 this.bulletSize * 0.8 * sizeMultiplier,
-                this.bulletSpeed * 1.8,  // 2x faster than before
+                this.bulletSpeed * 1.8 * speedVariation,
                 'shotgun',
                 gunData
             );
-            b.fastSpawn = true;  // Flag for fast stagger spawn (3ms vs 10ms)
-            b.followPlayer = player;  // Reference to player for position updates
-            b.bulletAngle = bulletAngle;  // Store angle for recalculating position
-            b.maxTravel = maxTravel;
-            b.spawned = false;  // Track if bullet has started moving
+            b.instantSpawn = true;  // All pellets fire at once
+            b.spawned = true;  // Already spawned - no stagger delay
             this.bulletsList.push(b);
         }
+
+        // Immediately mark all bullets as spawned for instant fire
+        this.bulletsSpawnCount = count;
+        this.bulletsSpawned = true;
     }
 
     createRapidfireBullets(player, gunData, sizeMultiplier) {
