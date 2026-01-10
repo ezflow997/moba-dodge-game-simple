@@ -578,7 +578,7 @@ export class RankedMenu {
             context.font = `${20 * rX}px Arial`;
             context.textAlign = 'center';
             context.fillStyle = '#ffaa00';
-            context.fillText('You will join this queue when you play a ranked game', centerX, panelY + 130 * rY);
+            context.fillText('You will join this queue when you play a ranked game', centerX, panelY + 150 * rY);
         }
 
         // Time remaining display (live countdown) - only shows when minimum players reached
@@ -590,10 +590,10 @@ export class RankedMenu {
             const seconds = Math.floor((liveTimeRemaining % 60000) / 1000);
             const timeStr = `${minutes}m ${seconds}s remaining`;
             context.fillStyle = minutes < 10 ? '#ff8844' : '#88ffff';
-            context.fillText(timeStr, centerX, panelY + 160 * rY);
+            context.fillText(timeStr, centerX, panelY + 180 * rY);
         } else if (this.queueSize > 0 && this.queueSize < this.maxPlayers) {
             context.fillStyle = '#888888';
-            context.fillText('Waiting for more players to start timer...', centerX, panelY + 160 * rY);
+            context.fillText('Waiting for more players to start timer...', centerX, panelY + 180 * rY);
         }
 
         // Queue status
@@ -669,12 +669,12 @@ export class RankedMenu {
         context.textAlign = 'center';
         context.fillStyle = '#888888';
         const queueCount = this.allQueuesSummary.length;
-        context.fillText(`${queueCount} active queue${queueCount !== 1 ? 's' : ''} | Drag scrollbar or use mouse wheel`, centerX, panelY + 160 * rY);
+        context.fillText(`${queueCount} active queue${queueCount !== 1 ? 's' : ''} | Drag scrollbar or use mouse wheel`, centerX, panelY + 180 * rY);
 
         // Draw clipping region for scrollable content
         context.save();
-        const clipY = panelY + 180 * rY;
-        const clipH = panelH - 280 * rY;
+        const clipY = panelY + 200 * rY;
+        const clipH = panelH - 300 * rY;
         context.beginPath();
         context.rect(centerX - panelW / 2 + 20 * rX, clipY, panelW - 40 * rX, clipH);
         context.clip();
