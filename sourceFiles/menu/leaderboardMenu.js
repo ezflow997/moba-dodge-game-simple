@@ -16,6 +16,8 @@ export class LeaderboardMenu {
         // Champions history view (for ranked mode)
         this.showChampionsView = false;
         this.championsData = [];
+        this.championsPage = 1;
+        this.championsPerPage = 8;
 
         this.leaderboardData = [];
         this.isLoading = false;
@@ -393,6 +395,10 @@ export class LeaderboardMenu {
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.showChampionsView = !this.showChampionsView;
                 this.championsToggleButton.text = this.showChampionsView ? "Rankings" : "Hall of Fame";
+                // Reset champions page when switching to champions view
+                if (this.showChampionsView) {
+                    this.championsPage = 1;
+                }
             }
         }
 
@@ -400,7 +406,12 @@ export class LeaderboardMenu {
         this.firstPageButton.update(inX, inY);
         if (this.firstPageButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
             this.clicked = true;
-            if (this.currentPage > 1) {
+            if (this.showChampionsView) {
+                if (this.championsPage > 1) {
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    this.championsPage = 1;
+                }
+            } else if (this.currentPage > 1) {
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.currentPage = 1;
                 this.loadLeaderboard();
@@ -411,7 +422,12 @@ export class LeaderboardMenu {
         this.prevPageButton.update(inX, inY);
         if (this.prevPageButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
             this.clicked = true;
-            if (this.currentPage > 1) {
+            if (this.showChampionsView) {
+                if (this.championsPage > 1) {
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    this.championsPage--;
+                }
+            } else if (this.currentPage > 1) {
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.currentPage--;
                 this.loadLeaderboard();
@@ -422,7 +438,13 @@ export class LeaderboardMenu {
         this.nextPageButton.update(inX, inY);
         if (this.nextPageButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
             this.clicked = true;
-            if (this.currentPage < this.totalPages) {
+            if (this.showChampionsView) {
+                const totalChampionPages = Math.ceil(this.championsData.length / this.championsPerPage);
+                if (this.championsPage < totalChampionPages) {
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    this.championsPage++;
+                }
+            } else if (this.currentPage < this.totalPages) {
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.currentPage++;
                 this.loadLeaderboard();
@@ -433,7 +455,13 @@ export class LeaderboardMenu {
         this.lastPageButton.update(inX, inY);
         if (this.lastPageButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
             this.clicked = true;
-            if (this.currentPage < this.totalPages) {
+            if (this.showChampionsView) {
+                const totalChampionPages = Math.ceil(this.championsData.length / this.championsPerPage);
+                if (this.championsPage < totalChampionPages) {
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    this.championsPage = totalChampionPages;
+                }
+            } else if (this.currentPage < this.totalPages) {
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.currentPage = this.totalPages;
                 this.loadLeaderboard();
@@ -866,10 +894,22 @@ export class LeaderboardMenu {
             return b.season_month.localeCompare(a.season_month);
         });
 
-        // Draw each champion (max 8 visible)
-        const maxVisible = 8;
-        for (let i = 0; i < Math.min(sortedChampions.length, maxVisible); i++) {
-            const champion = sortedChampions[i];
+        // Calculate pagination for champions
+        const totalChampions = sortedChampions.length;
+        const totalChampionPages = Math.ceil(totalChampions / this.championsPerPage);
+
+        // Ensure current page is valid
+        if (this.championsPage > totalChampionPages) {
+            this.championsPage = Math.max(1, totalChampionPages);
+        }
+
+        const startIndex = (this.championsPage - 1) * this.championsPerPage;
+        const endIndex = Math.min(startIndex + this.championsPerPage, totalChampions);
+        const pageChampions = sortedChampions.slice(startIndex, endIndex);
+
+        // Draw each champion on current page
+        for (let i = 0; i < pageChampions.length; i++) {
+            const champion = pageChampions[i];
             const y = startY + (i + 1) * rowHeight;
 
             // Row background with golden tint
@@ -905,11 +945,58 @@ export class LeaderboardMenu {
             context.restore();
         }
 
-        // Show "and X more..." if there are more champions
-        if (sortedChampions.length > maxVisible) {
-            const moreCount = sortedChampions.length - maxVisible;
-            const moreY = startY + (maxVisible + 1) * rowHeight;
-            this.super.drawGlowText(context, 1200, moreY, `and ${moreCount} more...`, 28, '#888888', '#666666', 6);
+        // Draw pagination for champions
+        this.drawChampionsPagination(context, rX, rY, totalChampions, totalChampionPages);
+    }
+
+    // Draw pagination controls for champions view
+    drawChampionsPagination(context, rX, rY, totalChampions, totalPages) {
+        // First page button
+        if (this.championsPage > 1) {
+            this.firstPageButton.draw(context);
+        } else {
+            context.save();
+            context.globalAlpha = 0.3;
+            this.firstPageButton.draw(context);
+            context.restore();
+        }
+
+        // Previous page button
+        if (this.championsPage > 1) {
+            this.prevPageButton.draw(context);
+        } else {
+            context.save();
+            context.globalAlpha = 0.3;
+            this.prevPageButton.draw(context);
+            context.restore();
+        }
+
+        // Total champions count
+        const totalText = `${totalChampions} total seasons`;
+        this.super.drawGlowText(context, 1220, 955, totalText, 24, '#ffd700', '#ffaa00', 4);
+
+        // Page indicator
+        const pageText = `Page ${this.championsPage} of ${totalPages}`;
+        this.super.drawGlowText(context, 1200, 1010, pageText, 32, '#ffffff', '#ffd700', 6);
+
+        // Next page button
+        if (this.championsPage < totalPages) {
+            this.nextPageButton.draw(context);
+        } else {
+            context.save();
+            context.globalAlpha = 0.3;
+            this.nextPageButton.draw(context);
+            context.restore();
+        }
+
+        // Last page button
+        if (this.championsPage < totalPages) {
+            this.lastPageButton.draw(context);
+        } else {
+            context.save();
+            context.globalAlpha = 0.3;
+            this.lastPageButton.draw(context);
+            context.restore();
         }
     }
 
