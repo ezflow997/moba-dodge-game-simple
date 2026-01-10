@@ -105,6 +105,10 @@ export class VoidBolts {
             }
             
             if (collision) {
+                // Check if this is a split bolt (not the main bolt, or main bolt after it split)
+                const isSplitBolt = bolt !== this.activeBolt || bolt.hasSplit;
+                const scoreMultiplier = isSplitBolt ? this.splitScoreMultiplier : 1;
+
                 if (collision.type === 'enemy') {
                     // Track if main bolt scored
                     if (bolt === this.activeBolt && !bolt.hasSplit) {
@@ -114,32 +118,32 @@ export class VoidBolts {
                     else if (bolt !== this.activeBolt) {
                         this.splitBoltHit = true;
                     }
-                    // Enemy hit
+                    // Enemy hit - apply split multiplier if applicable
                     enemies.hitStreak += 1;
                     if (enemies.hitStreak > enemies.best_streak) {
                         enemies.best_streak = enemies.hitStreak;
                     }
-                    game.rewardManager.addScore(game, enemies.enemyScoreValue * enemies.hitStreak);
+                    game.rewardManager.addScore(game, enemies.enemyScoreValue * enemies.hitStreak * scoreMultiplier);
                     enemies.enemiesTakenDown += 1;
-                    
+
                     // Add to boss score tracking
                     if (!enemies.bossActive) {
                         enemies.bossTowardsScore += enemies.enemyScoreValue;
                     }
                 } else if (collision.type === 'boss') {
-                    // Boss hit - increase streak and add score
+                    // Boss hit - increase streak and add score with split multiplier
                     enemies.hitStreak += 1;
                     if (enemies.hitStreak > enemies.best_streak) {
                         enemies.best_streak = enemies.hitStreak;
                     }
-                    game.rewardManager.addScore(game, enemies.enemyScoreValue * enemies.hitStreak);
+                    game.rewardManager.addScore(game, enemies.enemyScoreValue * enemies.hitStreak * scoreMultiplier);
                 } else if (collision.type === 'orbital') {
-                    // Vortex boss orbital hit - counts towards streak
+                    // Vortex boss orbital hit - counts towards streak with split multiplier
                     enemies.hitStreak += 1;
                     if (enemies.hitStreak > enemies.best_streak) {
                         enemies.best_streak = enemies.hitStreak;
                     }
-                    game.rewardManager.addScore(game, enemies.enemyScoreValue * enemies.hitStreak);
+                    game.rewardManager.addScore(game, enemies.enemyScoreValue * enemies.hitStreak * scoreMultiplier);
                 }
             }
             

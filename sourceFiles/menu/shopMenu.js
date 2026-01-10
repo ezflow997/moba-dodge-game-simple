@@ -222,54 +222,53 @@ export class ShopMenu {
         return item ? item.permanentUnlock : false;
     }
 
-    // Get display items for current category with gun type separators
+    // Get display items for current category with collapsible separators
     getDisplayItems() {
         const rewards = this.rewardsByCategory[this.selectedCategory] || [];
 
-        // For weapons category, group by gun type with separators
-        if (this.selectedCategory === CATEGORY.GUN && rewards.length > 0) {
-            // Group by gun type
-            const groups = {};
-            for (const reward of rewards) {
-                const gunType = reward.gunType || 'other';
-                if (!groups[gunType]) groups[gunType] = [];
-                groups[gunType].push(reward);
-            }
+        if (rewards.length === 0) return [];
 
-            // Sort groups by order and build result with separators
-            const result = [];
-            const sortedTypes = Object.keys(groups).sort((a, b) => {
-                const orderA = GUN_TYPE_INFO[a]?.order ?? 99;
-                const orderB = GUN_TYPE_INFO[b]?.order ?? 99;
-                return orderA - orderB;
-            });
-
-            for (const gunType of sortedTypes) {
-                const typeName = GUN_TYPE_INFO[gunType]?.name || gunType;
-                const isCollapsed = this.collapsedGroups[gunType] === true;
-                const itemCount = groups[gunType].length;
-
-                // Add separator
-                result.push({
-                    isSeparator: true,
-                    separatorName: typeName,
-                    gunType: gunType,
-                    isCollapsed: isCollapsed,
-                    itemCount: itemCount
-                });
-
-                // Add items only if not collapsed
-                if (!isCollapsed) {
-                    for (const reward of groups[gunType]) {
-                        result.push({ isSeparator: false, reward });
-                    }
-                }
-            }
-            return result;
+        // Group items by type with separators (works for all categories)
+        const groups = {};
+        for (const reward of rewards) {
+            const groupType = getItemGroupType(reward);
+            if (!groups[groupType]) groups[groupType] = [];
+            groups[groupType].push(reward);
         }
 
-        // For other categories, just wrap rewards
-        return rewards.map(reward => ({ isSeparator: false, reward }));
+        // Get the appropriate type info based on category
+        const typeInfo = this.selectedCategory === CATEGORY.GUN ? GUN_TYPE_INFO : GROUP_TYPE_INFO;
+
+        // Sort groups by order and build result with separators
+        const result = [];
+        const sortedTypes = Object.keys(groups).sort((a, b) => {
+            const orderA = typeInfo[a]?.order ?? 99;
+            const orderB = typeInfo[b]?.order ?? 99;
+            return orderA - orderB;
+        });
+
+        for (const groupType of sortedTypes) {
+            const typeName = typeInfo[groupType]?.name || groupType;
+            const isCollapsed = this.collapsedGroups[groupType] === true;
+            const itemCount = groups[groupType].length;
+
+            // Add separator
+            result.push({
+                isSeparator: true,
+                separatorName: typeName,
+                groupType: groupType,
+                isCollapsed: isCollapsed,
+                itemCount: itemCount
+            });
+
+            // Add items only if not collapsed
+            if (!isCollapsed) {
+                for (const reward of groups[groupType]) {
+                    result.push({ isSeparator: false, reward });
+                }
+            }
+        }
+        return result;
     }
 
     update(game) {
@@ -427,10 +426,10 @@ export class ShopMenu {
             }
 
             // Handle separator click - toggle collapse
-            if (clickedSeparator && clickedSeparator.gunType) {
+            if (clickedSeparator && clickedSeparator.groupType) {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
-                this.collapsedGroups[clickedSeparator.gunType] = !this.collapsedGroups[clickedSeparator.gunType];
+                this.collapsedGroups[clickedSeparator.groupType] = !this.collapsedGroups[clickedSeparator.groupType];
             }
             // Handle item click
             else if (clickedItem) {

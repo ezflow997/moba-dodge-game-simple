@@ -167,15 +167,24 @@ export class Bullets {
                     if(this.bulletsSpawned == true && this.bulletsHitTarget == false){
                         for(let i = this.bulletsList.length - 1; i >= 0; i--){
                             const bullet = this.bulletsList[i];
+
+                            // Always update and check collision first
+                            if (!bullet.destroy && !bullet.enemyCollision) {
+                                bullet.update(homingTargets);
+                                bullet.checkCollision(enemies.enemiesList, this.onChain.bind(this));
+                            }
+
+                            // Now handle destroy/collision states
                             if(bullet.destroy == true || bullet.enemyCollision == true){
                                 if(bullet.enemyCollision == true){
                                     // Check if bullet type should be independent (not clear all on hit)
                                     const independentTypes = ['shotgun', 'nova', 'twin', 'homing', 'ricochet', 'piercing'];
                                     const isIndependent = independentTypes.includes(bullet.gunType || bullet.bulletType);
 
-                                    // For piercing bullets, don't clear - just mark hit and continue
-                                    if (bullet.pierceCount > 0) {
+                                    // For piercing bullets with pierce remaining, continue
+                                    if (bullet.gunType === 'piercing' && bullet.pierceCount > 0) {
                                         bullet.enemyCollision = false;
+                                        // Continue to next bullet, this one keeps moving
                                     // For ricochet bullets with bounces remaining, continue bouncing
                                     } else if (bullet.gunType === 'ricochet' && bullet.bouncesRemaining > 0) {
                                         bullet.enemyCollision = false;
@@ -194,10 +203,6 @@ export class Bullets {
                                     this.bulletsList.splice(i,1);
                                 }
                             }
-                            else{
-                                bullet.update(homingTargets);
-                                bullet.checkCollision(enemies.enemiesList, this.onChain.bind(this));
-                            }
                         }
                     }
                     else if(this.bulletsSpawned == false && this.bulletsSpawnCount > 0 && this.bulletsList.length > 0 && this.bulletsHitTarget == false){
@@ -205,29 +210,40 @@ export class Bullets {
                         for(let i = max - 1; i >= 0; i--){
                             const bullet = this.bulletsList[i];
                             if(!bullet) continue;
-                            if(bullet.enemyCollision == true){
-                                // Check if bullet type should be independent (not clear all on hit)
-                                const independentTypes = ['shotgun', 'nova', 'twin', 'homing', 'ricochet', 'piercing'];
-                                const isIndependent = independentTypes.includes(bullet.gunType || bullet.bulletType);
 
-                                if (bullet.pierceCount > 0) {
-                                    bullet.enemyCollision = false;
-                                // For ricochet bullets with bounces remaining, continue bouncing
-                                } else if (bullet.gunType === 'ricochet' && bullet.bouncesRemaining > 0) {
-                                    bullet.enemyCollision = false;
-                                } else if (isIndependent) {
-                                    // Independent bullets: remove only this bullet
-                                    this.bulletsList.splice(i, 1);
-                                } else {
-                                    // Single-target weapons: clear all bullets
-                                    this.bulletsList = [];
-                                    this.bulletsHitTarget = true;
-                                    break;
-                                }
-                            }
-                            else{
+                            // Always update and check collision first
+                            if (!bullet.destroy && !bullet.enemyCollision) {
                                 bullet.update(homingTargets);
                                 bullet.checkCollision(enemies.enemiesList, this.onChain.bind(this));
+                            }
+
+                            // Now handle collision states
+                            if(bullet.destroy == true || bullet.enemyCollision == true){
+                                if(bullet.enemyCollision == true){
+                                    // Check if bullet type should be independent (not clear all on hit)
+                                    const independentTypes = ['shotgun', 'nova', 'twin', 'homing', 'ricochet', 'piercing'];
+                                    const isIndependent = independentTypes.includes(bullet.gunType || bullet.bulletType);
+
+                                    // For piercing bullets with pierce remaining, continue
+                                    if (bullet.gunType === 'piercing' && bullet.pierceCount > 0) {
+                                        bullet.enemyCollision = false;
+                                    // For ricochet bullets with bounces remaining, continue bouncing
+                                    } else if (bullet.gunType === 'ricochet' && bullet.bouncesRemaining > 0) {
+                                        bullet.enemyCollision = false;
+                                    } else if (isIndependent) {
+                                        // Independent bullets: remove only this bullet
+                                        this.bulletsList.splice(i, 1);
+                                    } else {
+                                        // Single-target weapons: clear all bullets
+                                        this.bulletsList = [];
+                                        this.bulletsHitTarget = true;
+                                        break;
+                                    }
+                                }
+                                else if(bullet.destroy == true){
+                                    enemies.hitStreak = 0;
+                                    this.bulletsList.splice(i, 1);
+                                }
                             }
                         }
                     }
