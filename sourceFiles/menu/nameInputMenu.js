@@ -130,6 +130,10 @@ export class NameInputMenu {
 
         // Handle escape - cancel without submitting
         if (e.key === 'Escape') {
+            // Consume the game's escape flag to prevent pause menu from opening
+            if (window.game && window.game.input) {
+                window.game.input.escapePressed = false;
+            }
             this.hide();
             if (this.onSubmit) this.onSubmit(null); // Signal cancelled
             e.preventDefault();

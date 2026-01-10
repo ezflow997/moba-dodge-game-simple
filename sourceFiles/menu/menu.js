@@ -334,6 +334,9 @@ export class Menu{
 
         // Display player scores panel in center
         this.drawScoresPanel(context, game, titleX, rX, rY);
+
+        // Draw ESC hint at bottom of screen
+        this.super.drawGlowText(context, 80, 1400, "Press ESC for Settings", 22, '#666666', '#444444', 3);
     }
 
     /**

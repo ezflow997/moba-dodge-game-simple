@@ -650,8 +650,8 @@ window.addEventListener('load', function () {
 				window.gameSound.playMenuMusic();
 			}
 
-			// Check for pause menu toggle in main menu (not when leaderboard or ranked menu is open)
-			if(game.input.escapePressed && !game.pauseMenu.isPaused && !game.leaderboardMenu.isVisible && !game.rankedMenu.isVisible && !game.pauseMenu.waitingForKey) {
+			// Check for pause menu toggle in main menu (not when leaderboard, ranked menu, or name input is open)
+			if(game.input.escapePressed && !game.pauseMenu.isPaused && !game.leaderboardMenu.isVisible && !game.rankedMenu.isVisible && !game.nameInputMenu.isVisible && !game.pauseMenu.waitingForKey) {
 				game.pauseMenu.toggle(true); // Pass true to indicate we're in main menu
 				game.input.escapePressed = false;
 			}
