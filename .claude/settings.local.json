@@ -16,7 +16,8 @@
       "Bash(node --check:*)",
       "Bash(vercel --prod:*)",
       "Bash(npm run deploy:*)",
-      "Bash(node -e:*)"
+      "Bash(node -e:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }

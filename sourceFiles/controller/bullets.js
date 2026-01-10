@@ -205,8 +205,9 @@ export class Bullets {
                                     }
                                 }
                                 else if(bullet.destroy == true){
-                                    // Don't reset streak for rapidfire misses
-                                    if (bullet.gunType !== 'rapidfire') {
+                                    // Don't reset streak if bullet hit enemies or is rapidfire
+                                    const hitEnemies = bullet.piercedEnemies && bullet.piercedEnemies.size > 0;
+                                    if (bullet.gunType !== 'rapidfire' && !hitEnemies) {
                                         enemies.hitStreak = 0;
                                     }
                                     this.bulletsList.splice(i,1);
@@ -250,8 +251,9 @@ export class Bullets {
                                     }
                                 }
                                 else if(bullet.destroy == true){
-                                    // Don't reset streak for rapidfire misses
-                                    if (bullet.gunType !== 'rapidfire') {
+                                    // Don't reset streak if bullet hit enemies or is rapidfire
+                                    const hitEnemies = bullet.piercedEnemies && bullet.piercedEnemies.size > 0;
+                                    if (bullet.gunType !== 'rapidfire' && !hitEnemies) {
                                         enemies.hitStreak = 0;
                                     }
                                     this.bulletsList.splice(i, 1);
@@ -325,8 +327,9 @@ export class Bullets {
                             this.bulletsList.splice(i, 1);
                         }
                     } else if (bullet.destroy) {
-                        // Bullet missed - rapidfire doesn't reset streak, others do
-                        if (bullet.gunType !== 'rapidfire') {
+                        // Don't reset streak if bullet hit enemies or is rapidfire
+                        const hitEnemies = bullet.piercedEnemies && bullet.piercedEnemies.size > 0;
+                        if (bullet.gunType !== 'rapidfire' && !hitEnemies) {
                             enemies.hitStreak = 0;
                         }
                         this.bulletsList.splice(i, 1);
