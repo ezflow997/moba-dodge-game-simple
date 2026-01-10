@@ -17,7 +17,7 @@ export class LeaderboardMenu {
         this.showChampionsView = false;
         this.championsData = [];
         this.championsPage = 1;
-        this.championsPerPage = 8;
+        this.championsPerPage = 6;
 
         this.leaderboardData = [];
         this.isLoading = false;
@@ -74,8 +74,8 @@ export class LeaderboardMenu {
         this.refreshButton = new Button(900, 1060, 280, 70, "Refresh", 40, 60, 50, false, true, 'white', 'white');
         this.backButton = new Button(1380, 1060, 280, 70, "Back", 40, 80, 50, false, true, 'white', 'white');
 
-        // Champions toggle button (for ranked mode) - positioned next to title with golden styling
-        this.championsToggleButton = new Button(1680, 220, 200, 60, "Hall of Fame", 24, 20, 42, false, true, '#ffd700', '#ffd700');
+        // Champions toggle button (for ranked mode) - positioned with padding from panel edge
+        this.championsToggleButton = new Button(1620, 220, 200, 60, "Hall of Fame", 24, 20, 42, false, true, '#ffd700', '#ffd700');
     }
 
     async show(initialDifficulty = 0) {
@@ -402,69 +402,84 @@ export class LeaderboardMenu {
             }
         }
 
-        // First page
-        this.firstPageButton.update(inX, inY);
-        if (this.firstPageButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
-            this.clicked = true;
-            if (this.showChampionsView) {
-                if (this.championsPage > 1) {
-                    if (window.gameSound) window.gameSound.playMenuClick();
-                    this.championsPage = 1;
-                }
-            } else if (this.currentPage > 1) {
-                if (window.gameSound) window.gameSound.playMenuClick();
-                this.currentPage = 1;
-                this.loadLeaderboard();
-            }
-        }
+        // Pagination - different handling for champions view vs regular leaderboard
+        if (this.showChampionsView) {
+            // Custom pagination for champions (simpler prev/next)
+            const paginationY = 920;
+            const prevX = 1050;
+            const nextX = 1350;
+            const btnW = 80;
+            const btnH = 50;
 
-        // Previous page
-        this.prevPageButton.update(inX, inY);
-        if (this.prevPageButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
-            this.clicked = true;
-            if (this.showChampionsView) {
-                if (this.championsPage > 1) {
-                    if (window.gameSound) window.gameSound.playMenuClick();
-                    this.championsPage--;
-                }
-            } else if (this.currentPage > 1) {
-                if (window.gameSound) window.gameSound.playMenuClick();
-                this.currentPage--;
-                this.loadLeaderboard();
-            }
-        }
+            const totalChampionPages = Math.ceil(this.championsData.length / this.championsPerPage);
 
-        // Next page
-        this.nextPageButton.update(inX, inY);
-        if (this.nextPageButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
-            this.clicked = true;
-            if (this.showChampionsView) {
-                const totalChampionPages = Math.ceil(this.championsData.length / this.championsPerPage);
-                if (this.championsPage < totalChampionPages) {
-                    if (window.gameSound) window.gameSound.playMenuClick();
-                    this.championsPage++;
+            // Check prev button click
+            if (inX >= prevX * rX && inX <= (prevX + btnW) * rX &&
+                inY >= paginationY * rY && inY <= (paginationY + btnH) * rY) {
+                if (game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                    this.clicked = true;
+                    if (this.championsPage > 1) {
+                        if (window.gameSound) window.gameSound.playMenuClick();
+                        this.championsPage--;
+                    }
                 }
-            } else if (this.currentPage < this.totalPages) {
-                if (window.gameSound) window.gameSound.playMenuClick();
-                this.currentPage++;
-                this.loadLeaderboard();
             }
-        }
 
-        // Last page
-        this.lastPageButton.update(inX, inY);
-        if (this.lastPageButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
-            this.clicked = true;
-            if (this.showChampionsView) {
-                const totalChampionPages = Math.ceil(this.championsData.length / this.championsPerPage);
-                if (this.championsPage < totalChampionPages) {
-                    if (window.gameSound) window.gameSound.playMenuClick();
-                    this.championsPage = totalChampionPages;
+            // Check next button click
+            if (inX >= nextX * rX && inX <= (nextX + btnW) * rX &&
+                inY >= paginationY * rY && inY <= (paginationY + btnH) * rY) {
+                if (game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                    this.clicked = true;
+                    if (this.championsPage < totalChampionPages) {
+                        if (window.gameSound) window.gameSound.playMenuClick();
+                        this.championsPage++;
+                    }
                 }
-            } else if (this.currentPage < this.totalPages) {
-                if (window.gameSound) window.gameSound.playMenuClick();
-                this.currentPage = this.totalPages;
-                this.loadLeaderboard();
+            }
+        } else {
+            // Regular leaderboard pagination
+            // First page
+            this.firstPageButton.update(inX, inY);
+            if (this.firstPageButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (this.currentPage > 1) {
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    this.currentPage = 1;
+                    this.loadLeaderboard();
+                }
+            }
+
+            // Previous page
+            this.prevPageButton.update(inX, inY);
+            if (this.prevPageButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (this.currentPage > 1) {
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    this.currentPage--;
+                    this.loadLeaderboard();
+                }
+            }
+
+            // Next page
+            this.nextPageButton.update(inX, inY);
+            if (this.nextPageButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (this.currentPage < this.totalPages) {
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    this.currentPage++;
+                    this.loadLeaderboard();
+                }
+            }
+
+            // Last page
+            this.lastPageButton.update(inX, inY);
+            if (this.lastPageButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (this.currentPage < this.totalPages) {
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    this.currentPage = this.totalPages;
+                    this.loadLeaderboard();
+                }
             }
         }
 
@@ -949,55 +964,67 @@ export class LeaderboardMenu {
         this.drawChampionsPagination(context, rX, rY, totalChampions, totalChampionPages);
     }
 
-    // Draw pagination controls for champions view
+    // Draw simplified pagination controls for champions view (just prev/next)
     drawChampionsPagination(context, rX, rY, totalChampions, totalPages) {
-        // First page button
-        if (this.championsPage > 1) {
-            this.firstPageButton.draw(context);
-        } else {
-            context.save();
-            context.globalAlpha = 0.3;
-            this.firstPageButton.draw(context);
-            context.restore();
+        const paginationY = 920;
+
+        // Only show pagination if more than 1 page
+        if (totalPages <= 1) {
+            // Just show total count centered
+            const totalText = `${totalChampions} seasons`;
+            this.super.drawGlowText(context, 1220, paginationY, totalText, 24, '#ffd700', '#ffaa00', 4);
+            return;
         }
 
-        // Previous page button
+        // Previous page button (draw manually for custom position)
+        const prevX = 1050;
+        const btnW = 80;
+        const btnH = 50;
+
+        context.save();
         if (this.championsPage > 1) {
-            this.prevPageButton.draw(context);
+            context.fillStyle = 'rgba(255, 215, 0, 0.2)';
+            context.strokeStyle = '#ffd700';
         } else {
-            context.save();
             context.globalAlpha = 0.3;
-            this.prevPageButton.draw(context);
-            context.restore();
+            context.fillStyle = 'rgba(100, 100, 100, 0.2)';
+            context.strokeStyle = '#666666';
         }
+        context.fillRect(prevX * rX, paginationY * rY, btnW * rX, btnH * rY);
+        context.lineWidth = 2 * rX;
+        context.strokeRect(prevX * rX, paginationY * rY, btnW * rX, btnH * rY);
+        context.restore();
 
-        // Total champions count
-        const totalText = `${totalChampions} total seasons`;
-        this.super.drawGlowText(context, 1220, 955, totalText, 24, '#ffd700', '#ffaa00', 4);
+        const prevColor = this.championsPage > 1 ? '#ffd700' : '#666666';
+        this.super.drawGlowText(context, prevX + 25, paginationY + 38, "<", 36, prevColor, prevColor, 6);
 
-        // Page indicator
-        const pageText = `Page ${this.championsPage} of ${totalPages}`;
-        this.super.drawGlowText(context, 1200, 1010, pageText, 32, '#ffffff', '#ffd700', 6);
+        // Page indicator in center
+        const pageText = `${this.championsPage} / ${totalPages}`;
+        this.super.drawGlowText(context, 1200, paginationY + 38, pageText, 28, '#ffffff', '#ffd700', 6);
 
         // Next page button
-        if (this.championsPage < totalPages) {
-            this.nextPageButton.draw(context);
-        } else {
-            context.save();
-            context.globalAlpha = 0.3;
-            this.nextPageButton.draw(context);
-            context.restore();
-        }
+        const nextX = 1350;
 
-        // Last page button
+        context.save();
         if (this.championsPage < totalPages) {
-            this.lastPageButton.draw(context);
+            context.fillStyle = 'rgba(255, 215, 0, 0.2)';
+            context.strokeStyle = '#ffd700';
         } else {
-            context.save();
             context.globalAlpha = 0.3;
-            this.lastPageButton.draw(context);
-            context.restore();
+            context.fillStyle = 'rgba(100, 100, 100, 0.2)';
+            context.strokeStyle = '#666666';
         }
+        context.fillRect(nextX * rX, paginationY * rY, btnW * rX, btnH * rY);
+        context.lineWidth = 2 * rX;
+        context.strokeRect(nextX * rX, paginationY * rY, btnW * rX, btnH * rY);
+        context.restore();
+
+        const nextColor = this.championsPage < totalPages ? '#ffd700' : '#666666';
+        this.super.drawGlowText(context, nextX + 25, paginationY + 38, ">", 36, nextColor, nextColor, 6);
+
+        // Total count below
+        const totalText = `${totalChampions} total seasons`;
+        this.super.drawGlowText(context, 1180, paginationY + 80, totalText, 22, '#888888', '#666666', 4);
     }
 
     // Format season month (e.g., "2025-01" -> "January 2025")
