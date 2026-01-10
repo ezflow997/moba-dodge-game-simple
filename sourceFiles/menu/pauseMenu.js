@@ -218,6 +218,8 @@ export class PauseMenu {
                 this.waitingForKey = null;
                 this.showKeybinds = false;
                 this.updateKeybindButtons();
+                // Clear escapePressed so main.js doesn't also close the pause menu
+                input.escapePressed = false;
                 return;
             }
             

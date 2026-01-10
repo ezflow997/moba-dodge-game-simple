@@ -147,7 +147,7 @@ export class Menu{
                 // Fetch shop inventory and show loadout menu
                 game.supabase.getShopData(game.playerName).then(data => {
                     game.loadoutMenu.setInventory(data.inventory || {});
-                    game.loadoutMenu.show();
+                    game.loadoutMenu.show(game.playerName);
                 });
             } else {
                 // Not logged in - start game directly

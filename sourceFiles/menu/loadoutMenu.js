@@ -410,13 +410,17 @@ export class LoadoutMenu {
         this.clearButton.y = refPanelTop + 45;
         this.clearButton.update(inX, inY);
 
-        // Position preset buttons (next to Selected header)
-        this.savePresetButton.x = refCenterX + 200;
-        this.savePresetButton.y = refPanelTop + 45;
+        // Position preset buttons (in Selected header area)
+        this.savePresetButton.x = refCenterX + 280;
+        this.savePresetButton.y = refPanelTop + 105;
+        this.savePresetButton.w = 100;
+        this.savePresetButton.h = 32;
         this.savePresetButton.update(inX, inY);
 
-        this.loadPresetButton.x = refCenterX + 200 + 140;
-        this.loadPresetButton.y = refPanelTop + 45;
+        this.loadPresetButton.x = refCenterX + 390;
+        this.loadPresetButton.y = refPanelTop + 105;
+        this.loadPresetButton.w = 100;
+        this.loadPresetButton.h = 32;
         this.loadPresetButton.update(inX, inY);
 
         // Handle preset menu interactions first if open
@@ -619,10 +623,10 @@ export class LoadoutMenu {
 
     updatePresetMenu(game, inX, inY, clicking, rX, rY, refCenterX, refPanelTop) {
         // Preset menu dimensions
-        const menuW = 350;
-        const menuH = this.presetMenuMode === 'save' ? 180 : Math.min(400, 100 + this.getSavedPresets().length * 50);
+        const menuW = 320;
+        const menuH = this.presetMenuMode === 'save' ? 180 : Math.min(350, 100 + this.getSavedPresets().length * 50);
         const menuX = refCenterX + 200;
-        const menuY = refPanelTop + 90;
+        const menuY = refPanelTop + 145;
 
         // Convert to screen coords
         const menuXPx = menuX * rX;
@@ -784,7 +788,180 @@ export class LoadoutMenu {
         this.cancelButton.draw(context);
         this.clearButton.draw(context);
 
+        // Draw preset buttons
+        this.drawPresetButton(context, this.savePresetButton, rX, rY, this.selectedRewards.length === 0);
+        this.drawPresetButton(context, this.loadPresetButton, rX, rY, false);
+
+        // Draw preset menu if open
+        if (this.showPresetMenu) {
+            this.drawPresetMenu(context, rX, rY, panelX, panelY);
+        }
+
         context.restore();
+    }
+
+    drawPresetButton(context, button, rX, rY, disabled) {
+        const bx = button.x * rX;
+        const by = button.y * rY;
+        const bw = button.w * rX;
+        const bh = button.h * rY;
+
+        context.beginPath();
+        context.roundRect(bx, by, bw, bh, 6 * rX);
+
+        if (disabled) {
+            context.fillStyle = 'rgba(30, 30, 40, 0.6)';
+            context.fill();
+            context.strokeStyle = '#444444';
+        } else if (button.isHovered) {
+            context.fillStyle = 'rgba(255, 170, 0, 0.2)';
+            context.fill();
+            context.strokeStyle = '#ffaa00';
+        } else {
+            context.fillStyle = 'rgba(40, 50, 70, 0.8)';
+            context.fill();
+            context.strokeStyle = '#ffaa00';
+        }
+        context.lineWidth = 1.5 * rX;
+        context.stroke();
+
+        context.font = `${14 * rX}px Arial`;
+        context.textAlign = 'center';
+        context.fillStyle = disabled ? '#666666' : (button.isHovered ? '#ffcc44' : '#ffaa00');
+        context.fillText(button.text, bx + bw / 2, by + bh / 2 + 5 * rY);
+    }
+
+    drawPresetMenu(context, rX, rY, panelX, panelY) {
+        const refCenterX = 1280;
+        const refPanelTop = 720 - 400;
+
+        const menuW = 320;
+        const presets = this.getSavedPresets();
+        const menuH = this.presetMenuMode === 'save' ? 180 : Math.max(120, 60 + presets.length * 50);
+        const menuX = refCenterX + 200;
+        const menuY = refPanelTop + 145;
+
+        const mx = menuX * rX;
+        const my = menuY * rY;
+        const mw = menuW * rX;
+        const mh = menuH * rY;
+
+        // Menu background
+        context.beginPath();
+        context.roundRect(mx, my, mw, mh, 10 * rX);
+        context.fillStyle = 'rgba(15, 25, 40, 0.98)';
+        context.fill();
+        context.strokeStyle = '#ffaa00';
+        context.lineWidth = 2 * rX;
+        context.stroke();
+
+        // Title
+        context.font = `bold ${18 * rX}px Arial`;
+        context.textAlign = 'center';
+        context.fillStyle = '#ffaa00';
+        const title = this.presetMenuMode === 'save' ? 'Save Preset' : 'Load Preset';
+        context.fillText(title, mx + mw / 2, my + 30 * rY);
+
+        if (this.presetMenuMode === 'save') {
+            // Input field
+            const inputX = mx + 20 * rX;
+            const inputY = my + 50 * rY;
+            const inputW = mw - 40 * rX;
+            const inputH = 40 * rY;
+
+            context.beginPath();
+            context.roundRect(inputX, inputY, inputW, inputH, 5 * rX);
+            context.fillStyle = 'rgba(0, 0, 0, 0.4)';
+            context.fill();
+            context.strokeStyle = '#666666';
+            context.lineWidth = 1 * rX;
+            context.stroke();
+
+            context.font = `${16 * rX}px Arial`;
+            context.textAlign = 'left';
+            context.fillStyle = '#ffffff';
+            context.fillText(this.presetNameInput + '_', inputX + 10 * rX, inputY + 26 * rY);
+
+            // Save button
+            const btnX = mx + 20 * rX;
+            const btnY = my + 110 * rY;
+            const btnW = mw - 40 * rX;
+            const btnH = 40 * rY;
+
+            context.beginPath();
+            context.roundRect(btnX, btnY, btnW, btnH, 5 * rX);
+            context.fillStyle = 'rgba(0, 255, 170, 0.2)';
+            context.fill();
+            context.strokeStyle = '#00ffaa';
+            context.lineWidth = 1.5 * rX;
+            context.stroke();
+
+            context.font = `bold ${16 * rX}px Arial`;
+            context.textAlign = 'center';
+            context.fillStyle = '#00ffaa';
+            context.fillText('Save', mx + mw / 2, btnY + 26 * rY);
+
+            // Hint text
+            context.font = `${12 * rX}px Arial`;
+            context.fillStyle = '#888888';
+            context.fillText('Press Enter to save', mx + mw / 2, my + 170 * rY);
+        } else {
+            // Load mode - show preset list
+            if (presets.length === 0) {
+                context.font = `${16 * rX}px Arial`;
+                context.textAlign = 'center';
+                context.fillStyle = '#888888';
+                context.fillText('No saved presets', mx + mw / 2, my + 70 * rY);
+                context.font = `${14 * rX}px Arial`;
+                context.fillText('Save a loadout first!', mx + mw / 2, my + 95 * rY);
+            } else {
+                const itemH = 50 * rY;
+                const listStartY = my + 50 * rY;
+
+                for (let i = 0; i < presets.length; i++) {
+                    const preset = presets[i];
+                    const itemY = listStartY + i * itemH;
+                    const isHovered = this.hoveredPresetIndex === i;
+
+                    // Item background
+                    context.beginPath();
+                    context.roundRect(mx + 10 * rX, itemY, mw - 20 * rX, itemH - 5 * rY, 5 * rX);
+                    context.fillStyle = isHovered ? 'rgba(255, 170, 0, 0.15)' : 'rgba(40, 50, 70, 0.5)';
+                    context.fill();
+                    context.strokeStyle = isHovered ? '#ffaa00' : '#555555';
+                    context.lineWidth = 1 * rX;
+                    context.stroke();
+
+                    // Preset name
+                    context.font = `${15 * rX}px Arial`;
+                    context.textAlign = 'left';
+                    context.fillStyle = isHovered ? '#ffcc44' : '#ffffff';
+                    context.fillText(preset.name, mx + 20 * rX, itemY + 22 * rY);
+
+                    // Item count
+                    const { validIds } = this.validatePreset(preset);
+                    context.font = `${12 * rX}px Arial`;
+                    context.fillStyle = '#888888';
+                    context.fillText(`${validIds.length} items`, mx + 20 * rX, itemY + 38 * rY);
+
+                    // Delete button (X)
+                    const delX = mx + mw - 45 * rX;
+                    const delY = itemY + 10 * rY;
+                    const delW = 25 * rX;
+                    const delH = 25 * rY;
+
+                    context.beginPath();
+                    context.roundRect(delX, delY, delW, delH, 3 * rX);
+                    context.fillStyle = isHovered ? 'rgba(255, 100, 100, 0.3)' : 'rgba(100, 50, 50, 0.3)';
+                    context.fill();
+
+                    context.font = `bold ${14 * rX}px Arial`;
+                    context.textAlign = 'center';
+                    context.fillStyle = isHovered ? '#ff6666' : '#aa6666';
+                    context.fillText('X', delX + delW / 2, delY + 18 * rY);
+                }
+            }
+        }
     }
 
     drawCategoryTabs(context, rX, rY, panelX, panelY) {

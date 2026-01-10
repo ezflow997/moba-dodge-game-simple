@@ -14,6 +14,7 @@ export class InputHandler {
 
         this.escapePressed = false;
         this.tabPressed = false;
+        this.lastKey = null; // For text input in menus
 
         this.keysList = [
             'Shift',
@@ -58,6 +59,9 @@ export class InputHandler {
 
         window.addEventListener('keydown', ev => {
             //console.log(ev);
+            // Track last key for text input in menus
+            this.lastKey = ev.key;
+
             if(ev.key == 'Escape'){
                 this.escapePressed = true;
             }
@@ -68,8 +72,8 @@ export class InputHandler {
             if(ev.key == 'q'){
                 this.q_key++;
             }
-            if(this.keysList.indexOf(ev.key) == -1 && 
-            this.buttons.indexOf(ev.key) == -1 && 
+            if(this.keysList.indexOf(ev.key) == -1 &&
+            this.buttons.indexOf(ev.key) == -1 &&
             this.typingInformation == false){
                 this.buttons.push(ev.key);
             }
