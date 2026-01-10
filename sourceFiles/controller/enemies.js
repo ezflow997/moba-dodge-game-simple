@@ -143,6 +143,7 @@ export class Enemies {
                             this.best_streak = this.hitStreak;
                         }
                         game.rewardManager.addScore(game, this.enemyScoreValue * this.hitStreak);
+                        game.rewardManager.onGunHit(); // Refund durability on hit
 
                         if(player.ePressed == true){
                             player.ePressedNow -= 500;
@@ -166,6 +167,7 @@ export class Enemies {
                         this.best_streak = this.hitStreak;
                     }
                     game.rewardManager.addScore(game, this.enemyScoreValue * this.hitStreak);
+                    game.rewardManager.onGunHit(); // Refund durability on hit
                 }
             }
 
@@ -277,6 +279,7 @@ export class Enemies {
                         }
                         this.enemiesTakenDown += 1;
                         game.rewardManager.addScore(game, this.enemyScoreValue * this.hitStreak);
+                        game.rewardManager.onGunHit(); // Refund durability on hit
                         this.bossTowardsScore = this.bossTowardsScore + this.enemyScoreValue;
                         if (window.gameSound) window.gameSound.playEnemyDeath();
                         if (game.effects) {

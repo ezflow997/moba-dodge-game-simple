@@ -175,6 +175,22 @@ export class RewardManager {
         // Default gun (slot 0) has infinite ammo, no decrease
     }
 
+    // Called when gun hits a target (refund some durability)
+    onGunHit() {
+        // Only refund if using upgrade slot (slot 1) with a gun
+        if (this.currentSlot === 1 && this.weaponSlots[1].gun) {
+            const gun = this.weaponSlots[1].gun;
+            const maxDurability = gun.durability;
+
+            // Refund 1 durability on hit, but don't exceed max
+            this.weaponSlots[1].durability = Math.min(
+                this.weaponSlots[1].durability + 1,
+                maxDurability
+            );
+            this.gunDurability = this.weaponSlots[1].durability;
+        }
+    }
+
     // Check if player can survive a hit (extra life or shield)
     canSurviveHit(isProjectile = false) {
         // Projectile shield first

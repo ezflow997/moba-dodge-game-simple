@@ -78,6 +78,7 @@ export class Bullets {
                         enemies.best_streak = enemies.hitStreak;
                     }
                     game.rewardManager.addScore(game, enemies.enemyScoreValue * enemies.hitStreak);
+                    game.rewardManager.onGunHit(); // Refund durability on hit
                     if (window.gameSound) window.gameSound.playEnemyDeath();
                     if (game.effects) {
                         game.effects.spawnBurst(target.x, target.y, 'enemyDeath');
