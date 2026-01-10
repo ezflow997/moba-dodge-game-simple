@@ -205,9 +205,10 @@ export class Bullets {
                                     }
                                 }
                                 else if(bullet.destroy == true){
-                                    // Don't reset streak if bullet hit enemies or is rapidfire
-                                    const hitEnemies = bullet.piercedEnemies && bullet.piercedEnemies.size > 0;
-                                    if (bullet.gunType !== 'rapidfire' && !hitEnemies) {
+                                    // Don't reset streak for multi-hit weapons (rapidfire, piercing, ricochet)
+                                    // These fire multiple bullets or hit multiple targets - individual misses shouldn't reset streak
+                                    const noStreakReset = ['rapidfire', 'piercing', 'ricochet'];
+                                    if (!noStreakReset.includes(bullet.gunType)) {
                                         enemies.hitStreak = 0;
                                     }
                                     this.bulletsList.splice(i,1);
@@ -251,9 +252,10 @@ export class Bullets {
                                     }
                                 }
                                 else if(bullet.destroy == true){
-                                    // Don't reset streak if bullet hit enemies or is rapidfire
-                                    const hitEnemies = bullet.piercedEnemies && bullet.piercedEnemies.size > 0;
-                                    if (bullet.gunType !== 'rapidfire' && !hitEnemies) {
+                                    // Don't reset streak for multi-hit weapons (rapidfire, piercing, ricochet)
+                                    // These fire multiple bullets or hit multiple targets - individual misses shouldn't reset streak
+                                    const noStreakReset = ['rapidfire', 'piercing', 'ricochet'];
+                                    if (!noStreakReset.includes(bullet.gunType)) {
                                         enemies.hitStreak = 0;
                                     }
                                     this.bulletsList.splice(i, 1);
@@ -327,9 +329,10 @@ export class Bullets {
                             this.bulletsList.splice(i, 1);
                         }
                     } else if (bullet.destroy) {
-                        // Don't reset streak if bullet hit enemies or is rapidfire
-                        const hitEnemies = bullet.piercedEnemies && bullet.piercedEnemies.size > 0;
-                        if (bullet.gunType !== 'rapidfire' && !hitEnemies) {
+                        // Don't reset streak for multi-hit weapons (rapidfire, piercing, ricochet)
+                        // These fire multiple bullets or hit multiple targets - individual misses shouldn't reset streak
+                        const noStreakReset = ['rapidfire', 'piercing', 'ricochet'];
+                        if (!noStreakReset.includes(bullet.gunType)) {
                             enemies.hitStreak = 0;
                         }
                         this.bulletsList.splice(i, 1);
