@@ -194,19 +194,21 @@ window.addEventListener('load', function () {
 				this.player.update(this.input, this);
 				
 				// Always update bullets/voidBolts so player can shoot
-				if(this.challenge_level == 0){
+				// Use bullets if normal mode OR if gun is equipped in challenging mode
+				const activeGun = this.rewardManager ? this.rewardManager.activeGun : null;
+				const useRegularBullets = this.challenge_level == 0 || activeGun != null;
+
+				if(useRegularBullets){
 					this.bullets.update(this.player, this.input, this.enemies, this);
-				}
-				else if(this.challenge_level == 1){
+				} else {
 					this.voidBolts.update(this.enemies, this);
 				}
-				
+
 				// Only update enemies and projectiles when NOT in test room
 				if(!this.testRoom.active) {
-					if(this.challenge_level == 0){
+					if(useRegularBullets){
 						this.enemies.update(this, this.player, this.bullets, msNow2);
-					}
-					else if(this.challenge_level == 1){
+					} else {
 						this.enemies.update(this, this.player, this.voidBolts, msNow2);
 					}
 					this.projectiles.update(this.player, this, msNow2);
@@ -253,10 +255,13 @@ window.addEventListener('load', function () {
 				}
 				
 				this.player.draw(context, this);
-				if(this.challenge_level == 0){
+				// Draw bullets if normal mode OR if gun is equipped in challenging mode
+				const activeGun = this.rewardManager ? this.rewardManager.activeGun : null;
+				const useRegularBullets = this.challenge_level == 0 || activeGun != null;
+
+				if(useRegularBullets){
 					this.bullets.draw(context);
-				}
-				else if(this.challenge_level == 1){
+				} else {
 					this.voidBolts.draw(context);
 				}
 				this.enemies.draw(context);

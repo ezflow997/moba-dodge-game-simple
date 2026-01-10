@@ -133,8 +133,11 @@ export class Player {
         const isRapidFire = activeGun && activeGun.gunType === 'rapidfire';
 
         if(input.buttons.indexOf(shootKey) > -1){
-            if(game.challenge_level == 0){
-                // Normal mode - regular bullets
+            // Use regular bullets if in normal mode OR if a gun is equipped in challenging mode
+            const useRegularBullets = game.challenge_level == 0 || activeGun != null;
+
+            if(useRegularBullets){
+                // Normal mode or equipped gun - regular bullets
                 // For rapid fire guns, allow continuous shooting when held (skip q_key check)
                 const canShoot = this.qPressed == false && this.qTriggered == true && (isRapidFire || input.q_key <= 30);
                 if(canShoot){
@@ -146,7 +149,7 @@ export class Player {
                     if (window.gameSound) window.gameSound.playShoot();
                 }
             } else {
-                // Vel'koz mode - void bolts
+                // Vel'koz mode without gun - void bolts
                 // Use q_key <= 30 check to prevent double-firing when cooldown resets while button held
                 if(this.qPressed == false && this.qTriggered == true && input.q_key <= 30){
                     input.q_key += 30; // Prevent immediate re-fire

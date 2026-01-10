@@ -303,7 +303,9 @@ export class SpecialBullet {
                 // Piercing - continue if we have pierce left
                 if (this.pierceCount > 0) {
                     this.pierceCount--;
-                    this.enemyCollision = true;
+                    // Mark enemy as hit so it gets killed
+                    enemy.bulletCollision = true;
+                    // Don't set enemyCollision - bullet continues without interruption (like ricochet)
 
                     // Chain lightning effect
                     if (this.chainsRemaining > 0 && onChain) {
