@@ -199,6 +199,20 @@ export class LoadoutMenu {
         return this.selectedRewards.filter(r => r.id === rewardId).length;
     }
 
+    // Extract base type from reward ID (e.g., 'shotgun_common' -> 'shotgun', 'q_cd_rare' -> 'q_cd')
+    getBaseType(rewardId) {
+        const parts = rewardId.split('_');
+        // Remove the rarity suffix (last part)
+        parts.pop();
+        return parts.join('_');
+    }
+
+    // Check if any tier of this buff type is already selected
+    hasBaseTypeSelected(rewardId) {
+        const baseType = this.getBaseType(rewardId);
+        return this.selectedRewards.some(r => this.getBaseType(r.id) === baseType);
+    }
+
     // Check if a gun is already selected
     hasGunSelected() {
         return this.selectedRewards.some(r => r.category === CATEGORY.GUN);
@@ -218,6 +232,9 @@ export class LoadoutMenu {
 
         // Only one gun can be selected at a time
         if (reward.category === CATEGORY.GUN && this.hasGunSelected()) return false;
+
+        // Cannot stack same buff type with different tiers
+        if (this.hasBaseTypeSelected(rewardId)) return false;
 
         // For non-permanent items, check quantity
         if (!data.permanentUnlock && data.quantity <= 0) return false;
@@ -406,20 +423,21 @@ export class LoadoutMenu {
         this.cancelButton.y = refPanelBottom - 90;
         this.cancelButton.update(inX, inY);
 
-        this.clearButton.x = refCenterX + 420;
+        this.clearButton.x = refCenterX + 200;
         this.clearButton.y = refPanelTop + 45;
+        this.clearButton.w = 100;
         this.clearButton.update(inX, inY);
 
-        // Position preset buttons (top row, left of Clear All)
-        this.savePresetButton.x = refCenterX + 205;
+        // Position preset buttons (next to Clear All)
+        this.savePresetButton.x = refCenterX + 310;
         this.savePresetButton.y = refPanelTop + 45;
-        this.savePresetButton.w = 90;
+        this.savePresetButton.w = 95;
         this.savePresetButton.h = 40;
         this.savePresetButton.update(inX, inY);
 
-        this.loadPresetButton.x = refCenterX + 305;
+        this.loadPresetButton.x = refCenterX + 415;
         this.loadPresetButton.y = refPanelTop + 45;
-        this.loadPresetButton.w = 90;
+        this.loadPresetButton.w = 95;
         this.loadPresetButton.h = 40;
         this.loadPresetButton.update(inX, inY);
 
@@ -625,8 +643,8 @@ export class LoadoutMenu {
         // Preset menu dimensions
         const menuW = 300;
         const menuH = this.presetMenuMode === 'save' ? 180 : Math.min(300, 100 + this.getSavedPresets().length * 50);
-        const menuX = refCenterX + 205;
-        const menuY = refPanelTop + 95;
+        const menuX = refCenterX + 200;
+        const menuY = refPanelTop + 90;
 
         // Convert to screen coords
         const menuXPx = menuX * rX;
@@ -838,8 +856,8 @@ export class LoadoutMenu {
         const menuW = 300;
         const presets = this.getSavedPresets();
         const menuH = this.presetMenuMode === 'save' ? 180 : Math.max(120, 60 + presets.length * 50);
-        const menuX = refCenterX + 205;
-        const menuY = refPanelTop + 95;
+        const menuX = refCenterX + 200;
+        const menuY = refPanelTop + 90;
 
         const mx = menuX * rX;
         const my = menuY * rY;
@@ -880,7 +898,7 @@ export class LoadoutMenu {
             context.font = `${16 * rX}px Arial`;
             context.textAlign = 'left';
             context.fillStyle = '#ffffff';
-            context.fillText(this.presetNameInput + '_', inputX + 10 * rX, inputY + 26 * rY);
+            context.fillText(this.presetNameInput, inputX + 10 * rX, inputY + 26 * rY);
 
             // Save button
             const btnX = mx + 20 * rX;
