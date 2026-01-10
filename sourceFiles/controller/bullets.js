@@ -113,12 +113,13 @@ export class Bullets {
                 const isIndependentGun = firstBullet && independentTypes.includes(firstBullet.gunType);
 
                 // For independent guns, allow cooldown to proceed once all bullets have spawned
-                // For other guns, wait until bullets are gone or hit target
-                const canProceed = this.bulletsList.length == 0 ||
-                                   this.bulletsHitTarget == true ||
-                                   (isIndependentGun && this.bulletsSpawned);
+                // but keep updating bullets until they're gone
+                if (isIndependentGun && this.bulletsSpawned && !this.bulletsDeSpawned) {
+                    this.bulletsDeSpawned = true;  // Allow cooldown to reset
+                }
 
-                if(canProceed){
+                // Standard completion check - bullets gone or hit target
+                if(this.bulletsList.length == 0 || this.bulletsHitTarget == true){
                     this.bulletsCreated = false;
                     this.bulletsSpawned = false;
                     this.bulletsDeSpawned = true;
