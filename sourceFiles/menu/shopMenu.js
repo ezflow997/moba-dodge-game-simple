@@ -510,7 +510,7 @@ export class ShopMenu {
         const gridLeft = panelX + 30 * rX;
         const gridTop = panelY + 150 * rY;
         const gridWidth = 950 * rX;
-        const gridHeight = panelH - 270 * rY;
+        const gridHeight = panelH - 250 * rY; // 150 top offset + 100 bottom offset
 
         // Clip region
         context.save();
