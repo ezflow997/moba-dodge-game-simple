@@ -120,7 +120,7 @@ export class Enemies {
 
                         // Check if using a multi-hit weapon (ricochet, piercing, rapidfire)
                         const activeGun = game.rewardManager ? game.rewardManager.activeGun : null;
-                        const isMultiHitGun = activeGun && (activeGun.gunType === 'ricochet' || activeGun.gunType === 'piercing' || activeGun.gunType === 'rapidfire');
+                        const isMultiHitGun = activeGun && (activeGun.gunType === 'ricochet' || activeGun.gunType === 'piercing' || activeGun.gunType === 'rapidfire' || activeGun.gunType === 'shotgun');
 
                         // Only clear bullets for single-hit weapons
                         if (!isMultiHitGun) {
@@ -167,7 +167,7 @@ export class Enemies {
 
                     // Check if using a multi-hit weapon
                     const activeGun = game.rewardManager ? game.rewardManager.activeGun : null;
-                    const isMultiHitGun = activeGun && (activeGun.gunType === 'ricochet' || activeGun.gunType === 'piercing' || activeGun.gunType === 'rapidfire');
+                    const isMultiHitGun = activeGun && (activeGun.gunType === 'ricochet' || activeGun.gunType === 'piercing' || activeGun.gunType === 'rapidfire' || activeGun.gunType === 'shotgun');
 
                     // Only clear bullets for single-hit weapons
                     if (!isMultiHitGun) {
@@ -287,7 +287,7 @@ export class Enemies {
 
                         // Check if using a multi-hit weapon (ricochet, piercing, rapidfire)
                         const activeGun = game.rewardManager ? game.rewardManager.activeGun : null;
-                        const isMultiHitGun = activeGun && (activeGun.gunType === 'ricochet' || activeGun.gunType === 'piercing' || activeGun.gunType === 'rapidfire');
+                        const isMultiHitGun = activeGun && (activeGun.gunType === 'ricochet' || activeGun.gunType === 'piercing' || activeGun.gunType === 'rapidfire' || activeGun.gunType === 'shotgun');
 
                         // Only clear all bullets for single-hit weapons
                         if (!isMultiHitGun) {

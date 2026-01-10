@@ -188,6 +188,35 @@ window.addEventListener('load', function () {
 					return;
 				}
 
+				// Check for weapon choice (pauses game while choosing)
+				if (this.rewardManager && this.rewardManager.showingWeaponChoice) {
+					// Handle 1/2 key input for choice
+					if (this.input.buttons.includes('1')) {
+						this.rewardManager.keepCurrentWeapon();
+						const idx = this.input.buttons.indexOf('1');
+						if (idx > -1) this.input.buttons.splice(idx, 1);
+					} else if (this.input.buttons.includes('2')) {
+						this.rewardManager.takeNewWeapon();
+						const idx = this.input.buttons.indexOf('2');
+						if (idx > -1) this.input.buttons.splice(idx, 1);
+					}
+
+					// Handle mouse click for choice
+					if (this.input.buttons.includes(0)) {  // Left mouse button
+						const choice = this.rewardManager.checkWeaponChoiceClick(this.input.mouseX, this.input.mouseY);
+						if (choice === 'keep') {
+							this.rewardManager.keepCurrentWeapon();
+						} else if (choice === 'swap') {
+							this.rewardManager.takeNewWeapon();
+						}
+						// Remove mouse button to prevent repeat
+						const idx = this.input.buttons.indexOf(0);
+						if (idx > -1) this.input.buttons.splice(idx, 1);
+					}
+
+					return; // Don't update game while choosing
+				}
+
 				if(msNow2 - this.msUpdate < 1000 / this.logic_fps) return;
 				this.msUpdate = window.performance.now();
 
@@ -269,6 +298,11 @@ window.addEventListener('load', function () {
 				this.effects.draw(context);
 				// Draw rewards (drops and on-player effects only)
 				this.rewardManager.draw(context, this.player);
+
+				// Draw weapon choice overlay if active
+				if (this.rewardManager.showingWeaponChoice) {
+					this.rewardManager.drawWeaponChoice(context);
+				}
 
 				// Draw unified PowerupHUD (abilities, weapon slots, active timers, permanent upgrades)
 				this.powerupHUD.draw(context, this);

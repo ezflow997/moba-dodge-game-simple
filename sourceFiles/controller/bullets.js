@@ -637,11 +637,12 @@ export class Bullets {
             bolt.draw(context);
         }
 
-        // Check if we have rapid fire bullets that should always be drawn
-        const hasRapidfireBullets = this.bulletsList.length > 0 &&
-            this.bulletsList.some(b => b && b.gunType === 'rapidfire');
+        // Check if we have independent bullets that should always be drawn
+        const independentDrawTypes = ['rapidfire', 'shotgun', 'ricochet', 'piercing', 'homing'];
+        const hasIndependentBullets = this.bulletsList.length > 0 &&
+            this.bulletsList.some(b => b && independentDrawTypes.includes(b.gunType));
 
-        if(this.bulletsSpawned == true || hasRapidfireBullets){
+        if(this.bulletsSpawned == true || hasIndependentBullets){
             // Draw all bullets (rapid fire bullets always get drawn)
             for(let i = 0; i < this.bulletsList.length; i++){
                 if (this.bulletsList[i]) {

@@ -61,6 +61,11 @@ export class RewardManager {
         this.loadoutWeaponIsPermanent = false;  // If true, unlimited reactivations
         this.loadoutWeaponUsesRemaining = 0;    // For single-use, how many uses left
         this.loadoutWeaponUsesConsumed = 0;     // Track how many were consumed this game
+
+        // Weapon choice state (when picking up weapon while having one)
+        this.pendingWeapon = null;          // The new weapon waiting to be chosen
+        this.showingWeaponChoice = false;   // Flag for UI and pause state
+        this.weaponChoiceAreas = { keep: null, swap: null };  // Clickable areas
     }
 
     reset() {
@@ -93,6 +98,9 @@ export class RewardManager {
         this.loadoutWeaponIsPermanent = false;
         this.loadoutWeaponUsesRemaining = 0;
         this.loadoutWeaponUsesConsumed = 0;
+        // Reset weapon choice state
+        this.pendingWeapon = null;
+        this.showingWeaponChoice = false;
     }
 
     // Add score with multiplier applied
@@ -129,6 +137,26 @@ export class RewardManager {
     // Check if upgrade slot has a weapon
     hasUpgradeWeapon() {
         return this.weaponSlots[1].gun !== null;
+    }
+
+    // Called when player chooses to keep current weapon (discard new one)
+    keepCurrentWeapon() {
+        this.pendingWeapon = null;
+        this.showingWeaponChoice = false;
+        this.addNotification('Kept current weapon', '#888888');
+    }
+
+    // Called when player chooses to take new weapon (replace current)
+    takeNewWeapon() {
+        if (this.pendingWeapon) {
+            this.weaponSlots[1].gun = this.pendingWeapon;
+            this.weaponSlots[1].durability = this.pendingWeapon.durability;
+            this.currentSlot = 1;
+            this.updateActiveGun();
+            this.addNotification(`${this.pendingWeapon.durability} shots - Press TAB to switch`, this.pendingWeapon.rarity.color);
+        }
+        this.pendingWeapon = null;
+        this.showingWeaponChoice = false;
     }
 
     // Get upgrade slot weapon info
@@ -175,11 +203,17 @@ export class RewardManager {
         // Default gun (slot 0) has infinite ammo, no decrease
     }
 
-    // Called when gun hits a target (refund some durability)
+    // Called when gun hits a target (refund some durability for rapidfire only)
     onGunHit() {
-        // Only refund if using upgrade slot (slot 1) with a gun
+        // Only refund if using upgrade slot (slot 1) with a rapidfire gun
         if (this.currentSlot === 1 && this.weaponSlots[1].gun) {
             const gun = this.weaponSlots[1].gun;
+
+            // Only rapidfire gets durability refund on hit
+            if (gun.gunType !== 'rapidfire') {
+                return;
+            }
+
             const maxDurability = gun.durability;
 
             // Refund 10 durability on hit, but don't exceed max
@@ -225,13 +259,20 @@ export class RewardManager {
         // Handle by category
         switch (reward.category) {
             case CATEGORY.GUN:
-                // Store gun in upgrade slot (slot 1)
-                this.weaponSlots[1].gun = reward;
-                this.weaponSlots[1].durability = reward.durability;
-                // Auto-switch to the new weapon
-                this.currentSlot = 1;
-                this.updateActiveGun();
-                this.addNotification(`${reward.durability} shots - Press TAB to switch`, reward.rarity.color);
+                // Check if player already has a weapon
+                if (this.hasUpgradeWeapon()) {
+                    // Store pending weapon and show choice UI
+                    this.pendingWeapon = reward;
+                    this.showingWeaponChoice = true;
+                } else {
+                    // No existing weapon - apply immediately
+                    this.weaponSlots[1].gun = reward;
+                    this.weaponSlots[1].durability = reward.durability;
+                    // Auto-switch to the new weapon
+                    this.currentSlot = 1;
+                    this.updateActiveGun();
+                    this.addNotification(`${reward.durability} shots - Press TAB to switch`, reward.rarity.color);
+                }
                 break;
 
             case CATEGORY.COOLDOWN:
@@ -838,6 +879,168 @@ export class RewardManager {
         }
 
         context.restore();
+    }
+
+    // Draw weapon choice overlay when picking up weapon while having one
+    drawWeaponChoice(context) {
+        if (!this.showingWeaponChoice || !this.pendingWeapon) return;
+
+        const rX = window.innerWidth / 2560;
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+
+        // Semi-transparent overlay
+        context.save();
+        context.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        context.fillRect(0, 0, window.innerWidth, window.innerHeight);
+
+        // Panel dimensions
+        const panelWidth = 600 * rX;
+        const panelHeight = 350 * rX;
+        const panelX = centerX - panelWidth / 2;
+        const panelY = centerY - panelHeight / 2;
+
+        // Panel background
+        context.fillStyle = 'rgba(20, 20, 30, 0.95)';
+        context.fillRect(panelX, panelY, panelWidth, panelHeight);
+
+        // Panel border
+        context.strokeStyle = '#00ffff';
+        context.lineWidth = 3 * rX;
+        context.shadowColor = '#00ffff';
+        context.shadowBlur = 15 * rX;
+        context.strokeRect(panelX, panelY, panelWidth, panelHeight);
+        context.shadowBlur = 0;
+
+        // Title
+        context.fillStyle = '#ffffff';
+        context.font = `bold ${28 * rX}px Arial`;
+        context.textAlign = 'center';
+        context.fillText('WEAPON DROP FOUND!', centerX, panelY + 45 * rX);
+
+        // Card dimensions
+        const cardWidth = 220 * rX;
+        const cardHeight = 200 * rX;
+        const cardY = panelY + 70 * rX;
+        const cardGap = 40 * rX;
+        const leftCardX = centerX - cardWidth - cardGap / 2;
+        const rightCardX = centerX + cardGap / 2;
+
+        // Current weapon card (clickable)
+        const currentGun = this.weaponSlots[1].gun;
+        const currentColor = currentGun.rarity.color;
+        this.drawWeaponCard(context, leftCardX, cardY, cardWidth, cardHeight, currentGun, this.weaponSlots[1].durability, currentColor, 'CURRENT', rX);
+
+        // New weapon card (clickable)
+        const newColor = this.pendingWeapon.rarity.color;
+        this.drawWeaponCard(context, rightCardX, cardY, cardWidth, cardHeight, this.pendingWeapon, this.pendingWeapon.durability, newColor, 'NEW', rX);
+
+        // Store clickable areas (entire card area)
+        this.weaponChoiceAreas.keep = { x: leftCardX, y: cardY, width: cardWidth, height: cardHeight + 50 * rX };
+        this.weaponChoiceAreas.swap = { x: rightCardX, y: cardY, width: cardWidth, height: cardHeight + 50 * rX };
+
+        // Button dimensions
+        const buttonWidth = cardWidth;
+        const buttonHeight = 40 * rX;
+        const buttonY = cardY + cardHeight + 10 * rX;
+
+        // Keep button
+        context.fillStyle = 'rgba(80, 80, 80, 0.9)';
+        context.fillRect(leftCardX, buttonY, buttonWidth, buttonHeight);
+        context.strokeStyle = '#888888';
+        context.lineWidth = 2 * rX;
+        context.strokeRect(leftCardX, buttonY, buttonWidth, buttonHeight);
+
+        context.fillStyle = '#ffffff';
+        context.font = `bold ${18 * rX}px Arial`;
+        context.textAlign = 'center';
+        context.fillText('[1] KEEP', leftCardX + buttonWidth / 2, buttonY + 27 * rX);
+
+        // Swap button
+        context.fillStyle = 'rgba(0, 100, 50, 0.9)';
+        context.fillRect(rightCardX, buttonY, buttonWidth, buttonHeight);
+        context.strokeStyle = '#00ff88';
+        context.lineWidth = 2 * rX;
+        context.strokeRect(rightCardX, buttonY, buttonWidth, buttonHeight);
+
+        context.fillStyle = '#ffffff';
+        context.fillText('[2] SWAP', rightCardX + buttonWidth / 2, buttonY + 27 * rX);
+
+        context.restore();
+    }
+
+    // Check if a click is on keep or swap button, returns 'keep', 'swap', or null
+    checkWeaponChoiceClick(mouseX, mouseY) {
+        if (!this.showingWeaponChoice) return null;
+
+        const keep = this.weaponChoiceAreas.keep;
+        const swap = this.weaponChoiceAreas.swap;
+
+        if (keep && mouseX >= keep.x && mouseX <= keep.x + keep.width &&
+            mouseY >= keep.y && mouseY <= keep.y + keep.height) {
+            return 'keep';
+        }
+
+        if (swap && mouseX >= swap.x && mouseX <= swap.x + swap.width &&
+            mouseY >= swap.y && mouseY <= swap.y + swap.height) {
+            return 'swap';
+        }
+
+        return null;
+    }
+
+    // Helper to draw a weapon card for the choice UI
+    drawWeaponCard(context, x, y, width, height, gun, durability, color, label, rX) {
+        // Card background
+        context.fillStyle = 'rgba(40, 40, 50, 0.9)';
+        context.fillRect(x, y, width, height);
+
+        // Card border with rarity color
+        context.strokeStyle = color;
+        context.lineWidth = 2 * rX;
+        context.shadowColor = color;
+        context.shadowBlur = 8 * rX;
+        context.strokeRect(x, y, width, height);
+        context.shadowBlur = 0;
+
+        // Label (CURRENT / NEW)
+        context.fillStyle = label === 'NEW' ? '#00ff88' : '#888888';
+        context.font = `bold ${14 * rX}px Arial`;
+        context.textAlign = 'center';
+        context.fillText(label, x + width / 2, y + 25 * rX);
+
+        // Weapon name
+        context.fillStyle = color;
+        context.font = `bold ${18 * rX}px Arial`;
+        context.fillText(gun.name, x + width / 2, y + 55 * rX);
+
+        // Rarity
+        context.fillStyle = color;
+        context.font = `${14 * rX}px Arial`;
+        context.fillText(gun.rarity.name, x + width / 2, y + 80 * rX);
+
+        // Durability
+        context.fillStyle = '#ffffff';
+        context.font = `${16 * rX}px Arial`;
+        context.fillText(`Durability: ${durability}`, x + width / 2, y + 115 * rX);
+
+        // Gun type
+        context.fillStyle = '#aaaaaa';
+        context.font = `${14 * rX}px Arial`;
+        const typeLabel = gun.gunType ? gun.gunType.charAt(0).toUpperCase() + gun.gunType.slice(1) : 'Basic';
+        context.fillText(`Type: ${typeLabel}`, x + width / 2, y + 145 * rX);
+
+        // Special stats based on gun type
+        context.fillStyle = '#88ffff';
+        context.font = `${12 * rX}px Arial`;
+        let specialStat = '';
+        if (gun.bulletCount) specialStat = `Bullets: ${gun.bulletCount}`;
+        else if (gun.bounceCount) specialStat = `Bounces: ${gun.bounceCount}`;
+        else if (gun.pierceCount) specialStat = `Pierce: ${gun.pierceCount}`;
+        else if (gun.chainCount) specialStat = `Chains: ${gun.chainCount}`;
+        if (specialStat) {
+            context.fillText(specialStat, x + width / 2, y + 170 * rX);
+        }
     }
 
     // Draw pistol icon for default slot
