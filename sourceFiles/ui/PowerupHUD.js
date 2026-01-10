@@ -49,9 +49,6 @@ export class PowerupHUD {
         const rewardManager = game.rewardManager;
         const pauseMenu = game.pauseMenu;
 
-        // Get control scheme for label display
-        const controlScheme = pauseMenu ? pauseMenu.controlScheme : 'mouse';
-
         // Calculate starting X position (from right edge)
         const weaponSlotsWidth = (this.weaponSlotWidth * 2 + this.gap) * rX;
         const abilitiesWidth = (this.abilitySize * 3 + this.gap * 2) * rX;
@@ -59,7 +56,7 @@ export class PowerupHUD {
         const startX = window.innerWidth - this.padding * rX - totalWidth;
 
         // Draw abilities (Q, E, F) on the left side of action bar
-        this.drawAbilities(ctx, player, rX, startX, y, controlScheme);
+        this.drawAbilities(ctx, player, rX, startX, y, pauseMenu);
 
         // Draw weapon slots on the right side
         const weaponX = startX + abilitiesWidth + this.gap * 2 * rX;
@@ -67,16 +64,45 @@ export class PowerupHUD {
     }
 
     /**
+     * Format key for display
+     */
+    formatKeyLabel(key) {
+        if (key === 0) return 'LMB';
+        if (key === 1) return 'MMB';
+        if (key === 2) return 'RMB';
+        if (key === 3) return 'M4';
+        if (key === 4) return 'M5';
+        if (typeof key === 'string') {
+            if (key === ' ') return 'Space';
+            return key.toUpperCase();
+        }
+        return String(key);
+    }
+
+    /**
      * Draw ability cooldown circles
      */
-    drawAbilities(ctx, player, rX, startX, y, controlScheme) {
+    drawAbilities(ctx, player, rX, startX, y, pauseMenu) {
         const size = this.abilitySize * rX;
         const centerY = y + size / 2;
 
-        // Labels based on control scheme
-        const labels = controlScheme === 'wasd'
-            ? { Q: 'LMB', E: 'E', F: 'F' }
-            : { Q: 'Q', E: 'E', F: 'F' };
+        // Get actual keybind labels from pause menu
+        let labels;
+        if (pauseMenu && pauseMenu.controlScheme === 'wasd') {
+            labels = {
+                Q: this.formatKeyLabel(pauseMenu.wasdKeys?.shoot ?? 0),
+                E: this.formatKeyLabel(pauseMenu.wasdKeys?.dash ?? 'e'),
+                F: this.formatKeyLabel(pauseMenu.wasdKeys?.ult ?? 'f')
+            };
+        } else if (pauseMenu) {
+            labels = {
+                Q: this.formatKeyLabel(pauseMenu.customKeys?.q ?? 'q'),
+                E: this.formatKeyLabel(pauseMenu.customKeys?.e ?? 'e'),
+                F: this.formatKeyLabel(pauseMenu.customKeys?.f ?? 'f')
+            };
+        } else {
+            labels = { Q: 'Q', E: 'E', F: 'F' };
+        }
 
         // Q Ability (Shoot)
         const qCenterX = startX + size / 2;
@@ -223,15 +249,12 @@ export class PowerupHUD {
      */
     drawPermanentUpgrades(ctx, game, rX, y) {
         const rewardManager = game.rewardManager;
-        const pauseMenu = game.pauseMenu;
-        const controlScheme = pauseMenu ? pauseMenu.controlScheme : 'mouse';
 
         const upgrades = [];
 
         // Collect permanent upgrades
         if (rewardManager.qCooldownMod !== 1) {
             const reduction = Math.round((1 - rewardManager.qCooldownMod) * 100);
-            const label = controlScheme === 'wasd' ? 'Shoot' : 'Q';
             upgrades.push({
                 icon: (ctx, x, y, s, c) => IconLibrary.drawAbilityIcon(ctx, x, y, s, 'Q', c),
                 color: '#00ffff',
