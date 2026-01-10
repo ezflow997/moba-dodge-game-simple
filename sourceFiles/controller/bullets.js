@@ -170,7 +170,7 @@ export class Bullets {
                             if(bullet.destroy == true || bullet.enemyCollision == true){
                                 if(bullet.enemyCollision == true){
                                     // Check if bullet type should be independent (not clear all on hit)
-                                    const independentTypes = ['shotgun', 'nova', 'twin', 'homing'];
+                                    const independentTypes = ['shotgun', 'nova', 'twin', 'homing', 'ricochet'];
                                     const isIndependent = independentTypes.includes(bullet.bulletType);
 
                                     // For piercing bullets, don't clear - just mark hit and continue
@@ -207,7 +207,7 @@ export class Bullets {
                             if(!bullet) continue;
                             if(bullet.enemyCollision == true){
                                 // Check if bullet type should be independent (not clear all on hit)
-                                const independentTypes = ['shotgun', 'nova', 'twin', 'homing'];
+                                const independentTypes = ['shotgun', 'nova', 'twin', 'homing', 'ricochet'];
                                 const isIndependent = independentTypes.includes(bullet.bulletType);
 
                                 if (bullet.pierceCount > 0) {
