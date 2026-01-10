@@ -600,7 +600,16 @@ export class PauseMenu {
         if (!this.showKeybinds && !this.showVolume) {
             // Check if in test room for extra button
             const inTestRoom = game.testRoom && game.testRoom.active;
-            const panelHeight = inTestRoom ? 700 : 610;
+            const devModeVisible = game.devMode && (this.devModeVisible || game.devMode.isEnabled());
+
+            // Calculate panel height based on visible buttons
+            // Base: Resume, Keybinds, Volume, Controls, Performance = 5 buttons
+            let buttonCount = 5;
+            if (devModeVisible) buttonCount++;  // Dev Mode button
+            if (inTestRoom) buttonCount++;      // Exit Test Room button
+            if (!inMainMenu) buttonCount++;     // Quit button
+
+            const panelHeight = 110 + (buttonCount * 85);  // Title area + buttons
 
             // Draw pause menu background
             context.save();
@@ -632,19 +641,26 @@ export class PauseMenu {
             this.controlSchemeButton.draw(context);
             this.performanceButton.draw(context);
             // Only draw dev mode button if visible (konami code entered or dev mode ON)
-            if (game.devMode && (this.devModeVisible || game.devMode.isEnabled())) {
+            if (devModeVisible) {
                 this.devModeButton.draw(context);
             }
             if (!inMainMenu) {
+                // Calculate button positions based on what's visible
+                // Base position after Performance button (index 4)
+                let nextButtonIndex = 5;
+
+                // Dev mode takes slot 5 if visible
+                if (devModeVisible) nextButtonIndex++;
+
                 // Draw Exit Test Room button when in test room
                 if (inTestRoom) {
+                    this.exitTestRoomButton.y = 280 + 85 * nextButtonIndex;
                     this.exitTestRoomButton.draw(context);
-                    // Move quit button down when exit test room button is visible
-                    this.quitButton.y = 280 + 85 * 7;  // Below exit test room button
-                } else {
-                    // Normal position when not in test room
-                    this.quitButton.y = 280 + 85 * 6;  // Normal position (where exit test room button would be)
+                    nextButtonIndex++;
                 }
+
+                // Quit button comes last
+                this.quitButton.y = 280 + 85 * nextButtonIndex;
                 this.quitButton.draw(context);
             }
         }
