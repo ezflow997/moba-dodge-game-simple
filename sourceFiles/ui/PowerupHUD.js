@@ -5,6 +5,7 @@
 
 import { IconLibrary } from './iconLibrary.js';
 import { CATEGORY } from '../controller/rewardTypes.js';
+import { getUIScale } from '../menu/pauseMenu.js';
 
 export class PowerupHUD {
     constructor() {
@@ -29,7 +30,10 @@ export class PowerupHUD {
      * Main draw method - renders entire HUD
      */
     draw(ctx, game) {
-        const rX = window.innerWidth / 2560;
+        // Base scaling factor with UI scale applied
+        const baseRX = window.innerWidth / 2560;
+        const uiScale = getUIScale();
+        const rX = baseRX * uiScale;
 
         // Calculate positions for unified action bar (bottom-right)
         // Extra padding (25px) for keybind labels below icons

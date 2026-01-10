@@ -109,13 +109,18 @@ export class Bullets {
             if(this.bulletsCreated == true){
                 // Check if this is an independent bullet type that shouldn't block cooldown
                 const firstBullet = this.bulletsList.length > 0 ? this.bulletsList[0] : null;
-                const independentTypes = ['shotgun', 'nova', 'twin', 'homing', 'ricochet', 'piercing'];
+                const independentTypes = ['shotgun', 'nova', 'twin', 'homing', 'ricochet', 'piercing', 'rapidfire'];
                 const isIndependentGun = firstBullet && independentTypes.includes(firstBullet.gunType);
 
                 // For independent guns, allow cooldown to proceed once all bullets have spawned
                 // but keep updating bullets until they're gone
                 if (isIndependentGun && this.bulletsSpawned && !this.bulletsDeSpawned) {
                     this.bulletsDeSpawned = true;  // Allow cooldown to reset
+                }
+
+                // Rapid fire: immediately allow next shot after bullet is created
+                if (firstBullet && firstBullet.gunType === 'rapidfire' && this.bulletsCreated && !this.bulletsDeSpawned) {
+                    this.bulletsDeSpawned = true;
                 }
 
                 // Standard completion check - bullets gone or hit target
@@ -178,7 +183,7 @@ export class Bullets {
                             if(bullet.destroy == true || bullet.enemyCollision == true){
                                 if(bullet.enemyCollision == true){
                                     // Check if bullet type should be independent (not clear all on hit)
-                                    const independentTypes = ['shotgun', 'nova', 'twin', 'homing', 'ricochet', 'piercing'];
+                                    const independentTypes = ['shotgun', 'nova', 'twin', 'homing', 'ricochet', 'piercing', 'rapidfire'];
                                     const isIndependent = independentTypes.includes(bullet.gunType || bullet.bulletType);
 
                                     // For piercing bullets with pierce remaining, continue
@@ -199,7 +204,10 @@ export class Bullets {
                                     }
                                 }
                                 else if(bullet.destroy == true){
-                                    enemies.hitStreak = 0;
+                                    // Don't reset streak for rapidfire misses
+                                    if (bullet.gunType !== 'rapidfire') {
+                                        enemies.hitStreak = 0;
+                                    }
                                     this.bulletsList.splice(i,1);
                                 }
                             }
@@ -221,7 +229,7 @@ export class Bullets {
                             if(bullet.destroy == true || bullet.enemyCollision == true){
                                 if(bullet.enemyCollision == true){
                                     // Check if bullet type should be independent (not clear all on hit)
-                                    const independentTypes = ['shotgun', 'nova', 'twin', 'homing', 'ricochet', 'piercing'];
+                                    const independentTypes = ['shotgun', 'nova', 'twin', 'homing', 'ricochet', 'piercing', 'rapidfire'];
                                     const isIndependent = independentTypes.includes(bullet.gunType || bullet.bulletType);
 
                                     // For piercing bullets with pierce remaining, continue
@@ -241,7 +249,10 @@ export class Bullets {
                                     }
                                 }
                                 else if(bullet.destroy == true){
-                                    enemies.hitStreak = 0;
+                                    // Don't reset streak for rapidfire misses
+                                    if (bullet.gunType !== 'rapidfire') {
+                                        enemies.hitStreak = 0;
+                                    }
                                     this.bulletsList.splice(i, 1);
                                 }
                             }
@@ -291,7 +302,7 @@ export class Bullets {
             case 'nova':
                 return activeGun.bulletCount || 12;
             case 'rapidfire':
-                return activeGun.bulletCount || this.bulletsMax;
+                return 1;  // Rapid fire shoots single bullets continuously
             case 'ricochet':
                 return 3;  // Ricochet always creates 3 bullets
             case 'homing':
@@ -421,19 +432,16 @@ export class Bullets {
     }
 
     createRapidfireBullets(player, gunData, sizeMultiplier) {
-        const count = gunData.bulletCount || this.bulletsMax;
-
-        for (let i = 0; i < count; i++) {
-            const b = new SpecialBullet(
-                this.offX, this.offY,
-                this.modifiedEndX, this.modifiedEndY,
-                this.bulletSize * ((100-(i*15))/100) * sizeMultiplier,
-                this.bulletSpeed * 1.2,
-                'rapidfire',
-                gunData
-            );
-            this.bulletsList.push(b);
-        }
+        // Rapid fire shoots single fast bullets continuously
+        const b = new SpecialBullet(
+            this.offX, this.offY,
+            this.modifiedEndX, this.modifiedEndY,
+            this.bulletSize * 0.7 * sizeMultiplier,
+            this.bulletSpeed * 1.5,
+            'rapidfire',
+            gunData
+        );
+        this.bulletsList.push(b);
     }
 
     createPiercingBullets(player, gunData, sizeMultiplier) {

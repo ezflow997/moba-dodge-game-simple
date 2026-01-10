@@ -110,7 +110,7 @@ export class PauseMenu {
             }
 
             // Konami code detection (only when pause menu is open and not in submenu)
-            if (this.isPaused && !this.showKeybinds && !this.showVolume && !this.waitingForKey) {
+            if (this.isPaused && !this.showKeybinds && !this.showVolume && !this.showUIScale && !this.waitingForKey) {
                 this.checkKonamiCode(ev.key, this.gameRef);
             }
         };
@@ -143,6 +143,7 @@ export class PauseMenu {
             // Close all submenus when unpausing
             this.showKeybinds = false;
             this.showVolume = false;
+            this.showUIScale = false;
             this.waitingForKey = null;
             // Reset konami progress
             this.konamiProgress = 0;
@@ -360,7 +361,7 @@ export class PauseMenu {
         }
 
         // Main pause menu
-        if (!this.showKeybinds && !this.showVolume) {
+        if (!this.showKeybinds && !this.showVolume && !this.showUIScale) {
             this.resumeButton.update(inX, inY);
             if (this.resumeButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
                 this.clicked = true;
@@ -387,12 +388,21 @@ export class PauseMenu {
                 }
             }
 
+            this.uiScaleButton.update(inX, inY);
+            if (this.uiScaleButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.showUIScale = true;
+                // Initialize slider with current UI scale
+                this.uiScaleSlider.setValue(uiScale);
+            }
+
             // Calculate button positions based on what's visible
             const inTestRoom = game.testRoom && game.testRoom.active;
             const devModeVisible = game.devMode && (this.devModeVisible || game.devMode.isEnabled());
 
-            // Base position after Performance button (index 4)
-            let nextButtonIndex = 5;
+            // Base position after Performance button (index 5, since UI Scale is index 3)
+            let nextButtonIndex = 6;
 
             // Dev mode takes slot 5 if visible
             if (devModeVisible) nextButtonIndex++;
@@ -409,6 +419,7 @@ export class PauseMenu {
                     this.isPaused = false;
                     this.showKeybinds = false;
                     this.showVolume = false;
+                    this.showUIScale = false;
                     // Resume music since we bypassed toggle()
                     if (window.gameSound) window.gameSound.resumeMusic();
                 }
@@ -443,6 +454,7 @@ export class PauseMenu {
                 this.isPaused = false;
                 this.showKeybinds = false;
                 this.showVolume = false;
+                this.showUIScale = false;
             }
 
             this.controlSchemeButton.update(inX, inY);
@@ -572,6 +584,22 @@ export class PauseMenu {
                 this.showVolume = false;
             }
         }
+        // UI Scale submenu
+        else if (this.showUIScale) {
+            // Update slider (only if not just opened - prevents click-through)
+            const mouseDown = input.buttons.indexOf(0) > -1 && !this.clicked;
+            this.uiScaleSlider.update(inX, inY, mouseDown);
+
+            // Apply UI scale changes in real-time
+            setUIScale(this.uiScaleSlider.value);
+
+            this.uiScaleBackButton.update(inX, inY);
+            if (this.uiScaleBackButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.showUIScale = false;
+            }
+        }
     }
 
     updateKeybindButtons() {
@@ -644,14 +672,14 @@ export class PauseMenu {
         context.restore();
 
         // Main pause menu
-        if (!this.showKeybinds && !this.showVolume) {
+        if (!this.showKeybinds && !this.showVolume && !this.showUIScale) {
             // Check if in test room for extra button
             const inTestRoom = game.testRoom && game.testRoom.active;
             const devModeVisible = game.devMode && (this.devModeVisible || game.devMode.isEnabled());
 
             // Calculate panel height based on visible buttons
-            // Base: Resume, Keybinds, Volume, Controls, Performance = 5 buttons
-            let buttonCount = 5;
+            // Base: Resume, Keybinds, Volume, UI Scale, Controls, Performance = 6 buttons
+            let buttonCount = 6;
             if (devModeVisible) buttonCount++;  // Dev Mode button
             if (inTestRoom) buttonCount++;      // Exit Test Room button
             if (!inMainMenu) buttonCount++;     // Quit button
@@ -685,6 +713,7 @@ export class PauseMenu {
             this.resumeButton.draw(context);
             this.keybindsButton.draw(context);
             this.volumeButton.draw(context);
+            this.uiScaleButton.draw(context);
             this.controlSchemeButton.draw(context);
             this.performanceButton.draw(context);
             // Only draw dev mode button if visible (konami code entered or dev mode ON)
@@ -774,6 +803,33 @@ export class PauseMenu {
 
             // Draw back button
             this.volumeBackButton.draw(context);
+        }
+        // UI Scale submenu
+        else if (this.showUIScale) {
+            // Draw UI scale background
+            context.save();
+            context.fillStyle = 'rgba(10, 20, 40, 0.95)';
+            context.fillRect(650 * rX, 250 * rY, 900 * rX, 400 * rY);
+            context.strokeStyle = '#00ffff';
+            context.shadowColor = '#00ffff';
+            context.shadowBlur = 15 * rX;
+            context.lineWidth = 3 * rY;
+            context.strokeRect(650 * rX, 250 * rY, 900 * rX, 400 * rY);
+            context.restore();
+
+            // Draw title
+            this.super.drawGlowText(context, 950, 310, "UI SCALE", 60, '#ffffff', '#00ffff', 12);
+
+            // Draw UI scale slider
+            this.super.drawGlowText(context, 720, 380, "HUD Size", 40, '#ffffff', '#00ffff', 8);
+            this.uiScaleSlider.draw(context);
+            this.super.drawGlowText(context, 1420, 465, `${Math.round(this.uiScaleSlider.value * 100)}%`, 35, '#00ff88', '#00ff00', 6);
+
+            // Draw preview hint
+            this.super.drawGlowText(context, 1100, 520, "Adjusts ability bar, powerups, and weapon slots", 20, '#888888', '#666666', 4, true);
+
+            // Draw back button
+            this.uiScaleBackButton.draw(context);
         }
     }
 }

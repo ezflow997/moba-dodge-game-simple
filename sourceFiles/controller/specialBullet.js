@@ -320,6 +320,8 @@ export class SpecialBullet {
                     this.triggerChain(enemy, enemies, onChain);
                 }
 
+                // Mark enemy as hit so it gets killed
+                enemy.bulletCollision = true;
                 this.enemyCollision = true;
                 return;
             }
