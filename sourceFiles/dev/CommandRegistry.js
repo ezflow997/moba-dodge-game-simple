@@ -79,6 +79,10 @@ export class CommandRegistry {
         this.register('testfast', this.cmdTestFast.bind(this), 'Run quick smoke tests');
         this.register('testverbose', this.cmdTestVerbose.bind(this), 'Run tests with verbose output: testverbose [category]');
         this.register('testlist', this.cmdTestList.bind(this), 'List all available test categories');
+
+        // Shop/points commands
+        this.register('points', this.cmdPoints.bind(this), 'Set shop points <amount> or add points: points add <amount>', ['setpoints']);
+        this.register('addpoints', this.cmdAddPoints.bind(this), 'Add shop points <amount>');
     }
     
     /**
@@ -779,6 +783,54 @@ export class CommandRegistry {
             return { success: true, message: 'Available test categories: ' + categories.join(', ') };
         } catch (error) {
             return { success: false, message: 'Test system not available: ' + error.message };
+        }
+    }
+
+    cmdPoints(args) {
+        if (!this.game.shopMenu) {
+            return { success: false, message: 'Shop system not available' };
+        }
+
+        if (args.length === 0) {
+            return { success: true, message: `Current points: ${this.game.shopMenu.playerPoints.toLocaleString()}` };
+        }
+
+        // Handle "points add <amount>" syntax
+        if (args[0].toLowerCase() === 'add') {
+            return this.cmdAddPoints(args.slice(1));
+        }
+
+        const amount = parseInt(args[0]);
+        if (isNaN(amount) || amount < 0) {
+            return { success: false, message: 'Invalid amount. Usage: points <amount>' };
+        }
+
+        this.game.shopMenu.playerPoints = amount;
+        return { success: true, message: `Points set to ${amount.toLocaleString()}` };
+    }
+
+    cmdAddPoints(args) {
+        if (!this.game.shopMenu) {
+            return { success: false, message: 'Shop system not available' };
+        }
+
+        if (args.length === 0) {
+            return { success: false, message: 'Usage: addpoints <amount>' };
+        }
+
+        const amount = parseInt(args[0]);
+        if (isNaN(amount)) {
+            return { success: false, message: 'Invalid amount. Usage: addpoints <amount>' };
+        }
+
+        const oldPoints = this.game.shopMenu.playerPoints;
+        this.game.shopMenu.playerPoints += amount;
+        const newPoints = this.game.shopMenu.playerPoints;
+
+        if (amount >= 0) {
+            return { success: true, message: `Added ${amount.toLocaleString()} points (${oldPoints.toLocaleString()} → ${newPoints.toLocaleString()})` };
+        } else {
+            return { success: true, message: `Removed ${Math.abs(amount).toLocaleString()} points (${oldPoints.toLocaleString()} → ${newPoints.toLocaleString()})` };
         }
     }
 

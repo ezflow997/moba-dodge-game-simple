@@ -680,7 +680,7 @@ export class RewardManager {
         context.restore();
     }
 
-    // Draw weapon slots UI (bottom-right corner)
+    // Draw weapon slots UI (bottom-left corner)
     drawWeaponSlotsUI(context) {
         const rX = window.innerWidth / 2560;
         const slotWidth = 90 * rX;
@@ -688,9 +688,10 @@ export class RewardManager {
         const slotGap = 10 * rX;
         const padding = 20 * rX;
 
-        // Position at bottom-right
-        const startX = window.innerWidth - (slotWidth * 2 + slotGap + padding);
-        const startY = window.innerHeight - slotHeight - padding;
+        // Position at bottom-left (above loadout button if present)
+        const startX = padding;
+        const loadoutHeight = this.loadoutWeapon ? 50 * rX + 10 * rX : 0;  // Add space for loadout button
+        const startY = window.innerHeight - slotHeight - padding - loadoutHeight;
 
         context.save();
 
