@@ -350,9 +350,19 @@ export class PauseMenu {
                 }
             }
 
-            // Exit Test Room button (only when in test room)
+            // Calculate button positions based on what's visible
             const inTestRoom = game.testRoom && game.testRoom.active;
+            const devModeVisible = game.devMode && (this.devModeVisible || game.devMode.isEnabled());
+
+            // Base position after Performance button (index 4)
+            let nextButtonIndex = 5;
+
+            // Dev mode takes slot 5 if visible
+            if (devModeVisible) nextButtonIndex++;
+
+            // Exit Test Room button (only when in test room)
             if (inTestRoom) {
+                this.exitTestRoomButton.y = 280 + 85 * nextButtonIndex;
                 this.exitTestRoomButton.update(inX, inY);
                 if (this.exitTestRoomButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
                     this.clicked = true;
@@ -365,11 +375,11 @@ export class PauseMenu {
                     // Resume music since we bypassed toggle()
                     if (window.gameSound) window.gameSound.resumeMusic();
                 }
-                this.quitButton.y = 280 + 85 * 6;  // Below exit test room button
-            } else {
-                this.quitButton.y = 280 + 85 * 5;  // Normal position (where exit test room button would be)
+                nextButtonIndex++;
             }
 
+            // Quit button comes last
+            this.quitButton.y = 280 + 85 * nextButtonIndex;
             this.quitButton.update(inX, inY);
             if (this.quitButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
                 this.clicked = true;
