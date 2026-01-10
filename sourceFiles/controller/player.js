@@ -145,21 +145,21 @@ export class Player {
                 }
             } else {
                 // Vel'koz mode - void bolts
-                if(this.qPressed == false && this.qTriggered == true && input.q_key <= 30){
-                    input.q_key += 30;
+                // Use qPressed/qTriggered for state, not q_key (which conflicts with 'q' keybind in WASD mode)
+                if(this.qPressed == false && this.qTriggered == true){
                     this.qPresses += 1;
                     this.qPressed = true;
                     this.qPressedNow = window.performance.now();
                     this.qTriggered = false;
-                    
+
                     // Shoot void bolt
                     game.voidBolts.shoot(this, input.mouseX, input.mouseY);
                 }
-                else if(this.qPressed == true && input.q_key <= 30){
-                    // Recast to split
+                else if(this.qPressed == true && this.qPressed_Recast == false){
+                    // Recast to split (one recast per shot)
                     if(game.voidBolts.recast()){
-                        input.q_key += 30;
                         this.qPresses_Recast += 1;
+                        this.qPressed_Recast = true;
                     }
                 }
             }

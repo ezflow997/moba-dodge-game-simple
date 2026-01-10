@@ -64,6 +64,7 @@ export class VoidBolts {
                 // Instant reset
                 game.player.qPressed = false;
                 game.player.qTriggered = true;
+                game.player.qPressed_Recast = false;
                 game.player.qCoolDownElapsed = 0;
                 game.player.qPressedNow = window.performance.now();
             }
@@ -71,6 +72,7 @@ export class VoidBolts {
             else if(game.player.qCoolDownElapsed >= game.player.qCoolDown && this.bolts.length === 0){
                 game.player.qPressed = false;
                 game.player.qTriggered = true;
+                game.player.qPressed_Recast = false;
             }
         }
 
