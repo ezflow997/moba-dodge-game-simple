@@ -549,7 +549,7 @@ export class LoadoutMenu {
 
         // Handle mouse wheel scroll
         if (game.input.wheelDelta) {
-            this.scrollOffset += game.input.wheelDelta > 0 ? -50 : 50;
+            this.scrollOffset += game.input.wheelDelta > 0 ? 50 : -50;
             this.scrollOffset = Math.max(0, Math.min(this.maxScrollOffset, this.scrollOffset));
         }
 
@@ -615,6 +615,113 @@ export class LoadoutMenu {
         }
 
         return true;
+    }
+
+    updatePresetMenu(game, inX, inY, clicking, rX, rY, refCenterX, refPanelTop) {
+        // Preset menu dimensions
+        const menuW = 350;
+        const menuH = this.presetMenuMode === 'save' ? 180 : Math.min(400, 100 + this.getSavedPresets().length * 50);
+        const menuX = refCenterX + 200;
+        const menuY = refPanelTop + 90;
+
+        // Convert to screen coords
+        const menuXPx = menuX * rX;
+        const menuYPx = menuY * rY;
+        const menuWPx = menuW * rX;
+        const menuHPx = menuH * rY;
+
+        // Check if clicking outside menu to close it
+        if (clicking && !this.clicked) {
+            if (inX < menuXPx || inX > menuXPx + menuWPx || inY < menuYPx || inY > menuYPx + menuHPx) {
+                this.clicked = true;
+                this.showPresetMenu = false;
+                this.presetMenuMode = null;
+                return 'handled';
+            }
+        }
+
+        if (this.presetMenuMode === 'save') {
+            // Handle text input for preset name
+            if (game.input.lastKey && !this.clicked) {
+                const key = game.input.lastKey;
+                if (key === 'Backspace') {
+                    this.presetNameInput = this.presetNameInput.slice(0, -1);
+                } else if (key === 'Enter') {
+                    if (this.presetNameInput.trim()) {
+                        this.savePreset(this.presetNameInput.trim());
+                        this.showPresetMenu = false;
+                        this.presetMenuMode = null;
+                        if (window.gameSound) window.gameSound.playMenuClick();
+                    }
+                } else if (key.length === 1 && this.presetNameInput.length < 20) {
+                    this.presetNameInput += key;
+                }
+                game.input.lastKey = null;
+            }
+
+            // Save button click area
+            const saveBtnY = menuY + 120;
+            const saveBtnH = 40;
+            const saveBtnYPx = saveBtnY * rY;
+            const saveBtnHPx = saveBtnH * rY;
+
+            if (clicking && !this.clicked && inY >= saveBtnYPx && inY <= saveBtnYPx + saveBtnHPx) {
+                if (this.presetNameInput.trim()) {
+                    this.clicked = true;
+                    this.savePreset(this.presetNameInput.trim());
+                    this.showPresetMenu = false;
+                    this.presetMenuMode = null;
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    return 'handled';
+                }
+            }
+        } else if (this.presetMenuMode === 'load') {
+            const presets = this.getSavedPresets();
+            const itemH = 50;
+            const listStartY = menuY + 50;
+
+            // Check hover
+            this.hoveredPresetIndex = -1;
+            for (let i = 0; i < presets.length; i++) {
+                const itemY = (listStartY + i * itemH) * rY;
+                const itemHPx = itemH * rY;
+                if (inY >= itemY && inY < itemY + itemHPx && inX >= menuXPx && inX <= menuXPx + menuWPx) {
+                    this.hoveredPresetIndex = i;
+                    break;
+                }
+            }
+
+            // Handle clicks on presets
+            if (clicking && !this.clicked && this.hoveredPresetIndex >= 0) {
+                const preset = presets[this.hoveredPresetIndex];
+                // Check if clicking on delete button (right side)
+                const deleteX = (menuX + menuW - 50) * rX;
+                if (inX >= deleteX) {
+                    this.clicked = true;
+                    this.deletePreset(preset.name);
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    return 'handled';
+                } else {
+                    // Load the preset
+                    this.clicked = true;
+                    this.loadPreset(preset);
+                    this.showPresetMenu = false;
+                    this.presetMenuMode = null;
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    return 'handled';
+                }
+            }
+
+            // Handle empty state - close menu on click if no presets
+            if (presets.length === 0 && clicking && !this.clicked) {
+                this.clicked = true;
+                this.showPresetMenu = false;
+                this.presetMenuMode = null;
+                return 'handled';
+            }
+        }
+
+        return 'handled';
     }
 
     draw(context, game) {

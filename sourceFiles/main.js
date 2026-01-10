@@ -176,8 +176,8 @@ window.addEventListener('load', function () {
 					}
 				}
 
-				// Check for pause toggle
-				if(this.input.escapePressed) {
+				// Check for pause toggle (skip if waiting for keybind - let pause menu handle ESC)
+				if(this.input.escapePressed && !this.pauseMenu.waitingForKey) {
 					this.pauseMenu.toggle();
 					this.input.escapePressed = false;
 				}
@@ -419,7 +419,7 @@ window.addEventListener('load', function () {
 		function animate() {
 			// Canvas size is now handled by resize event listener
 
-			if(game.input.escapePressed && game.pauseMenu.isPaused) {
+			if(game.input.escapePressed && game.pauseMenu.isPaused && !game.pauseMenu.waitingForKey) {
 				game.pauseMenu.toggle();
 				game.input.escapePressed = false;
 			}
@@ -612,7 +612,7 @@ window.addEventListener('load', function () {
 			}
 
 			// Check for pause menu toggle in main menu (not when leaderboard or ranked menu is open)
-			if(game.input.escapePressed && !game.pauseMenu.isPaused && !game.leaderboardMenu.isVisible && !game.rankedMenu.isVisible) {
+			if(game.input.escapePressed && !game.pauseMenu.isPaused && !game.leaderboardMenu.isVisible && !game.rankedMenu.isVisible && !game.pauseMenu.waitingForKey) {
 				game.pauseMenu.toggle(true); // Pass true to indicate we're in main menu
 				game.input.escapePressed = false;
 			}
@@ -620,8 +620,8 @@ window.addEventListener('load', function () {
 			// Update pause menu if active in main menu
 			if(game.pauseMenu.isPaused) {
 				game.pauseMenu.update(game);
-				// Check if escape was pressed to close pause menu
-				if(game.input.escapePressed) {
+				// Check if escape was pressed to close pause menu (skip if waiting for keybind)
+				if(game.input.escapePressed && !game.pauseMenu.waitingForKey) {
 					game.pauseMenu.toggle(true);
 					game.input.escapePressed = false;
 				}
