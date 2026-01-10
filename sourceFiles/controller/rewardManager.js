@@ -182,9 +182,9 @@ export class RewardManager {
             const gun = this.weaponSlots[1].gun;
             const maxDurability = gun.durability;
 
-            // Refund 1 durability on hit, but don't exceed max
+            // Refund 10 durability on hit, but don't exceed max
             this.weaponSlots[1].durability = Math.min(
-                this.weaponSlots[1].durability + 1,
+                this.weaponSlots[1].durability + 10,
                 maxDurability
             );
             this.gunDurability = this.weaponSlots[1].durability;
