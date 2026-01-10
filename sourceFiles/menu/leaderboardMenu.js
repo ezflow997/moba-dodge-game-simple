@@ -33,6 +33,9 @@ export class LeaderboardMenu {
         this.cursorBlink = 0;
         this.searchDebounceTimer = null;
 
+        // Animation timer for champion effects
+        this.animationTime = 0;
+
         // Search results navigation
         this.searchResults = [];      // Array of {player_name, rank}
         this.currentResultIndex = 0;  // Which result is selected
@@ -436,6 +439,9 @@ export class LeaderboardMenu {
     draw(context, game) {
         if (!this.isVisible) return;
 
+        // Update animation timer
+        this.animationTime += 0.05;
+
         const rX = window.innerWidth / 2560;
         const rY = window.innerHeight / 1440;
 
@@ -730,15 +736,24 @@ export class LeaderboardMenu {
             // Rank
             this.super.drawGlowText(context, colRank, y, actualRank.toString(), 34, rankColor, glowColor, 8);
 
-            // Name (truncate to 12 chars) - brighter if highlighted
+            // Name (truncate to 12 chars) - brighter if highlighted, animated if champion
             const playerName = entry.player_name || entry.playerName || 'Unknown';
             const displayName = playerName.length > 12
                 ? playerName.substring(0, 12) + '...'
                 : playerName;
-            const nameColor = isHighlighted ? '#00ffff' : '#ffffff';
-            const nameGlow = isHighlighted ? '#00ffff' : '#00ffff';
-            const nameGlowSize = isHighlighted ? 15 : 8;
-            this.super.drawGlowText(context, colName, y, displayName, 34, nameColor, nameGlow, nameGlowSize);
+
+            // Check if this player is a champion (won a monthly season)
+            const isChampion = entry.isChampion === true;
+
+            if (isChampion) {
+                // Draw animated rainbow champion name
+                this.drawChampionName(context, colName, y, displayName, 34, rX, isHighlighted);
+            } else {
+                const nameColor = isHighlighted ? '#00ffff' : '#ffffff';
+                const nameGlow = isHighlighted ? '#00ffff' : '#00ffff';
+                const nameGlowSize = isHighlighted ? 15 : 8;
+                this.super.drawGlowText(context, colName, y, displayName, 34, nameColor, nameGlow, nameGlowSize);
+            }
 
             if (isRanked) {
                 // ELO
@@ -769,5 +784,51 @@ export class LeaderboardMenu {
                 this.super.drawGlowText(context, colStreak, y, entry.best_streak.toString(), 34, '#ffff88', '#ffff00', 8);
             }
         }
+    }
+
+    // Draw animated rainbow name for monthly champions
+    drawChampionName(context, x, y, text, size, rX, isHighlighted) {
+        const scaledSize = size * rX;
+        const scaledX = x * rX;
+        const scaledY = y * (window.innerHeight / 1440);
+
+        context.save();
+        context.font = `bold ${scaledSize}px Arial`;
+        context.textAlign = 'left';
+        context.textBaseline = 'middle';
+
+        // Calculate character positions
+        const chars = text.split('');
+        let currentX = scaledX;
+
+        // Draw each character with a different color in the rainbow cycle
+        for (let i = 0; i < chars.length; i++) {
+            // Calculate hue based on character position and animation time
+            const hue = ((this.animationTime * 50) + (i * 25)) % 360;
+            const color = `hsl(${hue}, 100%, 65%)`;
+            const glowColor = `hsl(${hue}, 100%, 50%)`;
+
+            // Set shadow/glow
+            context.shadowColor = glowColor;
+            context.shadowBlur = isHighlighted ? 20 * rX : 12 * rX;
+            context.fillStyle = color;
+
+            // Draw the character
+            context.fillText(chars[i], currentX, scaledY);
+
+            // Move to next character position
+            currentX += context.measureText(chars[i]).width;
+        }
+
+        // Draw crown/star indicator before name
+        const crownX = scaledX - 28 * rX;
+        const crownHue = (this.animationTime * 80) % 360;
+        context.shadowColor = `hsl(${crownHue}, 100%, 50%)`;
+        context.shadowBlur = 15 * rX;
+        context.fillStyle = `hsl(${crownHue}, 100%, 70%)`;
+        context.font = `${scaledSize * 0.8}px Arial`;
+        context.fillText('★', crownX, scaledY);
+
+        context.restore();
     }
 }

@@ -237,17 +237,23 @@ export default async function handler(req, res) {
 
         const entries = await response.json();
 
-        // Add rank to each entry
+        // Fetch all champions to mark them in the leaderboard
+        const champions = await getAllChampions();
+        const championNames = new Set(champions.map(c => c.player_name));
+
+        // Add rank and champion status to each entry
         const rankedEntries = entries.map((entry, index) => ({
             rank: offset + index + 1,
             playerName: entry.player_name,
             elo: entry.elo,
             gamesPlayed: entry.games_played,
-            wins: entry.wins || 0
+            wins: entry.wins || 0,
+            isChampion: championNames.has(entry.player_name)
         }));
 
         return res.status(200).json({
             entries: rankedEntries,
+            champions: champions, // Include full champion history for client-side use
             pagination: {
                 page,
                 limit,

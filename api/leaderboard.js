@@ -39,6 +39,26 @@ function getTodayDate() {
     return now.toISOString().split('T')[0];
 }
 
+// Get all ranked champions (players who won a monthly ELO season)
+async function getAllChampions() {
+    try {
+        const url = `${SUPABASE_URL}/rest/v1/ranked_champions?select=player_name,season_month,final_elo&order=awarded_at.desc`;
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        if (!response.ok) return [];
+        return await response.json();
+    } catch (error) {
+        console.error('getAllChampions error:', error);
+        return [];
+    }
+}
+
 async function getLeaderboard(difficulty, limit = 10, offset = 0, dailyOnly = false) {
     const cols = getDifficultyColumns(difficulty);
 
@@ -128,13 +148,18 @@ export default async function handler(req, res) {
         const { data, totalCount } = result;
         const cols = getDifficultyColumns(diff);
 
+        // Fetch all champions to mark them in the leaderboard
+        const champions = await getAllChampions();
+        const championNames = new Set(champions.map(c => c.player_name));
+
         // Transform to expected format - use daily stats if daily filter
         const safeData = data.map(entry => ({
             player_name: entry.player_name,
             score: dailyOnly ? (entry[cols.dailyScore] || 0) : (entry[cols.score] || 0),
             kills: dailyOnly ? (entry[cols.dailyKills] || 0) : (entry[cols.kills] || 0),
             best_streak: dailyOnly ? (entry[cols.dailyStreak] || 0) : (entry[cols.streak] || 0),
-            difficulty: diff
+            difficulty: diff,
+            isChampion: championNames.has(entry.player_name)
         }));
 
         // Calculate total pages
@@ -142,6 +167,7 @@ export default async function handler(req, res) {
 
         return res.status(200).json({
             entries: safeData,
+            champions: champions, // Include full champion history for client-side use
             pagination: {
                 page: pageNum,
                 limit: maxLimit,
