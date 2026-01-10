@@ -140,7 +140,7 @@ export class Enemies {
                         if (this.hitStreak > this.best_streak) {
                             this.best_streak = this.hitStreak;
                         }
-                        game.score = game.score + (this.enemyScoreValue * this.hitStreak);
+                        game.rewardManager.addScore(game, this.enemyScoreValue * this.hitStreak);
 
                         if(player.ePressed == true){
                             player.ePressedNow -= 500;
@@ -163,7 +163,7 @@ export class Enemies {
                     if (this.hitStreak > this.best_streak) {
                         this.best_streak = this.hitStreak;
                     }
-                    game.score = game.score + (this.enemyScoreValue * this.hitStreak);
+                    game.rewardManager.addScore(game, this.enemyScoreValue * this.hitStreak);
                 }
             }
 
@@ -277,7 +277,7 @@ export class Enemies {
                             this.best_streak = this.hitStreak;
                         }
                         this.enemiesTakenDown += 1;
-                        game.score = game.score + (this.enemyScoreValue * this.hitStreak);
+                        game.rewardManager.addScore(game, this.enemyScoreValue * this.hitStreak);
                         this.bossTowardsScore = this.bossTowardsScore + this.enemyScoreValue;
                         if (window.gameSound) window.gameSound.playEnemyDeath();
                         if (game.effects) {
@@ -418,8 +418,8 @@ export class Enemies {
     }
 
     handleBossDefeat(game) {
-        // Award bonus score
-        game.score += (this.bossDefeatBonus * (this.bossDefeated + 1));
+        // Award bonus score (with multiplier)
+        game.rewardManager.addScore(game, this.bossDefeatBonus * (this.bossDefeated + 1));
 
         // Trigger death effects
         if (game.effects) {

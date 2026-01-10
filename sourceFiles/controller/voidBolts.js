@@ -115,7 +115,7 @@ export class VoidBolts {
                     if (enemies.hitStreak > enemies.best_streak) {
                         enemies.best_streak = enemies.hitStreak;
                     }
-                    game.score += enemies.enemyScoreValue * enemies.hitStreak;
+                    game.rewardManager.addScore(game, enemies.enemyScoreValue * enemies.hitStreak);
                     enemies.enemiesTakenDown += 1;
                     
                     // Add to boss score tracking
@@ -128,14 +128,14 @@ export class VoidBolts {
                     if (enemies.hitStreak > enemies.best_streak) {
                         enemies.best_streak = enemies.hitStreak;
                     }
-                    game.score += enemies.enemyScoreValue * enemies.hitStreak;
+                    game.rewardManager.addScore(game, enemies.enemyScoreValue * enemies.hitStreak);
                 } else if (collision.type === 'orbital') {
                     // Vortex boss orbital hit - counts towards streak
                     enemies.hitStreak += 1;
                     if (enemies.hitStreak > enemies.best_streak) {
                         enemies.best_streak = enemies.hitStreak;
                     }
-                    game.score += enemies.enemyScoreValue * enemies.hitStreak;
+                    game.rewardManager.addScore(game, enemies.enemyScoreValue * enemies.hitStreak);
                 }
             }
             

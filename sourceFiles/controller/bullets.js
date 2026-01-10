@@ -77,7 +77,7 @@ export class Bullets {
                     if (enemies.hitStreak > enemies.best_streak) {
                         enemies.best_streak = enemies.hitStreak;
                     }
-                    game.score += enemies.enemyScoreValue * enemies.hitStreak;
+                    game.rewardManager.addScore(game, enemies.enemyScoreValue * enemies.hitStreak);
                     if (window.gameSound) window.gameSound.playEnemyDeath();
                     if (game.effects) {
                         game.effects.spawnBurst(target.x, target.y, 'enemyDeath');

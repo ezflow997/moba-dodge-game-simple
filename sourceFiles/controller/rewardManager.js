@@ -95,6 +95,13 @@ export class RewardManager {
         this.loadoutWeaponUsesConsumed = 0;
     }
 
+    // Add score with multiplier applied
+    addScore(game, baseScore) {
+        const multiplied = Math.ceil(baseScore * this.scoreMultiplier);
+        game.score += multiplied;
+        return multiplied;
+    }
+
     // Cycle weapon slots with Tab key
     cycleWeaponSlot() {
         // Only cycle if slot 1 has a weapon
@@ -531,7 +538,7 @@ export class RewardManager {
                     // Kill enemy
                     enemies.splice(i, 1);
                     game.enemies.enemiesTakenDown++;
-                    game.score += game.enemies.enemyScoreValue;
+                    this.addScore(game, game.enemies.enemyScoreValue);
                     if (window.gameSound) window.gameSound.playEnemyDeath();
 
                     // Effects
