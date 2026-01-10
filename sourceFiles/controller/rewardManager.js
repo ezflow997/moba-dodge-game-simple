@@ -773,8 +773,8 @@ export class RewardManager {
         if (this.loadoutWeapon) {
             const loadoutW = 180 * rX;
             const loadoutH = 50 * rX;
-            const loadoutX = 20 * rX;  // Bottom-left with padding
-            const loadoutY = window.innerHeight - loadoutH - 20 * rX;
+            const loadoutX = 20;  // Fixed 20px from left edge
+            const loadoutY = window.innerHeight - loadoutH - 20;
 
             // Background
             const canReactivate = this.canReactivateLoadoutWeapon();
