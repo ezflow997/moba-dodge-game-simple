@@ -207,7 +207,7 @@ export class Bullets {
                                 else if(bullet.destroy == true){
                                     // Don't reset streak for multi-hit weapons (rapidfire, piercing, ricochet)
                                     // These fire multiple bullets or hit multiple targets - individual misses shouldn't reset streak
-                                    const noStreakReset = ['rapidfire', 'piercing', 'ricochet'];
+                                    const noStreakReset = ['rapidfire', 'piercing', 'ricochet', 'shotgun'];
                                     if (!noStreakReset.includes(bullet.gunType)) {
                                         enemies.hitStreak = 0;
                                     }
@@ -254,7 +254,7 @@ export class Bullets {
                                 else if(bullet.destroy == true){
                                     // Don't reset streak for multi-hit weapons (rapidfire, piercing, ricochet)
                                     // These fire multiple bullets or hit multiple targets - individual misses shouldn't reset streak
-                                    const noStreakReset = ['rapidfire', 'piercing', 'ricochet'];
+                                    const noStreakReset = ['rapidfire', 'piercing', 'ricochet', 'shotgun'];
                                     if (!noStreakReset.includes(bullet.gunType)) {
                                         enemies.hitStreak = 0;
                                     }
@@ -304,7 +304,7 @@ export class Bullets {
 
         // Update independent bullets (rapidfire, ricochet, etc.) after qPressed resets
         // They keep flying after cooldown completes - only run when qPressed is false to avoid double-updating
-        const independentUpdateTypes = ['rapidfire', 'ricochet', 'homing', 'piercing'];
+        const independentUpdateTypes = ['rapidfire', 'ricochet', 'homing', 'piercing', 'shotgun'];
         const needsIndependentUpdate = activeGun && independentUpdateTypes.includes(activeGun.gunType);
 
         if (!player.qPressed && needsIndependentUpdate && this.bulletsList.length > 0) {
@@ -329,9 +329,9 @@ export class Bullets {
                             this.bulletsList.splice(i, 1);
                         }
                     } else if (bullet.destroy) {
-                        // Don't reset streak for multi-hit weapons (rapidfire, piercing, ricochet)
+                        // Don't reset streak for multi-hit weapons (rapidfire, piercing, ricochet, shotgun)
                         // These fire multiple bullets or hit multiple targets - individual misses shouldn't reset streak
-                        const noStreakReset = ['rapidfire', 'piercing', 'ricochet'];
+                        const noStreakReset = ['rapidfire', 'piercing', 'ricochet', 'shotgun'];
                         if (!noStreakReset.includes(bullet.gunType)) {
                             enemies.hitStreak = 0;
                         }

@@ -17,7 +17,10 @@
       "Bash(vercel --prod:*)",
       "Bash(npm run deploy:*)",
       "Bash(node -e:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout:*)",
+      "Bash(npx serve -l 3000)"
     ]
   }
 }
