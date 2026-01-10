@@ -298,9 +298,12 @@ export class Bullets {
             }
         }
 
-        // Update rapid fire bullets independently (they keep flying after qPressed resets)
-        // Only run when qPressed is false to avoid double-updating
-        if (!player.qPressed && activeGun && activeGun.gunType === 'rapidfire' && this.bulletsList.length > 0) {
+        // Update independent bullets (rapidfire, ricochet, etc.) after qPressed resets
+        // They keep flying after cooldown completes - only run when qPressed is false to avoid double-updating
+        const independentUpdateTypes = ['rapidfire', 'ricochet', 'homing', 'piercing'];
+        const needsIndependentUpdate = activeGun && independentUpdateTypes.includes(activeGun.gunType);
+
+        if (!player.qPressed && needsIndependentUpdate && this.bulletsList.length > 0) {
             for (let i = this.bulletsList.length - 1; i >= 0; i--) {
                 const bullet = this.bulletsList[i];
                 if (!bullet) continue;
@@ -314,10 +317,18 @@ export class Bullets {
                 // Handle destroy/collision
                 if (bullet.destroy || bullet.enemyCollision) {
                     if (bullet.enemyCollision) {
-                        // Rapid fire: just remove the bullet that hit
-                        this.bulletsList.splice(i, 1);
+                        // For ricochet bullets with bounces remaining, continue bouncing
+                        if (bullet.gunType === 'ricochet' && bullet.bouncesRemaining > 0) {
+                            bullet.enemyCollision = false;
+                        } else {
+                            // Remove the bullet that hit
+                            this.bulletsList.splice(i, 1);
+                        }
                     } else if (bullet.destroy) {
-                        // Bullet missed - rapid fire doesn't reset streak
+                        // Bullet missed - rapidfire doesn't reset streak, others do
+                        if (bullet.gunType !== 'rapidfire') {
+                            enemies.hitStreak = 0;
+                        }
                         this.bulletsList.splice(i, 1);
                     }
                 }
