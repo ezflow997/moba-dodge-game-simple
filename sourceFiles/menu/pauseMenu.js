@@ -213,9 +213,10 @@ export class PauseMenu {
             const pressedKey = this.capturedKey;
             this.capturedKey = null;
             
-            // Cancel if ESC is pressed
+            // Cancel if ESC is pressed - go back to main pause menu
             if (pressedKey === 'Escape') {
                 this.waitingForKey = null;
+                this.showKeybinds = false;
                 this.updateKeybindButtons();
                 return;
             }
@@ -709,10 +710,10 @@ export class PauseMenu {
                 if (this.controlScheme === 'mouse') {
                     this.super.drawGlowText(context, 700, 620, "Press any keyboard key...", 40, '#ffff00', '#ffaa00', 8);
                     this.super.drawGlowText(context, 700, 665, "(Mouse buttons not allowed)", 32, '#ff8888', '#ff4444', 6);
-                    this.super.drawGlowText(context, 700, 705, "Press ESC to cancel", 28, '#aaaaaa', '#888888', 6);
+                    this.super.drawGlowText(context, 700, 705, "Press ESC to go back", 28, '#aaaaaa', '#888888', 6);
                 } else {
                     this.super.drawGlowText(context, 700, 620, "Press any key or mouse button...", 40, '#ffff00', '#ffaa00', 8);
-                    this.super.drawGlowText(context, 700, 665, "Press ESC to cancel", 32, '#aaaaaa', '#888888', 6);
+                    this.super.drawGlowText(context, 700, 665, "Press ESC to go back", 32, '#aaaaaa', '#888888', 6);
                 }
             } else {
                 this.keybindBackButton.draw(context);

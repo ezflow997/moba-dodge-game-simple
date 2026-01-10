@@ -67,14 +67,28 @@ export class LoadoutMenu {
         this.startButton = new Button(0, 0, 220, 70, "Start Game", 30, 0, 0, false, true, 'white', 'white');
         this.cancelButton = new Button(0, 0, 180, 70, "Cancel", 28, 0, 0, false, true, 'white', 'white');
         this.clearButton = new Button(0, 0, 130, 40, "Clear All", 16, 0, 0, false, true, 'white', 'white');
+
+        // Preset buttons
+        this.savePresetButton = new Button(0, 0, 130, 40, "Save Preset", 14, 0, 0, false, true, 'white', 'white');
+        this.loadPresetButton = new Button(0, 0, 130, 40, "Load Preset", 14, 0, 0, false, true, 'white', 'white');
+
+        // Preset menu state
+        this.showPresetMenu = false;
+        this.presetMenuMode = null; // 'save' or 'load' or 'delete'
+        this.presetNameInput = 'Preset 1';
+        this.hoveredPresetIndex = -1;
+        this.playerName = '';
     }
 
-    show() {
+    show(playerName = '') {
         this.isVisible = true;
         this.clicked = false;
         this.scrollOffset = 0;
         this.selectedRewards = [];
         this.selectedCategory = CATEGORY.GUN;
+        this.playerName = playerName;
+        this.showPresetMenu = false;
+        this.presetMenuMode = null;
     }
 
     hide() {
@@ -230,11 +244,136 @@ export class LoadoutMenu {
         return false;
     }
 
+    // Get localStorage key for presets
+    getPresetsKey() {
+        return `savedLoadouts_${this.playerName}`;
+    }
+
+    // Get all saved presets from localStorage
+    getSavedPresets() {
+        if (!this.playerName) return [];
+        try {
+            const data = localStorage.getItem(this.getPresetsKey());
+            return data ? JSON.parse(data) : [];
+        } catch (e) {
+            console.error('Error loading presets:', e);
+            return [];
+        }
+    }
+
+    // Save presets to localStorage
+    setSavedPresets(presets) {
+        if (!this.playerName) return;
+        try {
+            localStorage.setItem(this.getPresetsKey(), JSON.stringify(presets));
+        } catch (e) {
+            console.error('Error saving presets:', e);
+        }
+    }
+
+    // Save current selection as a preset
+    savePreset(name) {
+        if (!name || this.selectedRewards.length === 0) return false;
+
+        const presets = this.getSavedPresets();
+        const rewardIds = this.selectedRewards.map(r => r.id);
+
+        // Check if preset with same name exists - update it
+        const existingIndex = presets.findIndex(p => p.name === name);
+        if (existingIndex >= 0) {
+            presets[existingIndex].rewardIds = rewardIds;
+        } else {
+            presets.push({ name, rewardIds });
+        }
+
+        this.setSavedPresets(presets);
+        return true;
+    }
+
+    // Validate a preset against current inventory and return valid reward IDs
+    validatePreset(preset) {
+        if (!preset || !preset.rewardIds) return { validIds: [], removedIds: [] };
+
+        const validIds = [];
+        const removedIds = [];
+
+        for (const rewardId of preset.rewardIds) {
+            const data = this.inventory[rewardId];
+            // Check if item is available (permanent or has quantity)
+            if (data && (data.permanentUnlock || data.quantity > 0)) {
+                validIds.push(rewardId);
+            } else {
+                removedIds.push(rewardId);
+            }
+        }
+
+        return { validIds, removedIds };
+    }
+
+    // Load a preset into selection, removing unavailable items
+    loadPreset(preset) {
+        if (!preset) return { loaded: 0, removed: 0 };
+
+        const { validIds, removedIds } = this.validatePreset(preset);
+
+        // Clear current selection
+        this.selectedRewards = [];
+
+        // Add valid items to selection (respecting gun limit)
+        let gunAdded = false;
+        for (const rewardId of validIds) {
+            const reward = Object.values(REWARDS).find(r => r.id === rewardId);
+            if (reward) {
+                // Only one gun allowed
+                if (reward.category === CATEGORY.GUN) {
+                    if (gunAdded) continue;
+                    gunAdded = true;
+                }
+                this.selectedRewards.push(reward);
+            }
+        }
+
+        // If items were removed, update the saved preset
+        if (removedIds.length > 0) {
+            const presets = this.getSavedPresets();
+            const presetIndex = presets.findIndex(p => p.name === preset.name);
+            if (presetIndex >= 0) {
+                presets[presetIndex].rewardIds = validIds;
+                this.setSavedPresets(presets);
+            }
+        }
+
+        return { loaded: this.selectedRewards.length, removed: removedIds.length };
+    }
+
+    // Delete a preset by name
+    deletePreset(name) {
+        const presets = this.getSavedPresets();
+        const newPresets = presets.filter(p => p.name !== name);
+        this.setSavedPresets(newPresets);
+    }
+
+    // Generate next available preset name
+    getNextPresetName() {
+        const presets = this.getSavedPresets();
+        let num = 1;
+        while (presets.some(p => p.name === `Preset ${num}`)) {
+            num++;
+        }
+        return `Preset ${num}`;
+    }
+
     update(game) {
         if (!this.isVisible) return true;
 
-        // Handle ESC to cancel
+        // Handle ESC to cancel (close preset menu first if open)
         if (game.input.escapePressed) {
+            if (this.showPresetMenu) {
+                this.showPresetMenu = false;
+                this.presetMenuMode = null;
+                game.input.escapePressed = false;
+                return true;
+            }
             this.hide();
             game.input.escapePressed = false;
             return 'cancel';
@@ -271,6 +410,23 @@ export class LoadoutMenu {
         this.clearButton.y = refPanelTop + 45;
         this.clearButton.update(inX, inY);
 
+        // Position preset buttons (next to Selected header)
+        this.savePresetButton.x = refCenterX + 200;
+        this.savePresetButton.y = refPanelTop + 45;
+        this.savePresetButton.update(inX, inY);
+
+        this.loadPresetButton.x = refCenterX + 200 + 140;
+        this.loadPresetButton.y = refPanelTop + 45;
+        this.loadPresetButton.update(inX, inY);
+
+        // Handle preset menu interactions first if open
+        if (this.showPresetMenu) {
+            const menuResult = this.updatePresetMenu(game, inX, inY, clicking, rX, rY, refCenterX, refPanelTop);
+            if (menuResult === 'handled') {
+                return true;
+            }
+        }
+
         // Handle button clicks
         if (this.startButton.isHovered && clicking && !this.clicked) {
             this.clicked = true;
@@ -289,6 +445,26 @@ export class LoadoutMenu {
             this.clicked = true;
             if (window.gameSound) window.gameSound.playMenuClick();
             this.selectedRewards = [];
+        }
+
+        // Handle Save Preset button
+        if (this.savePresetButton.isHovered && clicking && !this.clicked) {
+            this.clicked = true;
+            if (window.gameSound) window.gameSound.playMenuClick();
+            if (this.selectedRewards.length > 0) {
+                this.showPresetMenu = true;
+                this.presetMenuMode = 'save';
+                this.presetNameInput = this.getNextPresetName();
+            }
+        }
+
+        // Handle Load Preset button
+        if (this.loadPresetButton.isHovered && clicking && !this.clicked) {
+            this.clicked = true;
+            if (window.gameSound) window.gameSound.playMenuClick();
+            this.showPresetMenu = true;
+            this.presetMenuMode = 'load';
+            this.hoveredPresetIndex = -1;
         }
 
         // Update category buttons
