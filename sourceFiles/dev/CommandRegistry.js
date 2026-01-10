@@ -835,12 +835,25 @@ export class CommandRegistry {
         }
     }
 
-    cmdShowPoints(args) {
-        if (!this.game.shopMenu) {
-            return { success: false, message: 'Shop system not available' };
+    async cmdShowPoints(args) {
+        if (!this.game.supabase || !this.game.playerName) {
+            return { success: false, message: 'Not logged in' };
         }
 
-        return { success: true, message: `Current points: ${this.game.shopMenu.playerPoints.toLocaleString()}` };
+        try {
+            const data = await this.game.supabase.getShopData(this.game.playerName);
+            if (data.error) {
+                return { success: false, message: `Error: ${data.error}` };
+            }
+            const points = data.points || 0;
+            // Also update shopMenu if available
+            if (this.game.shopMenu) {
+                this.game.shopMenu.setShopData(data);
+            }
+            return { success: true, message: `Current points: ${points.toLocaleString()}` };
+        } catch (error) {
+            return { success: false, message: `Error: ${error.message}` };
+        }
     }
 
     async cmdLeaderboard(args) {
