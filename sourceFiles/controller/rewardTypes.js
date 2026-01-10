@@ -104,7 +104,7 @@ export const REWARDS = {
         category: CATEGORY.GUN,
         rarity: RARITY.COMMON,
         gunType: 'rapidfire',
-        durability: 15,
+        durability: 30,
         cooldownMultiplier: 0.75
     },
     RAPIDFIRE_UNCOMMON: {
@@ -114,7 +114,7 @@ export const REWARDS = {
         category: CATEGORY.GUN,
         rarity: RARITY.UNCOMMON,
         gunType: 'rapidfire',
-        durability: 22,
+        durability: 45,
         cooldownMultiplier: 0.6
     },
     RAPIDFIRE_RARE: {
@@ -124,7 +124,7 @@ export const REWARDS = {
         category: CATEGORY.GUN,
         rarity: RARITY.RARE,
         gunType: 'rapidfire',
-        durability: 30,
+        durability: 60,
         cooldownMultiplier: 0.5
     },
     RAPIDFIRE_EPIC: {
@@ -134,7 +134,7 @@ export const REWARDS = {
         category: CATEGORY.GUN,
         rarity: RARITY.EPIC,
         gunType: 'rapidfire',
-        durability: 40,
+        durability: 80,
         cooldownMultiplier: 0.4
     },
     RAPIDFIRE_LEGENDARY: {
@@ -144,7 +144,7 @@ export const REWARDS = {
         category: CATEGORY.GUN,
         rarity: RARITY.LEGENDARY,
         gunType: 'rapidfire',
-        durability: 50,
+        durability: 100,
         cooldownMultiplier: 0.3
     },
     RAPIDFIRE_STIER: {
@@ -154,7 +154,7 @@ export const REWARDS = {
         category: CATEGORY.GUN,
         rarity: RARITY.STIER,
         gunType: 'rapidfire',
-        durability: 65,
+        durability: 130,
         cooldownMultiplier: 0.2,
         bulletCount: 2
     },
