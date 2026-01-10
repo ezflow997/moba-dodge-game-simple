@@ -47,6 +47,9 @@ export class NameInputMenu {
 
         // Bind keyboard handler
         this.keyHandler = this.handleKeyPress.bind(this);
+
+        // Track when menu was closed to prevent escape key from opening pause menu
+        this.closedAt = 0;
     }
 
     show(onSubmitCallback, allowRegistration = true) {
@@ -71,6 +74,7 @@ export class NameInputMenu {
 
     hide() {
         this.isVisible = false;
+        this.closedAt = performance.now(); // Track when menu closed for escape key cooldown
         // Remove keyboard listener
         document.removeEventListener('keydown', this.keyHandler);
     }

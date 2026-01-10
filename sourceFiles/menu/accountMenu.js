@@ -61,6 +61,9 @@ export class AccountMenu {
 
         // Keyboard handler
         this.keyHandler = this.handleKeyPress.bind(this);
+
+        // Track when menu was closed to prevent escape key from opening pause menu
+        this.closedAt = 0;
     }
 
     show(isLoggedIn = false, playerName = '', hasSecurityQuestion = true) {
@@ -106,6 +109,7 @@ export class AccountMenu {
 
     hide() {
         this.isVisible = false;
+        this.closedAt = performance.now(); // Track when menu closed for escape key cooldown
         document.removeEventListener('keydown', this.keyHandler);
     }
 
@@ -114,6 +118,10 @@ export class AccountMenu {
 
         // Handle Escape to go back/close
         if (e.key === 'Escape') {
+            // Clear escape flag to prevent pause menu from opening
+            if (window.game && window.game.input) {
+                window.game.input.escapePressed = false;
+            }
             if (this.mode === 'main') {
                 this.hide();
             } else {
