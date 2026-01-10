@@ -590,10 +590,10 @@ export class RankedMenu {
             const seconds = Math.floor((liveTimeRemaining % 60000) / 1000);
             const timeStr = `${minutes}m ${seconds}s remaining`;
             context.fillStyle = minutes < 10 ? '#ff8844' : '#88ffff';
-            context.fillText(timeStr, centerX, panelY + 180 * rY);
+            context.fillText(timeStr, centerX, panelY + 165 * rY);
         } else if (this.queueSize > 0 && this.queueSize < this.maxPlayers) {
             context.fillStyle = '#888888';
-            context.fillText('Waiting for more players to start timer...', centerX, panelY + 180 * rY);
+            context.fillText('Waiting for more players to start timer...', centerX, panelY + 165 * rY);
         }
 
         // Queue status
