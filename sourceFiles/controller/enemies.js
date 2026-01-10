@@ -79,8 +79,9 @@ export class Enemies {
         return Math.round(baseThreshold * (1 + variation));
     }
     update(game, player, bullets, update){
-        // Get the correct bullet/bolt array based on challenge mode
-        const bulletArray = game.challenge_level === 0 ? bullets.bulletsList : bullets.bolts;
+        // Get the correct bullet/bolt array based on which controller was passed
+        // (bullets controller has bulletsList, voidBolts controller has bolts)
+        const bulletArray = bullets.bulletsList !== undefined ? bullets.bulletsList : bullets.bolts;
         
         if(!this.bossActive &&
             this.bossTowardsScore >= this.currentBossThreshold){
@@ -123,7 +124,7 @@ export class Enemies {
 
                         // Only clear bullets for single-hit weapons
                         if (!isMultiHitGun) {
-                            if(game.challenge_level === 0) {
+                            if(bullets.bulletsList !== undefined) {
                                 bullets.bulletsList = [];
                                 bullets.bulletsSpawned = false;
                             } else {
@@ -249,8 +250,10 @@ export class Enemies {
                     if (window.gameSound) window.gameSound.playPlayerDeath();
                 }
                 if(p.bulletCollision == true){
-                    //console.log('colision ',game.input.q_key);
-                    if(game.challenge_level == 0){
+                    // Check if using bullets controller (has bulletsList) vs voidBolts controller (has bolts)
+                    const usingBullets = bullets.bulletsList !== undefined;
+
+                    if(usingBullets){
                         player.qCoolDownElapsed = 0;
                         game.input.q_key += 60;
 
@@ -260,14 +263,8 @@ export class Enemies {
 
                         // Only clear all bullets for single-hit weapons
                         if (!isMultiHitGun) {
-                            if(game.challenge_level === 0) {
-                                bullets.bulletsList = [];
-                                bullets.bulletsSpawned = false;
-                            } else {
-                                bullets.bolts = [];
-                                bullets.canRecast = false;
-                                bullets.activeBolt = null;
-                            }
+                            bullets.bulletsList = [];
+                            bullets.bulletsSpawned = false;
                         }
                         // Always allow shooting again after hitting a target
                         player.qPressed = false;
@@ -290,19 +287,15 @@ export class Enemies {
                             break;
                         }
                     }
-                    else if(game.challenge_level == 1){
+                    else {
+                        // VoidBolts mode - scoring is handled in voidBolts.js
                         this.enemiesList.splice(i,1);
                         if (window.gameSound) window.gameSound.playEnemyDeath();
                     }
                 }
                 else{
                     p.update(player);
-                    if(game.challenge_level == 0){
-                        p.checkCollision(player, bulletArray, game.rewardManager);
-                    }
-                    else if(game.challenge_level == 1){
-                        p.checkCollision(player, bulletArray, game.rewardManager);
-                    }
+                    p.checkCollision(player, bulletArray, game.rewardManager);
                 }
             }
         }

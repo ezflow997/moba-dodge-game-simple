@@ -1,6 +1,24 @@
 import { Button, superFunctions } from "./supers.js";
 import { performanceMode, setPerformanceMode } from "../controller/enemy.js";
 
+// UI Scale setting - exported for use by other modules
+let uiScale = 1.0;
+
+export function getUIScale() {
+    return uiScale;
+}
+
+export function setUIScale(value) {
+    uiScale = Math.max(0.5, Math.min(2.0, value));
+    localStorage.setItem('uiScale', uiScale.toString());
+}
+
+// Load UI scale from localStorage on module init
+const savedUIScale = localStorage.getItem('uiScale');
+if (savedUIScale !== null) {
+    uiScale = parseFloat(savedUIScale);
+}
+
 export class PauseMenu {
     constructor() {
         this.super = new superFunctions();
@@ -21,11 +39,12 @@ export class PauseMenu {
         this.resumeButton = new Button(btnX, 280, btnW, btnH, "Resume (ESC)", fontSize, 0, 0, false, true, 'white', 'white');
         this.keybindsButton = new Button(btnX, 280 + btnSpace, btnW, btnH, "Keybinds", fontSize, 0, 0, false, true, 'white', 'white');
         this.volumeButton = new Button(btnX, 280 + btnSpace * 2, btnW, btnH, "Volume", fontSize, 0, 0, false, true, 'white', 'white');
-        this.controlSchemeButton = new Button(btnX, 280 + btnSpace * 3, btnW, btnH, "Controls: Mouse", fontSize, 0, 0, false, true, 'white', 'white');
-        this.performanceButton = new Button(btnX, 280 + btnSpace * 4, btnW, btnH, "Performance Mode: OFF", fontSize, 0, 0, false, true, 'white', 'white');
-        this.devModeButton = new Button(btnX, 280 + btnSpace * 5, btnW, btnH, "Dev Mode: OFF", fontSize, 0, 0, false, true, 'white', 'white');
-        this.exitTestRoomButton = new Button(btnX, 280 + btnSpace * 6, btnW, btnH, "Exit Test Room", fontSize, 0, 0, false, true, 'white', 'white');
-        this.quitButton = new Button(btnX, 280 + btnSpace * 7, btnW, btnH, "Quit to Menu", fontSize, 0, 0, false, true, 'white', 'white');
+        this.uiScaleButton = new Button(btnX, 280 + btnSpace * 3, btnW, btnH, "UI Scale", fontSize, 0, 0, false, true, 'white', 'white');
+        this.controlSchemeButton = new Button(btnX, 280 + btnSpace * 4, btnW, btnH, "Controls: Mouse", fontSize, 0, 0, false, true, 'white', 'white');
+        this.performanceButton = new Button(btnX, 280 + btnSpace * 5, btnW, btnH, "Performance Mode: OFF", fontSize, 0, 0, false, true, 'white', 'white');
+        this.devModeButton = new Button(btnX, 280 + btnSpace * 6, btnW, btnH, "Dev Mode: OFF", fontSize, 0, 0, false, true, 'white', 'white');
+        this.exitTestRoomButton = new Button(btnX, 280 + btnSpace * 7, btnW, btnH, "Exit Test Room", fontSize, 0, 0, false, true, 'white', 'white');
+        this.quitButton = new Button(btnX, 280 + btnSpace * 8, btnW, btnH, "Quit to Menu", fontSize, 0, 0, false, true, 'white', 'white');
 
         // Load performance mode setting from localStorage
         const savedPerfMode = localStorage.getItem('performanceMode') === 'true';
@@ -45,6 +64,7 @@ export class PauseMenu {
         // Submenu states
         this.showKeybinds = false;
         this.showVolume = false;
+        this.showUIScale = false;
 
         // Keybinds submenu
         this.keybindQButton = new Button(700, 300, 600, 80, "Shoot: Q", 50, 140, 60, false, true, 'white', 'white');
@@ -76,6 +96,11 @@ export class PauseMenu {
         this.musicVolumeSlider = new Slider(700, 350, 800, 30, 0, 1);
         this.sfxVolumeSlider = new Slider(700, 500, 800, 30, 0, 1);
         this.volumeBackButton = new Button(880, 600, 400, 80, "Back", 50, 140, 60, false, true, 'white', 'white');
+
+        // UI Scale submenu
+        this.uiScaleSlider = new Slider(700, 400, 800, 30, 0.5, 2.0);
+        this.uiScaleSlider.setValue(uiScale); // Initialize with current value
+        this.uiScaleBackButton = new Button(880, 550, 400, 80, "Back", 50, 140, 60, false, true, 'white', 'white');
 
         // keyboard key down listener
         this.keydownHandler = (ev) => {

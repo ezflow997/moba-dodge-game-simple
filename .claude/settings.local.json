@@ -14,7 +14,8 @@
       "Bash(node test-complete-queues.js:*)",
       "WebSearch",
       "Bash(node --check:*)",
-      "Bash(vercel --prod:*)"
+      "Bash(vercel --prod:*)",
+      "Bash(npm run deploy:*)"
     ]
   }
 }
