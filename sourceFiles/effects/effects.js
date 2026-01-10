@@ -1,5 +1,8 @@
 import { Particle, PARTICLE_PRESETS } from './particle.js';
 
+// Import performance mode from enemy.js
+import { performanceMode } from '../controller/enemy.js';
+
 export class EffectsManager {
     constructor() {
         this.particles = [];
@@ -8,20 +11,27 @@ export class EffectsManager {
 
         // Particle pool for performance
         this.maxParticles = 500;
+        this.maxParticlesPerformance = 100;  // Reduced limit for performance mode
     }
 
     spawnBurst(x, y, preset, customConfig = {}) {
         const baseConfig = PARTICLE_PRESETS[preset] || PARTICLE_PRESETS.default || {};
         const config = { ...baseConfig, ...customConfig };
-        const count = config.count || 10;
+
+        // Reduce particle count in performance mode
+        const maxCount = performanceMode ? Math.ceil((config.count || 10) / 3) : (config.count || 10);
+        const currentMax = performanceMode ? this.maxParticlesPerformance : this.maxParticles;
 
         // Safety check for colors
         if (!config.colors || config.colors.length === 0) {
             config.colors = ['#ffffff', '#ffff00', '#ff8800'];
         }
 
-        for (let i = 0; i < count; i++) {
-            if (this.particles.length >= this.maxParticles) {
+        // Disable glow in performance mode
+        const useGlow = performanceMode ? false : (config.glow || false);
+
+        for (let i = 0; i < maxCount; i++) {
+            if (this.particles.length >= currentMax) {
                 // Remove oldest particle
                 this.particles.shift();
             }
@@ -38,7 +48,7 @@ export class EffectsManager {
                 color: color,
                 life: config.life || 500,
                 gravity: config.gravity || 0,
-                glow: config.glow || false,
+                glow: useGlow,
                 glowSize: config.glowSize || 10,
                 decay: config.decay || 0.02
             });

@@ -1,4 +1,5 @@
 import { REWARDS, CATEGORY } from '../controller/rewardTypes.js';
+import { performanceMode, setPerformanceMode } from '../controller/enemy.js';
 
 /**
  * CommandRegistry - Manages all debug console commands
@@ -56,6 +57,7 @@ export class CommandRegistry {
         // Visualization
         this.register('hitboxes', this.cmdHitboxes.bind(this), 'Toggle hitbox visualization', ['showboxes']);
         this.register('fps', this.cmdFPS.bind(this), 'Toggle FPS counter');
+        this.register('performance', this.cmdPerformance.bind(this), 'Toggle performance mode (reduced effects)', ['perf', 'lowfx']);
         this.register('debug', this.cmdDebug.bind(this), 'Toggle detailed stats overlay', ['stats']);
         this.register('grid', this.cmdGrid.bind(this), 'Toggle coordinate grid overlay');
         this.register('paths', this.cmdPaths.bind(this), 'Show enemy pathfinding/movement paths');
@@ -603,7 +605,16 @@ export class CommandRegistry {
         this.devMode.showFPS = !this.devMode.showFPS;
         return { success: true, message: `FPS counter ${this.devMode.showFPS ? 'enabled' : 'disabled'}` };
     }
-    
+
+    cmdPerformance(args) {
+        const newMode = !performanceMode;
+        setPerformanceMode(newMode);
+        return {
+            success: true,
+            message: `Performance mode ${newMode ? 'ENABLED - reduced effects for better FPS' : 'DISABLED - full visual effects'}`
+        };
+    }
+
     cmdDebug(args) {
         this.devMode.showStats = !this.devMode.showStats;
         return { success: true, message: `Stats overlay ${this.devMode.showStats ? 'enabled' : 'disabled'}` };
