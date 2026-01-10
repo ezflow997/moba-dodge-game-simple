@@ -107,7 +107,18 @@ export class Bullets {
             player.qCoolDownElapsed = (msNow - player.qPressedNow) * timescale;
 
             if(this.bulletsCreated == true){
-                if(this.bulletsList.length == 0 || this.bulletsHitTarget == true){
+                // Check if this is an independent bullet type that shouldn't block cooldown
+                const firstBullet = this.bulletsList.length > 0 ? this.bulletsList[0] : null;
+                const independentTypes = ['shotgun', 'nova', 'twin', 'homing', 'ricochet'];
+                const isIndependentGun = firstBullet && independentTypes.includes(firstBullet.gunType);
+
+                // For independent guns, allow cooldown to proceed once all bullets have spawned
+                // For other guns, wait until bullets are gone or hit target
+                const canProceed = this.bulletsList.length == 0 ||
+                                   this.bulletsHitTarget == true ||
+                                   (isIndependentGun && this.bulletsSpawned);
+
+                if(canProceed){
                     this.bulletsCreated = false;
                     this.bulletsSpawned = false;
                     this.bulletsDeSpawned = true;
