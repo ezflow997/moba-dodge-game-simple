@@ -65,6 +65,57 @@ async function setLastResetMonth(yearMonth) {
     }
 }
 
+// Get the current #1 ranked player (highest ELO with at least 1 game played)
+async function getCurrentChampion() {
+    try {
+        const url = `${SUPABASE_URL}/rest/v1/player_elo?games_played=gt.0&order=elo.desc,games_played.desc&limit=1`;
+        const response = await fetch(url, { method: 'GET', headers: getHeaders() });
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data.length > 0 ? data[0] : null;
+    } catch (error) {
+        console.error('getCurrentChampion error:', error);
+        return null;
+    }
+}
+
+// Save the monthly champion to the champions table
+async function saveChampion(playerName, elo, gamesPlayed, wins, yearMonth) {
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/ranked_champions`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({
+                player_name: playerName,
+                final_elo: elo,
+                games_played: gamesPlayed,
+                wins: wins,
+                season_month: yearMonth,
+                awarded_at: new Date().toISOString()
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        console.log(`[CHAMPION] ${playerName} saved as champion for ${yearMonth} with ELO ${elo}`);
+        return true;
+    } catch (error) {
+        console.error('saveChampion error:', error);
+        return false;
+    }
+}
+
+// Get previous year-month string (for awarding the champion)
+function getPreviousYearMonth() {
+    const now = new Date();
+    now.setUTCMonth(now.getUTCMonth() - 1);
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+}
+
 // Reset all player ELO to default (1000) for monthly reset
 async function resetAllPlayerElo() {
     try {
@@ -102,6 +153,19 @@ async function checkAndPerformMonthlyReset() {
     if (!lastResetMonth || lastResetMonth !== currentMonth) {
         console.log(`[ELO RESET] New month detected. Last reset: ${lastResetMonth}, Current: ${currentMonth}`);
 
+        // Capture the champion BEFORE resetting (use last month for the award)
+        const previousMonth = lastResetMonth || getPreviousYearMonth();
+        const champion = await getCurrentChampion();
+        if (champion) {
+            await saveChampion(
+                champion.player_name,
+                champion.elo,
+                champion.games_played,
+                champion.wins || 0,
+                previousMonth
+            );
+        }
+
         const resetSuccess = await resetAllPlayerElo();
         if (resetSuccess) {
             await setLastResetMonth(currentMonth);
@@ -111,6 +175,19 @@ async function checkAndPerformMonthlyReset() {
     }
 
     return false;
+}
+
+// Get all champions (players who won a monthly season)
+async function getAllChampions() {
+    try {
+        const url = `${SUPABASE_URL}/rest/v1/ranked_champions?select=player_name,season_month,final_elo&order=awarded_at.desc`;
+        const response = await fetch(url, { method: 'GET', headers: getHeaders() });
+        if (!response.ok) return [];
+        return await response.json();
+    } catch (error) {
+        console.error('getAllChampions error:', error);
+        return [];
+    }
 }
 
 export default async function handler(req, res) {

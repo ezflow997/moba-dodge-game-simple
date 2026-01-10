@@ -644,7 +644,7 @@ export class LeaderboardMenu {
         if (isRanked) {
             this.super.drawGlowText(context, colScore, startY, "ELO", 38, '#888888', '#666666', 6);
             this.super.drawGlowText(context, colKills, startY, "GAMES", 38, '#888888', '#666666', 6);
-            this.super.drawGlowText(context, colWinrate, startY, "WINS", 38, '#888888', '#666666', 6);
+            this.super.drawGlowText(context, colWinrate, startY, "WIN%", 38, '#888888', '#666666', 6);
         } else {
             this.super.drawGlowText(context, colScore, startY, "SCORE", 38, '#888888', '#666666', 6);
             this.super.drawGlowText(context, colKills, startY, "KILLS", 38, '#888888', '#666666', 6);
@@ -751,11 +751,13 @@ export class LeaderboardMenu {
                 const games = entry.games_played || entry.gamesPlayed || 0;
                 this.super.drawGlowText(context, colKills, y, games.toString(), 34, '#88ffff', '#00ffff', 8);
 
-                // Wins (1st place finishes)
+                // Winrate (1st place finishes / games played)
                 const wins = entry.wins || 0;
-                const winColor = wins > 0 ? '#ffdd00' : '#888888';
-                const winGlow = wins > 0 ? '#ffaa00' : '#666666';
-                this.super.drawGlowText(context, colWinrate, y, wins.toString(), 34, winColor, winGlow, 8);
+                const winrate = games > 0 ? Math.round((wins / games) * 100) : 0;
+                const winrateText = `${winrate}%`;
+                const winColor = winrate >= 50 ? '#00ff88' : winrate > 0 ? '#ffdd00' : '#888888';
+                const winGlow = winrate >= 50 ? '#00ff00' : winrate > 0 ? '#ffaa00' : '#666666';
+                this.super.drawGlowText(context, colWinrate, y, winrateText, 34, winColor, winGlow, 8);
             } else {
                 // Score
                 this.super.drawGlowText(context, colScore, y, entry.score.toString(), 34, '#00ff88', '#00ff00', 8);
