@@ -12,7 +12,8 @@
       "Bash(node build.js:*)",
       "Bash(node test-fill-queue.js:*)",
       "Bash(node test-complete-queues.js:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(node --check:*)"
     ]
   }
 }

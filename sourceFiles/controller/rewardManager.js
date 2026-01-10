@@ -773,15 +773,13 @@ export class RewardManager {
         if (this.loadoutWeapon) {
             const loadoutW = 180 * rX;
             const loadoutH = 50 * rX;
-            const loadoutX = 20;  // Fixed 20px from left edge
-            const loadoutY = window.innerHeight - loadoutH - 20;
+            const loadoutX = 20 * rX;  // Bottom-left with padding
+            const loadoutY = window.innerHeight - loadoutH - 20 * rX;
 
             // Background
             const canReactivate = this.canReactivateLoadoutWeapon();
             context.fillStyle = canReactivate ? 'rgba(0, 100, 50, 0.9)' : 'rgba(50, 50, 50, 0.8)';
-            context.beginPath();
-            context.roundRect(loadoutX, loadoutY, loadoutW, loadoutH, 6 * rX);
-            context.fill();
+            context.fillRect(loadoutX, loadoutY, loadoutW, loadoutH);
 
             // Border
             context.strokeStyle = canReactivate ? '#00ff88' : '#555555';
@@ -790,7 +788,7 @@ export class RewardManager {
                 context.shadowColor = '#00ff88';
                 context.shadowBlur = 8 * rX;
             }
-            context.stroke();
+            context.strokeRect(loadoutX, loadoutY, loadoutW, loadoutH);
             context.shadowBlur = 0;
 
             // Left side: Label and weapon name
