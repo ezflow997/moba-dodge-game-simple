@@ -22,6 +22,72 @@ const GUN_TYPE_INFO = {
     'chain': { name: 'Chain Lightning', order: 7 }
 };
 
+// Group type info for all categories
+const GROUP_TYPE_INFO = {
+    // Cooldown groups
+    'q_cooldown': { name: 'Q Cooldown', order: 0 },
+    'e_cooldown': { name: 'E Cooldown', order: 1 },
+    'f_cooldown': { name: 'F Cooldown', order: 2 },
+    // Survivability groups
+    'extra_life': { name: 'Extra Lives', order: 0 },
+    'shield': { name: 'Shields', order: 1 },
+    'shrink': { name: 'Size Reduction', order: 2 },
+    // Movement groups
+    'speed': { name: 'Speed Boost', order: 0 },
+    'dash': { name: 'Dash Distance', order: 1 },
+    'phase': { name: 'Phase', order: 2 },
+    // Offense groups
+    'score_mult': { name: 'Score Multiplier', order: 0 },
+    'bullet_size': { name: 'Bullet Size', order: 1 },
+    'range': { name: 'Range', order: 2 },
+    'aura': { name: 'Damage Aura', order: 3 }
+};
+
+// Helper to determine item group type based on properties
+function getItemGroupType(reward) {
+    if (!reward) return 'other';
+
+    // Gun category uses gunType directly
+    if (reward.category === CATEGORY.GUN) {
+        return reward.gunType || 'other';
+    }
+
+    // Cooldown - check ability property
+    if (reward.category === CATEGORY.COOLDOWN) {
+        if (reward.ability === 'q') return 'q_cooldown';
+        if (reward.ability === 'e') return 'e_cooldown';
+        if (reward.ability === 'f') return 'f_cooldown';
+        return 'other';
+    }
+
+    // Survivability - check specific properties
+    if (reward.category === CATEGORY.SURVIVABILITY) {
+        if (reward.lives !== undefined) return 'extra_life';
+        if (reward.blockCount !== undefined) return 'shield';
+        if (reward.sizeReduction !== undefined) return 'shrink';
+        return 'other';
+    }
+
+    // Movement - check specific properties
+    if (reward.category === CATEGORY.MOVEMENT) {
+        if (reward.speedBoost !== undefined) return 'speed';
+        if (reward.dashDistanceMod !== undefined) return 'dash';
+        if (reward.phaseDuration !== undefined) return 'phase';
+        return 'other';
+    }
+
+    // Offense - check specific properties
+    if (reward.category === CATEGORY.OFFENSE) {
+        if (reward.scoreMultiplier !== undefined) return 'score_mult';
+        if (reward.sizeMultiplier !== undefined) return 'bullet_size';
+        if (reward.auraRadius !== undefined) return 'aura';
+        if (reward.rangeMultiplier !== undefined) return 'range';
+        return 'other';
+    }
+
+    return 'other';
+}
+
 export class LoadoutMenu {
     constructor() {
         this.super = new superFunctions();
@@ -51,8 +117,9 @@ export class LoadoutMenu {
         this.scrollbarDragStartY = 0;
         this.scrollbarDragStartOffset = 0;
 
-        // Collapsed groups (for gun types) - collapsed by default
+        // Collapsed groups (for all categories) - collapsed by default
         this.collapsedGroups = {
+            // Gun types
             'shotgun': true,
             'rapidfire': true,
             'piercing': true,
@@ -60,7 +127,24 @@ export class LoadoutMenu {
             'homing': true,
             'twin': true,
             'nova': true,
-            'chain': true
+            'chain': true,
+            // Cooldown groups
+            'q_cooldown': true,
+            'e_cooldown': true,
+            'f_cooldown': true,
+            // Survivability groups
+            'extra_life': true,
+            'shield': true,
+            'shrink': true,
+            // Movement groups
+            'speed': true,
+            'dash': true,
+            'phase': true,
+            // Offense groups
+            'score_mult': true,
+            'bullet_size': true,
+            'range': true,
+            'aura': true
         };
 
         // Buttons
@@ -133,7 +217,7 @@ export class LoadoutMenu {
     }
 
     // Get available items for current category (owned quantity > 0 or permanently unlocked)
-    // For weapons, groups items by gun type with separators
+    // Groups items by type with collapsible separators
     getAvailableItems() {
         const items = [];
         for (const [rewardId, data] of Object.entries(this.inventory)) {
@@ -151,41 +235,44 @@ export class LoadoutMenu {
             }
         }
 
-        // For weapons category, group by gun type with separators
-        if (this.selectedCategory === CATEGORY.GUN && items.length > 0) {
-            // Group by gun type
+        // Group items by type with separators (works for all categories)
+        if (items.length > 0) {
+            // Group by item type
             const groups = {};
             for (const item of items) {
-                const gunType = item.reward.gunType || 'other';
-                if (!groups[gunType]) groups[gunType] = [];
-                groups[gunType].push(item);
+                const groupType = getItemGroupType(item.reward);
+                if (!groups[groupType]) groups[groupType] = [];
+                groups[groupType].push(item);
             }
+
+            // Get the appropriate type info based on category
+            const typeInfo = this.selectedCategory === CATEGORY.GUN ? GUN_TYPE_INFO : GROUP_TYPE_INFO;
 
             // Sort groups by order and build result with separators
             const result = [];
             const sortedTypes = Object.keys(groups).sort((a, b) => {
-                const orderA = GUN_TYPE_INFO[a]?.order ?? 99;
-                const orderB = GUN_TYPE_INFO[b]?.order ?? 99;
+                const orderA = typeInfo[a]?.order ?? 99;
+                const orderB = typeInfo[b]?.order ?? 99;
                 return orderA - orderB;
             });
 
-            for (const gunType of sortedTypes) {
-                const typeName = GUN_TYPE_INFO[gunType]?.name || gunType;
-                const isCollapsed = this.collapsedGroups[gunType] === true;
-                const itemCount = groups[gunType].length;
+            for (const groupType of sortedTypes) {
+                const typeName = typeInfo[groupType]?.name || groupType;
+                const isCollapsed = this.collapsedGroups[groupType] === true;
+                const itemCount = groups[groupType].length;
 
                 // Add separator with collapse info
                 result.push({
                     isSeparator: true,
                     separatorName: typeName,
-                    gunType: gunType,
+                    groupType: groupType,
                     isCollapsed: isCollapsed,
                     itemCount: itemCount
                 });
 
                 // Add items only if not collapsed
                 if (!isCollapsed) {
-                    result.push(...groups[gunType]);
+                    result.push(...groups[groupType]);
                 }
             }
             return result;
@@ -598,10 +685,10 @@ export class LoadoutMenu {
             }
 
             // Handle separator click - toggle collapse
-            if (clickedSeparator && clickedSeparator.gunType) {
+            if (clickedSeparator && clickedSeparator.groupType) {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
-                this.collapsedGroups[clickedSeparator.gunType] = !this.collapsedGroups[clickedSeparator.gunType];
+                this.collapsedGroups[clickedSeparator.groupType] = !this.collapsedGroups[clickedSeparator.groupType];
             }
             // Handle item click
             else if (clickedItem) {

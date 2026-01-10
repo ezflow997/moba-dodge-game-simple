@@ -41,6 +41,72 @@ const GUN_TYPE_INFO = {
     'chain': { name: 'Chain Lightning', order: 7 }
 };
 
+// Group type info for all categories
+const GROUP_TYPE_INFO = {
+    // Cooldown groups
+    'q_cooldown': { name: 'Q Cooldown', order: 0 },
+    'e_cooldown': { name: 'E Cooldown', order: 1 },
+    'f_cooldown': { name: 'F Cooldown', order: 2 },
+    // Survivability groups
+    'extra_life': { name: 'Extra Lives', order: 0 },
+    'shield': { name: 'Shields', order: 1 },
+    'shrink': { name: 'Size Reduction', order: 2 },
+    // Movement groups
+    'speed': { name: 'Speed Boost', order: 0 },
+    'dash': { name: 'Dash Distance', order: 1 },
+    'phase': { name: 'Phase', order: 2 },
+    // Offense groups
+    'score_mult': { name: 'Score Multiplier', order: 0 },
+    'bullet_size': { name: 'Bullet Size', order: 1 },
+    'range': { name: 'Range', order: 2 },
+    'aura': { name: 'Damage Aura', order: 3 }
+};
+
+// Helper to determine item group type based on properties
+function getItemGroupType(reward) {
+    if (!reward) return 'other';
+
+    // Gun category uses gunType directly
+    if (reward.category === CATEGORY.GUN) {
+        return reward.gunType || 'other';
+    }
+
+    // Cooldown - check ability property
+    if (reward.category === CATEGORY.COOLDOWN) {
+        if (reward.ability === 'q') return 'q_cooldown';
+        if (reward.ability === 'e') return 'e_cooldown';
+        if (reward.ability === 'f') return 'f_cooldown';
+        return 'other';
+    }
+
+    // Survivability - check specific properties
+    if (reward.category === CATEGORY.SURVIVABILITY) {
+        if (reward.lives !== undefined) return 'extra_life';
+        if (reward.blockCount !== undefined) return 'shield';
+        if (reward.sizeReduction !== undefined) return 'shrink';
+        return 'other';
+    }
+
+    // Movement - check specific properties
+    if (reward.category === CATEGORY.MOVEMENT) {
+        if (reward.speedBoost !== undefined) return 'speed';
+        if (reward.dashDistanceMod !== undefined) return 'dash';
+        if (reward.phaseDuration !== undefined) return 'phase';
+        return 'other';
+    }
+
+    // Offense - check specific properties
+    if (reward.category === CATEGORY.OFFENSE) {
+        if (reward.scoreMultiplier !== undefined) return 'score_mult';
+        if (reward.sizeMultiplier !== undefined) return 'bullet_size';
+        if (reward.auraRadius !== undefined) return 'aura';
+        if (reward.rangeMultiplier !== undefined) return 'range';
+        return 'other';
+    }
+
+    return 'other';
+}
+
 export class ShopMenu {
     constructor() {
         this.super = new superFunctions();
@@ -62,8 +128,9 @@ export class ShopMenu {
         this.scrollbarDragStartY = 0;
         this.scrollbarDragStartOffset = 0;
 
-        // Collapsed groups (for gun types) - collapsed by default
+        // Collapsed groups (for all categories) - collapsed by default
         this.collapsedGroups = {
+            // Gun types
             'shotgun': true,
             'rapidfire': true,
             'piercing': true,
@@ -71,7 +138,24 @@ export class ShopMenu {
             'homing': true,
             'twin': true,
             'nova': true,
-            'chain': true
+            'chain': true,
+            // Cooldown groups
+            'q_cooldown': true,
+            'e_cooldown': true,
+            'f_cooldown': true,
+            // Survivability groups
+            'extra_life': true,
+            'shield': true,
+            'shrink': true,
+            // Movement groups
+            'speed': true,
+            'dash': true,
+            'phase': true,
+            // Offense groups
+            'score_mult': true,
+            'bullet_size': true,
+            'range': true,
+            'aura': true
         };
 
         // Selected item for purchase

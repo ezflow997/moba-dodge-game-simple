@@ -65,6 +65,7 @@ export class VoidBolts {
                 game.player.qPressed = false;
                 game.player.qTriggered = true;
                 game.player.qPressed_Recast = false;
+                game.player.qRecastReady = false;
                 game.player.qCoolDownElapsed = 0;
                 game.player.qPressedNow = window.performance.now();
             }
@@ -73,6 +74,7 @@ export class VoidBolts {
                 game.player.qPressed = false;
                 game.player.qTriggered = true;
                 game.player.qPressed_Recast = false;
+                game.player.qRecastReady = false;
             }
         }
 

@@ -31,6 +31,7 @@ export class Player {
         this.qPressed_Recast = false;
         this.qTriggered_Recast = true;
         this.qPresses_Recast = 0;
+        this.qRecastReady = false;
 
         this.eCoolDown = 6100;
         this.ePressed = false;
@@ -82,6 +83,7 @@ export class Player {
         this.qPressed_Recast = false;
         this.qTriggered_Recast = true;
         this.qPresses_Recast = 0;
+        this.qRecastReady = false;
 
         this.qRecastNow = window.performance.now();
 
@@ -151,18 +153,23 @@ export class Player {
                     this.qPressed = true;
                     this.qPressedNow = window.performance.now();
                     this.qTriggered = false;
+                    this.qRecastReady = false; // Must release button before recast
 
                     // Shoot void bolt
                     game.voidBolts.shoot(this, input.mouseX, input.mouseY);
                 }
-                else if(this.qPressed == true && this.qPressed_Recast == false){
-                    // Recast to split (one recast per shot)
+                else if(this.qPressed == true && this.qPressed_Recast == false && this.qRecastReady == true){
+                    // Recast to split (must have released and re-pressed button)
                     if(game.voidBolts.recast()){
                         this.qPresses_Recast += 1;
                         this.qPressed_Recast = true;
                     }
                 }
             }
+        }
+        // Track button release for void bolt recast
+        if(input.buttons.indexOf(shootKey) == -1 && this.qPressed == true && this.qRecastReady == false){
+            this.qRecastReady = true;
         }
         
         // Mouse mode: move towards clicked position
