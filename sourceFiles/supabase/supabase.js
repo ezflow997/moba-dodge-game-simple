@@ -502,4 +502,58 @@ export class SupabaseLeaderboard {
             return { error: error.message };
         }
     }
+
+    // Claim ad reward (get random reward rarity and bonus points)
+    async claimAdReward(playerName, password) {
+        try {
+            const response = await fetch(`${this.apiBase}/shop`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    playerName,
+                    password,
+                    action: 'ad_reward'
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                return { error: data.error || `HTTP ${response.status}` };
+            }
+
+            return data;
+        } catch (error) {
+            console.error('claimAdReward error:', error);
+            return { error: error.message };
+        }
+    }
+
+    // Grant a specific reward to player's inventory
+    async grantReward(playerName, password, rewardId, isPermanent) {
+        try {
+            const response = await fetch(`${this.apiBase}/shop`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    playerName,
+                    password,
+                    action: 'grant_reward',
+                    rewardId,
+                    isPermanent
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                return { error: data.error || `HTTP ${response.status}` };
+            }
+
+            return data;
+        } catch (error) {
+            console.error('grantReward error:', error);
+            return { error: error.message };
+        }
+    }
 }

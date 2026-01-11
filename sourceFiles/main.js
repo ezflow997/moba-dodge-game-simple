@@ -24,6 +24,7 @@ import { CommandRegistry } from "./dev/CommandRegistry.js";
 import { DebugConsole } from "./dev/DebugConsole.js";
 import { TestRoom } from "./dev/TestRoom.js";
 import { PowerupHUD } from "./ui/PowerupHUD.js";
+import { poki } from "./poki/pokiSDK.js";
 
 // Simple Score class for local session tracking
 class SimpleScore {
@@ -81,6 +82,7 @@ window.addEventListener('load', function () {
 				this.sessionAccountCreated = sessionStorage.getItem('sessionAccountCreated') === 'true'; // Track if account was created this session
 				this.pendingScore = null;
 				this.awaitingNameInput = false;
+				this.awaitingAd = false;
 				this.submitError = '';
 				this.pendingSecurityQuestion = null;
 				this.pendingSecurityAnswer = null;
@@ -573,6 +575,26 @@ window.addEventListener('load', function () {
 		const game = new Game(canvas.width, canvas.height);
 		window.game = game; // Global reference for account menu
 
+		// Initialize Poki SDK
+		await poki.init();
+		poki.setPauseCallbacks(
+			() => {
+				// Pause game when ad plays
+				if (!game.pauseMenu.isPaused && !game.gameOver) {
+					game.pauseMenu.toggle();
+				}
+				if (window.gameSound) {
+					window.gameSound.pauseMusic();
+				}
+			},
+			() => {
+				// Resume game when ad finishes
+				if (window.gameSound) {
+					window.gameSound.resumeMusic();
+				}
+			}
+		);
+
 		// Handle window resize - only resize canvas when window actually changes
 		function handleResize() {
 			canvas.width = window.innerWidth;
@@ -597,6 +619,9 @@ window.addEventListener('load', function () {
 
 			if(game.gameOver == true){
 				if(game.showMessage == '' && game.score != 0){
+					// Notify Poki that gameplay stopped
+					poki.gameplayStop();
+
 					// Check if dev mode was used this session - don't save scores
 					if (game.devMode && game.devMode.wasUsedThisSession()) {
 						game.showMessage = 'Dev Mode - Score not saved (' + game.score + ')';
@@ -754,21 +779,26 @@ window.addEventListener('load', function () {
 						requestAnimationFrame(animate);
 					}
 				}
-				if(game.showMessage == 'None' && game.score == 0 && !game.awaitingNameInput){
-					game.menu.mainMenuShow = true;
-					game.showMessage = '';
-					// Clear escape flag to prevent pause menu from opening after closing name input
-					game.input.escapePressed = false;
+				if(game.showMessage == 'None' && game.score == 0 && !game.awaitingNameInput && !game.awaitingAd){
+					// Show commercial break before returning to menu
+					game.awaitingAd = true;
+					poki.commercialBreak().then(() => {
+						game.awaitingAd = false;
+						game.menu.mainMenuShow = true;
+						game.showMessage = '';
+						// Clear escape flag to prevent pause menu from opening after closing name input
+						game.input.escapePressed = false;
 
-					// Force refresh leaderboard scores when returning to menu
-					game.menu.forceRefreshScores();
+						// Force refresh leaderboard scores when returning to menu
+						game.menu.forceRefreshScores();
 
-					// Switch to menu music when returning to menu
-					if (window.gameSound) {
-						window.gameSound.playMenuMusic();
-					}
+						// Switch to menu music when returning to menu
+						if (window.gameSound) {
+							window.gameSound.playMenuMusic();
+						}
 
-					requestAnimationFrame(drawMenu);
+						requestAnimationFrame(drawMenu);
+					});
 					return;
 				}
 
@@ -1003,6 +1033,9 @@ window.addEventListener('load', function () {
 			else{
 				game.game_time = window.performance.now();
 				game.set_difficulty();
+
+				// Notify Poki that gameplay is starting
+				poki.gameplayStart();
 
 				// Apply starter rewards if any (non-ranked games only)
 				if (!game.isRankedGame && game.pendingLoadoutRewards && game.pendingLoadoutRewards.length > 0) {

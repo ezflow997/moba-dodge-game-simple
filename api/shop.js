@@ -260,6 +260,78 @@ export default async function handler(req, res) {
                 });
             }
 
+            // Handle ad reward action (grant random reward for watching ad)
+            if (action === 'ad_reward') {
+                // Bonus points for watching ad (25-50)
+                const bonusPoints = Math.floor(Math.random() * 26) + 25;
+                const currentPoints = player.shop_points || 0;
+
+                // Roll for rarity using weights
+                const rarityWeights = [
+                    { rarity: 'Common', weight: 35 },
+                    { rarity: 'Uncommon', weight: 25 },
+                    { rarity: 'Rare', weight: 20 },
+                    { rarity: 'Epic', weight: 12 },
+                    { rarity: 'Legendary', weight: 6 },
+                    { rarity: 'S-Tier', weight: 2 }
+                ];
+
+                const totalWeight = rarityWeights.reduce((sum, r) => sum + r.weight, 0);
+                let roll = Math.random() * totalWeight;
+                let selectedRarity = 'Common';
+
+                for (const r of rarityWeights) {
+                    roll -= r.weight;
+                    if (roll <= 0) {
+                        selectedRarity = r.rarity;
+                        break;
+                    }
+                }
+
+                // Roll for permanent unlock (5% chance, but only 1% for Legendary/S-Tier)
+                const permChance = (selectedRarity === 'Legendary' || selectedRarity === 'S-Tier') ? 0.01 : 0.05;
+                const isPermanentReward = Math.random() < permChance;
+
+                // Award points
+                await updatePlayerPoints(playerName, currentPoints + bonusPoints);
+
+                // Return the reward info - let frontend pick the actual reward
+                // (since reward definitions are in frontend)
+                return res.status(200).json({
+                    success: true,
+                    bonusPoints,
+                    newPoints: currentPoints + bonusPoints,
+                    rewardRarity: selectedRarity,
+                    isPermanent: isPermanentReward
+                });
+            }
+
+            // Handle grant reward action (actually add the reward to inventory)
+            if (action === 'grant_reward') {
+                if (!rewardId) {
+                    return res.status(400).json({ error: 'Reward ID required' });
+                }
+
+                const grantPermanent = isPermanent || false;
+                const existing = await getInventoryEntry(playerName, rewardId);
+                const currentQuantity = existing ? (existing.quantity || 0) : 0;
+                const currentPermanent = existing ? (existing.permanent_unlock || false) : false;
+
+                // If already permanent, don't downgrade
+                if (grantPermanent && !currentPermanent) {
+                    await upsertInventoryEntry(playerName, rewardId, currentQuantity, true);
+                } else if (!currentPermanent) {
+                    await upsertInventoryEntry(playerName, rewardId, currentQuantity + 1, false);
+                }
+
+                return res.status(200).json({
+                    success: true,
+                    rewardId,
+                    newQuantity: grantPermanent ? currentQuantity : currentQuantity + 1,
+                    permanentUnlock: grantPermanent || currentPermanent
+                });
+            }
+
             // Handle consume action (use items after game)
             if (action === 'consume') {
                 if (!rewardIds || !Array.isArray(rewardIds) || rewardIds.length === 0) {
