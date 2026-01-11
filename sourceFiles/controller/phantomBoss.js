@@ -43,7 +43,7 @@ export class PhantomBoss {
         this.teleportStart = 0;
         this.glitchDuration = 500;
         this.invisibleDuration = 500; // Varies by phase
-        this.teleportCooldown = 4000;
+        this.teleportCooldown = 5000;
         this.lastTeleport = performance.now();
         this.teleportTarget = { x: 0, y: 0 };
         this.glitchOffset = { x: 0, y: 0 };
@@ -53,7 +53,7 @@ export class PhantomBoss {
 
         // Toxic burst attack
         this.lastBurst = performance.now();
-        this.burstCooldown = 2500;
+        this.burstCooldown = 3500;
         this.burstCharging = false;
         this.burstChargeStart = 0;
         this.burstChargeDuration = 400;
@@ -133,16 +133,16 @@ export class PhantomBoss {
 
         if (this.health <= this.phaseThresholds[3] && this.phase < 3) {
             this.phase = 3;
-            this.teleportCooldown = 2000;
-            this.burstCooldown = 1500;
+            this.teleportCooldown = 3000;
+            this.burstCooldown = 2500;
             this.invisibleDuration = 300;
             this.color = '#00ff88';
             this.glowColor = '#66ffaa';
             this.ghostAlpha = 0.7; // More transparent in phase 3
         } else if (this.health <= this.phaseThresholds[2] && this.phase < 2) {
             this.phase = 2;
-            this.teleportCooldown = 3000;
-            this.burstCooldown = 2000;
+            this.teleportCooldown = 4000;
+            this.burstCooldown = 3000;
             this.invisibleDuration = 400;
             this.color = '#00ff77';
             this.glowColor = '#55ff99';
@@ -329,7 +329,7 @@ export class PhantomBoss {
                     const targetX = img.x + Math.cos(angle) * 1000;
                     const targetY = img.y + Math.sin(angle) * 1000;
 
-                    const proj = new BossProjectile(spawnX, spawnY, targetX, targetY, 10, 12);
+                    const proj = new BossProjectile(spawnX, spawnY, targetX, targetY, 10, 9);
                     proj.color = '#00ff66';
                     proj.glowColor = '#44ff88';
                     this.projectiles.push(proj);
@@ -439,7 +439,7 @@ export class PhantomBoss {
             const targetX = this.x + Math.cos(angle) * 1000;
             const targetY = this.y + Math.sin(angle) * 1000;
 
-            const proj = new BossProjectile(spawnX, spawnY, targetX, targetY, 11, 14);
+            const proj = new BossProjectile(spawnX, spawnY, targetX, targetY, 11, 10);
             proj.color = '#00ff66';
             proj.glowColor = '#44ff88';
             this.projectiles.push(proj);
@@ -562,7 +562,7 @@ export class PhantomBoss {
                 const spawnX = this.shadowClone.x + Math.cos(angle) * this.shadowClone.size;
                 const spawnY = this.shadowClone.y + Math.sin(angle) * this.shadowClone.size;
 
-                const proj = new BossProjectile(spawnX, spawnY, player.x, player.y, 10, 12);
+                const proj = new BossProjectile(spawnX, spawnY, player.x, player.y, 10, 9);
                 proj.color = '#004422';
                 proj.glowColor = '#00ff66';
                 this.projectiles.push(proj);

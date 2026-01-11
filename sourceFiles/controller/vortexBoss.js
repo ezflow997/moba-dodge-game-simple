@@ -49,7 +49,7 @@ export class VortexBoss {
         // Attack patterns
         this.homingMissiles = [];
         this.lastHomingShot = performance.now();
-        this.homingCooldown = 2500;
+        this.homingCooldown = 3500;
 
         this.spiralProjectiles = [];
         this.lastSpiral = performance.now();
@@ -126,13 +126,13 @@ export class VortexBoss {
         if (this.health <= this.phaseThresholds[3] && this.phase < 3) {
             this.phase = 3;
             this.createOrbitalRing(3);
-            this.homingCooldown = 1500;
+            this.homingCooldown = 2500;
             this.color = '#cc00ff';
             this.glowColor = '#ff00ff';
         } else if (this.health <= this.phaseThresholds[2] && this.phase < 2) {
             this.phase = 2;
             this.createOrbitalRing(2);
-            this.homingCooldown = 2000;
+            this.homingCooldown = 3000;
             this.color = '#9900ff';
             this.glowColor = '#ff00ff';
         }
@@ -312,9 +312,9 @@ export class VortexBoss {
             y: this.y,
             vx: 0,
             vy: 0,
-            speed: 14 * rX,
+            speed: 10 * rX,
             size: 10 * rX,
-            turnSpeed: 0.25,
+            turnSpeed: 0.18,
             pulsePhase: 0,
             trail: [],
             maxTrailLength: 10,
@@ -391,8 +391,8 @@ export class VortexBoss {
                     this.spiralProjectiles.push({
                         x: this.x,
                         y: this.y,
-                        vx: Math.cos(angle) * 4 * rX,
-                        vy: Math.sin(angle) * 4 * rX,
+                        vx: Math.cos(angle) * 3 * rX,
+                        vy: Math.sin(angle) * 3 * rX,
                         size: 8 * rX,
                         pulsePhase: 0,
                         destroy: false,
@@ -778,15 +778,15 @@ export class VortexBoss {
 
     executeShockwave() {
         const rX = window.innerWidth / 2560;
-        const projectileCount = 16;
-        
+        const projectileCount = 12;
+
         for (let i = 0; i < projectileCount; i++) {
             const angle = (Math.PI * 2 / projectileCount) * i;
             this.spiralProjectiles.push({
                 x: this.x,
                 y: this.y,
-                vx: Math.cos(angle) * 6 * rX,
-                vy: Math.sin(angle) * 6 * rX,
+                vx: Math.cos(angle) * 4.5 * rX,
+                vy: Math.sin(angle) * 4.5 * rX,
                 size: 8 * rX,
                 pulsePhase: 0,
                 destroy: false,
