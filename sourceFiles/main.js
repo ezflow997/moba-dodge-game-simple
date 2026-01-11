@@ -630,15 +630,30 @@ window.addEventListener('load', function () {
 						const pointsEarned = game.calculateShopPoints(game.score, game.difficulties[game.difficulty_level]);
 						game.showMessageRow2 = '+' + pointsEarned + ' Shop Points';
 
+						// Check for daily high score (from cached leaderboard data)
+						let isNewDailyHigh = false;
+						if (game.menu && game.menu.playerLeaderboardData && game.playerName) {
+							const daily = game.menu.playerLeaderboardData.daily;
+							const dailyScore = daily ? (daily.score || 0) : 0;
+							isNewDailyHigh = game.score > dailyScore;
+						}
+
 						// Check for high score
 						if(game.score > parseInt(game.player_data.high_score[game.difficulty_level].value) || !(parseInt(game.player_data.high_score[game.difficulty_level].value) > 0)){
 							game.showMessage = 'New High Score of ' + game.score + ' !';
+							if (isNewDailyHigh) {
+								game.showMessage += ' (New Daily High!)';
+							}
 							game.showMessageNow = window.performance.now();
 							game.setScores(game.player_data.high_score[game.difficulty_level]);
 							game.setScores(game.player_data.last_score[game.difficulty_level]);
 						}
 						else{
-							game.showMessage = 'Your Score is ' + game.score;
+							if (isNewDailyHigh) {
+								game.showMessage = 'New Daily High Score of ' + game.score + ' !';
+							} else {
+								game.showMessage = 'Your Score is ' + game.score;
+							}
 							game.showMessageNow = window.performance.now();
 							game.setScores(game.player_data.last_score[game.difficulty_level]);
 						}
