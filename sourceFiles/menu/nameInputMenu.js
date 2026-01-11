@@ -44,7 +44,7 @@ export class NameInputMenu {
 
         this.submitButton = new Button(1080, 580, 280, 70, "Submit", 45, 75, 50, false, true, 'white', 'white');
         this.nextButton = new Button(1080, 580, 280, 70, "Next", 45, 90, 50, false, true, 'white', 'white');
-        this.togglePasswordButton = new Button(1570, 500, 50, 50, "*", 35, 12, 38, false, true, 'white', 'white');
+        this.togglePasswordButton = new Button(1470, 470, 50, 60, "*", 35, 12, 43, false, true, 'white', 'white');
 
         // Security question navigation buttons
         this.prevQuestionButton = new Button(900, 440, 50, 50, "<", 35, 12, 38, false, true, 'white', 'white');
@@ -487,9 +487,9 @@ export class NameInputMenu {
             if (this.showForgotPassword && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
                 const rX = window.innerWidth / 2560;
                 const rY = window.innerHeight / 1440;
-                // Check if click is within the "Forgot Password?" text area (text drawn at y=610)
-                const linkX = 910 * rX;
-                const linkY = 585 * rY;
+                // Check if click is within the "Forgot Password?" text area (text drawn at y=680)
+                const linkX = 1080 * rX;
+                const linkY = 655 * rY;
                 const linkW = 200 * rX;
                 const linkH = 35 * rY;
                 if (inX >= linkX && inX <= linkX + linkW && inY >= linkY && inY <= linkY + linkH) {
@@ -619,13 +619,13 @@ export class NameInputMenu {
             const reqColor = this.password.length >= 4 ? '#00ff88' : '#ff8888';
             this.super.drawGlowText(context, 910, 560, "Min 4 characters", 22, reqColor, reqColor, 3);
 
-            // Show "Forgot Password?" link after failed login
+            // Show "Forgot Password?" link after failed login (below the button)
             if (this.showForgotPassword) {
                 // Check if mouse is hovering over the link for highlight effect
                 const rX = window.innerWidth / 2560;
                 const rY = window.innerHeight / 1440;
-                const linkX = 910 * rX;
-                const linkY = 585 * rY;
+                const linkX = 1080 * rX;
+                const linkY = 655 * rY;
                 const linkW = 200 * rX;
                 const linkH = 35 * rY;
                 const mouseX = game.input.mouseX;
@@ -634,7 +634,7 @@ export class NameInputMenu {
 
                 const linkColor = isHovered ? '#00ffff' : '#ffaa00';
                 const linkGlow = isHovered ? '#00ffff' : '#ff8800';
-                this.super.drawGlowText(context, 910, 610, "Forgot Password?", 24, linkColor, linkGlow, isHovered ? 12 : 6);
+                this.super.drawGlowText(context, 1080, 680, "Forgot Password?", 24, linkColor, linkGlow, isHovered ? 12 : 6);
             }
 
             this.super.drawGlowText(context, 970, 720, "Press ENTER to continue | ESC to cancel", 22, '#666666', '#444444', 3);
