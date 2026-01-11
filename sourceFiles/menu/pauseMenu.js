@@ -106,8 +106,8 @@ export class PauseMenu {
 
         // Volume submenu - centered like other panels
         this.musicVolumeSlider = new Slider(930, 340, 700, 30, 0, 1);
-        this.sfxVolumeSlider = new Slider(930, 490, 700, 30, 0, 1);
-        this.volumeBackButton = new Button(btnX, 580, btnW, btnH, "Back", fontSize, 0, 0, false, true, 'white', 'white');
+        this.sfxVolumeSlider = new Slider(930, 430, 700, 30, 0, 1);
+        this.volumeBackButton = new Button(btnX, 510, btnW, btnH, "Back", fontSize, 0, 0, false, true, 'white', 'white');
 
         // UI Scale submenu - centered like other panels
         this.uiScaleSlider = new Slider(930, 380, 700, 30, 0.5, 2.0);
@@ -1084,12 +1084,12 @@ export class PauseMenu {
             // Draw volume background - centered like other panels
             context.save();
             context.fillStyle = 'rgba(10, 20, 40, 0.95)';
-            context.fillRect(880 * rX, 200 * rY, 800 * rX, 480 * rY);
+            context.fillRect(880 * rX, 200 * rY, 800 * rX, 410 * rY);
             context.strokeStyle = '#00ffff';
             context.shadowColor = '#00ffff';
             context.shadowBlur = 15 * rX;
             context.lineWidth = 3 * rY;
-            context.strokeRect(880 * rX, 200 * rY, 800 * rX, 480 * rY);
+            context.strokeRect(880 * rX, 200 * rY, 800 * rX, 410 * rY);
             context.restore();
 
             // Draw title
@@ -1098,12 +1098,12 @@ export class PauseMenu {
             // Draw music volume
             this.super.drawGlowText(context, 1280, 310, "Music Volume", 32, '#ffffff', '#00ffff', 8, true);
             this.musicVolumeSlider.draw(context);
-            this.super.drawGlowText(context, 1560, 395, `${Math.round(this.musicVolumeSlider.value * 100)}%`, 28, '#00ff88', '#00ff00', 6);
+            this.super.drawGlowText(context, 1280, 385, `${Math.round(this.musicVolumeSlider.value * 100)}%`, 28, '#00ff88', '#00ff00', 6, true);
 
             // Draw SFX volume
-            this.super.drawGlowText(context, 1280, 460, "SFX Volume", 32, '#ffffff', '#00ffff', 8, true);
+            this.super.drawGlowText(context, 1280, 405, "SFX Volume", 32, '#ffffff', '#00ffff', 8, true);
             this.sfxVolumeSlider.draw(context);
-            this.super.drawGlowText(context, 1560, 545, `${Math.round(this.sfxVolumeSlider.value * 100)}%`, 28, '#00ff88', '#00ff00', 6);
+            this.super.drawGlowText(context, 1280, 475, `${Math.round(this.sfxVolumeSlider.value * 100)}%`, 28, '#00ff88', '#00ff00', 6, true);
 
             // Draw back button
             this.volumeBackButton.draw(context);
@@ -1127,10 +1127,10 @@ export class PauseMenu {
             // Draw UI scale slider
             this.super.drawGlowText(context, 1280, 310, "HUD Size", 32, '#ffffff', '#00ffff', 8, true);
             this.uiScaleSlider.draw(context);
-            this.super.drawGlowText(context, 1560, 425, `${Math.round(this.uiScaleSlider.value * 100)}%`, 28, '#00ff88', '#00ff00', 6);
+            this.super.drawGlowText(context, 1280, 430, `${Math.round(this.uiScaleSlider.value * 100)}%`, 32, '#00ff88', '#00ff00', 6, true);
 
             // Draw preview hint
-            this.super.drawGlowText(context, 1280, 455, "Adjusts ability bar, powerups, and weapon slots", 18, '#888888', '#666666', 4, true);
+            this.super.drawGlowText(context, 1280, 470, "Adjusts ability bar, powerups, and weapon slots", 18, '#888888', '#666666', 4, true);
 
             // Draw back button
             this.uiScaleBackButton.draw(context);

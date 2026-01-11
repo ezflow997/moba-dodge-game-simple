@@ -36,6 +36,7 @@ export class Bullets {
         this.prevWindowHeight = window.innerHeight;
     }
     reset(){
+        console.log(`[RESET] Clearing bulletsList (had ${this.bulletsList.length} bullets)`);
         this.bulletsList = [];
         this.chainBolts = [];
         this.bulletsMaxTravel = 780 * window.innerWidth / 2560;
@@ -47,6 +48,11 @@ export class Bullets {
         this.homingMissileCount = 0;
     }
     update(player, input, enemies, game){
+        // Debug: log bulletsList state at start of each frame
+        if (this.bulletsList.length > 0 && this.bulletsList.some(b => b && b.gunType === 'homing')) {
+            console.log(`[FRAME-START] bullets=${this.bulletsList.length}, bulletsCreated=${this.bulletsCreated}, bulletsSpawned=${this.bulletsSpawned}`);
+        }
+
         if(this.prevWindowWidth != window.innerWidth || this.prevWindowHeight != window.innerHeight){
             this.bulletsMaxTravel = this.bulletsMaxTravel * window.innerWidth / this.prevWindowWidth;
 
@@ -178,10 +184,19 @@ export class Bullets {
                         for(let i = this.bulletsList.length - 1; i >= 0; i--){
                             const bullet = this.bulletsList[i];
 
+                            // Debug logging for homing bullets
+                            if (bullet && bullet.gunType === 'homing') {
+                                console.log(`[LOOP] Processing bullet ${i}, destroy=${bullet.destroy}, enemyCollision=${bullet.enemyCollision}, lockedTarget=${!!bullet.lockedTarget}`);
+                            }
+
                             // Always update and check collision first
                             if (!bullet.destroy && !bullet.enemyCollision) {
                                 bullet.update(homingTargets);
                                 bullet.checkCollision(enemies.enemiesList, this.onChain.bind(this));
+                                // Debug: log state after update
+                                if (bullet.gunType === 'homing') {
+                                    console.log(`[AFTER-UPDATE] bullet ${i}: destroy=${bullet.destroy}, enemyCollision=${bullet.enemyCollision}`);
+                                }
                             }
 
                             // Now handle destroy/collision states
@@ -208,7 +223,7 @@ export class Bullets {
                                         this.bulletsList.splice(i, 1);
                                     } else {
                                         // Single-target weapons: clear all bullets
-                                        console.log(`[BULLETS] Clearing all bullets (single-target hit, gun: ${bullet.gunType})`);
+                                        console.log(`[CLEAR-A] Clearing all bullets (single-target hit, gun: ${bullet.gunType}, isIndependent=${isIndependent})`);
                                         this.bulletsList = [];
                                         this.bulletsHitTarget = true;
                                         break;
@@ -264,6 +279,7 @@ export class Bullets {
                                         this.bulletsList.splice(i, 1);
                                     } else {
                                         // Single-target weapons: clear all bullets
+                                        console.log(`[CLEAR-B] Clearing all bullets (single-target spawning, gun: ${bullet.gunType})`);
                                         this.bulletsList = [];
                                         this.bulletsHitTarget = true;
                                         break;
