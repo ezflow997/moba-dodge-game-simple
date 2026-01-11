@@ -293,7 +293,7 @@ export class Player {
             this.eButtonHeld = true; // Mark button as held for test room
             // Apply dash distance modifier from rewards
             const dashMod = game.rewardManager ? game.rewardManager.dashDistanceMod : 1.0;
-            this.speed = this.speed * (20 * dashMod * innerWidth/2560);
+            this.speed = this.speed * (30 * dashMod * innerWidth/2560);
             this.ePresses += 1;
             game.score = game.score + this.ePenalty;
 
@@ -328,7 +328,7 @@ export class Player {
             this.fButtonHeld = true; // Mark button as held for test room
             // Apply dash distance modifier from rewards
             const dashMod = game.rewardManager ? game.rewardManager.dashDistanceMod : 1.0;
-            this.speed = this.speed * (20 * dashMod * innerWidth/2560);
+            this.speed = this.speed * (30 * dashMod * innerWidth/2560);
             this.fPresses += 1;
             game.score = game.score + this.fPenalty;
 

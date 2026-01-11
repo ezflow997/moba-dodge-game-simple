@@ -120,11 +120,12 @@ export class Bullets {
             const inTestRoom = game.testRoom && game.testRoom.active;
             player.qCoolDownElapsed = inTestRoom ? player.qCoolDown + 1 : (msNow - player.qPressedNow) * timescale;
 
-            // In test room, set qTriggered and bulletsDeSpawned to allow next shot immediately
-            // Bullets will continue updating via the independent bullets section
+            // In test room, reset bullet creation state to allow next shot immediately
+            // Old bullets will continue updating via the independent bullets section
             if (inTestRoom && this.bulletsCreated) {
-                player.qTriggered = true;
-                this.bulletsDeSpawned = true;
+                this.bulletsCreated = false;
+                this.bulletsSpawned = true;  // Keep true so old bullets continue drawing
+                this.bulletsDeSpawned = true;  // Allow cooldown to reset
             }
 
             if(this.bulletsCreated == true){
