@@ -42,8 +42,7 @@ export class NameInputMenu {
         this.passwordCaretPos = 0;
         this.securityAnswerCaretPos = 0;
 
-        this.submitButton = new Button(1080, 580, 280, 70, "Submit", 45, 75, 50, false, true, 'white', 'white');
-        this.nextButton = new Button(1080, 580, 280, 70, "Next", 45, 90, 50, false, true, 'white', 'white');
+        this.submitButton = new Button(1080, 510, 280, 60, "Submit", 40, 75, 43, false, true, 'white', 'white');
         this.togglePasswordButton = new Button(1470, 470, 50, 60, "*", 35, 12, 43, false, true, 'white', 'white');
 
         // Security question navigation buttons
@@ -454,10 +453,10 @@ export class NameInputMenu {
             }
         }
 
-        // Next button (name state)
+        // Submit button (name state)
         if (this.inputState === 'name') {
-            this.nextButton.update(inX, inY);
-            if (this.nextButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked && this.playerName.trim().length > 0) {
+            this.submitButton.update(inX, inY);
+            if (this.submitButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked && this.playerName.trim().length > 0) {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.checkPlayerName();
@@ -466,13 +465,18 @@ export class NameInputMenu {
 
         // Submit button (password state)
         if (this.inputState === 'password') {
-            // Always use Submit button for password step
+            // Move button down for password state
+            const originalY = this.submitButton.y;
+            this.submitButton.y = 590;
+
             this.submitButton.update(inX, inY);
             if (this.submitButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked && this.password.length >= 4) {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.proceedFromPassword();
             }
+
+            this.submitButton.y = originalY;
 
             // Toggle password visibility
             this.togglePasswordButton.update(inX, inY);
@@ -523,6 +527,10 @@ export class NameInputMenu {
                 this.selectedQuestionIndex = (this.selectedQuestionIndex + 1) % SECURITY_QUESTIONS.length;
             }
 
+            // Move button down for security state
+            const originalY = this.submitButton.y;
+            this.submitButton.y = 620;
+
             // Submit button
             this.submitButton.update(inX, inY);
             if (this.submitButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked && this.securityAnswer.trim().length >= 1) {
@@ -530,6 +538,8 @@ export class NameInputMenu {
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.submitWithSecurity();
             }
+
+            this.submitButton.y = originalY;
         }
     }
 
@@ -587,15 +597,15 @@ export class NameInputMenu {
             this.drawInputField(context, rX, rY, 900, 420, 560, 'name', this.playerName, this.maxNameLength, "Type your name...");
 
             if (this.playerName.trim().length > 0) {
-                this.nextButton.draw(context);
+                this.submitButton.draw(context);
             } else {
                 context.save();
                 context.globalAlpha = 0.3;
-                this.nextButton.draw(context);
+                this.submitButton.draw(context);
                 context.restore();
             }
 
-            this.super.drawGlowText(context, 1000, 670, "Press ENTER to continue | ESC to skip", 22, '#666666', '#444444', 3);
+            this.super.drawGlowText(context, 1000, 600, "Press ENTER to continue | ESC to skip", 22, '#666666', '#444444', 3);
         }
 
         // Password input state
@@ -604,7 +614,13 @@ export class NameInputMenu {
             this.drawInputField(context, rX, rY, 900, 470, 560, 'password', this.password, this.maxPasswordLength, "Enter password...");
             this.togglePasswordButton.draw(context);
 
-            // Always show Submit button for password step
+            const reqColor = this.password.length >= 4 ? '#00ff88' : '#ff8888';
+            this.super.drawGlowText(context, 910, 560, "Min 4 characters", 22, reqColor, reqColor, 3);
+
+            // Move button down for password state
+            const originalY = this.submitButton.y;
+            this.submitButton.y = 590;
+
             if (this.password.length >= 4) {
                 this.submitButton.draw(context);
             } else {
@@ -614,14 +630,10 @@ export class NameInputMenu {
                 context.restore();
             }
 
-            const reqColor = this.password.length >= 4 ? '#00ff88' : '#ff8888';
-            this.super.drawGlowText(context, 910, 560, "Min 4 characters", 22, reqColor, reqColor, 3);
+            this.submitButton.y = originalY;
 
             // Show "Forgot Password?" link after failed login (below the button)
             if (this.showForgotPassword) {
-                // Check if mouse is hovering over the link for highlight effect
-                const rX = window.innerWidth / 2560;
-                const rY = window.innerHeight / 1440;
                 const linkX = 1080 * rX;
                 const linkY = 655 * rY;
                 const linkW = 200 * rX;
@@ -655,6 +667,10 @@ export class NameInputMenu {
             this.super.drawGlowText(context, 910, 510, "Your Answer:", 26, '#888888', '#666666', 5);
             this.drawInputField(context, rX, rY, 900, 530, 560, 'securityAnswer', this.securityAnswer, this.maxAnswerLength, "Type your answer...");
 
+            // Move button down for security state
+            const originalY = this.submitButton.y;
+            this.submitButton.y = 620;
+
             // Submit button
             if (this.securityAnswer.trim().length >= 1) {
                 this.submitButton.draw(context);
@@ -664,6 +680,8 @@ export class NameInputMenu {
                 this.submitButton.draw(context);
                 context.restore();
             }
+
+            this.submitButton.y = originalY;
 
             // Instructions
             this.super.drawGlowText(context, 930, 720, "Use arrows to change question | ENTER to submit", 22, '#666666', '#444444', 3);
