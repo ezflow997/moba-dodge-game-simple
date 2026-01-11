@@ -541,39 +541,7 @@ window.addEventListener('load', function () {
 							}
 						}
 
-						// Consume used loadout items (if any)
-						if (this.usedLoadoutRewardIds && this.usedLoadoutRewardIds.length > 0) {
-							// Build consumption list - include weapon ID for each use
-							const consumeList = [...this.usedLoadoutRewardIds];
-
-							// Check for loadout weapon uses - need to add extra copies for reactivations
-							const weaponUsesConsumed = this.rewardManager.getLoadoutWeaponUsesConsumed();
-							if (this.pendingLoadoutWeapon && !this.pendingLoadoutWeapon.isPermanent && weaponUsesConsumed > 1) {
-								// First use is already in the list, add extra uses
-								const weaponId = this.pendingLoadoutWeapon.reward.id;
-								for (let i = 1; i < weaponUsesConsumed; i++) {
-									consumeList.push(weaponId);
-								}
-								console.log('[LOADOUT] Weapon uses consumed:', weaponUsesConsumed);
-							}
-
-							// Update local inventory to reflect consumed items
-							const consumedCounts = {};
-							for (const id of consumeList) {
-								consumedCounts[id] = (consumedCounts[id] || 0) + 1;
-							}
-							for (const [id, count] of Object.entries(consumedCounts)) {
-								if (this.loadoutMenu && this.loadoutMenu.inventory[id] && !this.loadoutMenu.inventory[id].permanentUnlock) {
-									this.loadoutMenu.inventory[id].quantity = Math.max(0, (this.loadoutMenu.inventory[id].quantity || 0) - count);
-								}
-							}
-
-							this.supabase.consumeItems(this.playerName, this.playerPassword, consumeList).then(consumeResult => {
-								console.log('[LOADOUT] Consumed items:', consumeResult);
-							}).catch(err => {
-								console.error('[LOADOUT] Failed to consume items:', err);
-							});
-						}
+						// Items are consumed at game over, no need to consume here
 					}
 					// Clear loadout tracking
 					this.pendingLoadoutRewards = [];
@@ -698,6 +666,42 @@ window.addEventListener('load', function () {
 						}
 					}
 
+					// Consume used loadout items immediately at game over
+					if (game.usedLoadoutRewardIds && game.usedLoadoutRewardIds.length > 0 && game.playerName && game.playerPassword) {
+						const consumeList = [...game.usedLoadoutRewardIds];
+
+						// Check for loadout weapon uses
+						const weaponUsesConsumed = game.rewardManager.getLoadoutWeaponUsesConsumed();
+						if (game.pendingLoadoutWeapon && !game.pendingLoadoutWeapon.isPermanent && weaponUsesConsumed > 1) {
+							const weaponId = game.pendingLoadoutWeapon.reward.id;
+							for (let i = 1; i < weaponUsesConsumed; i++) {
+								consumeList.push(weaponId);
+							}
+							console.log('[LOADOUT] Weapon uses consumed:', weaponUsesConsumed);
+						}
+
+						// Update local inventory to reflect consumed items
+						const consumedCounts = {};
+						for (const id of consumeList) {
+							consumedCounts[id] = (consumedCounts[id] || 0) + 1;
+						}
+						for (const [id, count] of Object.entries(consumedCounts)) {
+							if (game.loadoutMenu && game.loadoutMenu.inventory[id] && !game.loadoutMenu.inventory[id].permanentUnlock) {
+								game.loadoutMenu.inventory[id].quantity = Math.max(0, (game.loadoutMenu.inventory[id].quantity || 0) - count);
+								console.log('[LOADOUT] Updated local inventory:', id, 'new quantity:', game.loadoutMenu.inventory[id].quantity);
+							}
+						}
+
+						game.supabase.consumeItems(game.playerName, game.playerPassword, consumeList).then(result => {
+							console.log('[LOADOUT] Consumed items at game over:', result);
+						}).catch(err => {
+							console.error('[LOADOUT] Failed to consume items:', err);
+						});
+
+						// Clear the used IDs so we don't consume again
+						game.usedLoadoutRewardIds = [];
+					}
+
 					game.score = 0;
 					game.player.reset(game);
 					game.projectiles.reset();
@@ -741,38 +745,7 @@ window.addEventListener('load', function () {
 								console.log('[LOADOUT] Removed items from loadout:', removedIds);
 							}
 
-							// Consume used loadout items from the previous game before retry
-							if (game.usedLoadoutRewardIds && game.usedLoadoutRewardIds.length > 0 && game.playerName && game.playerPassword) {
-								const consumeList = [...game.usedLoadoutRewardIds];
-
-								// Check for loadout weapon uses
-								const weaponUsesConsumed = game.rewardManager.getLoadoutWeaponUsesConsumed();
-								if (game.pendingLoadoutWeapon && !game.pendingLoadoutWeapon.isPermanent && weaponUsesConsumed > 1) {
-									const weaponId = game.pendingLoadoutWeapon.reward.id;
-									for (let i = 1; i < weaponUsesConsumed; i++) {
-										consumeList.push(weaponId);
-									}
-								}
-
-								// Update local inventory to reflect consumed items
-								const consumedCounts = {};
-								for (const id of consumeList) {
-									consumedCounts[id] = (consumedCounts[id] || 0) + 1;
-								}
-								for (const [id, count] of Object.entries(consumedCounts)) {
-									if (game.loadoutMenu.inventory[id] && !game.loadoutMenu.inventory[id].permanentUnlock) {
-										game.loadoutMenu.inventory[id].quantity = Math.max(0, (game.loadoutMenu.inventory[id].quantity || 0) - count);
-										console.log('[LOADOUT RETRY] Updated local inventory:', id, 'new quantity:', game.loadoutMenu.inventory[id].quantity);
-									}
-								}
-
-								game.supabase.consumeItems(game.playerName, game.playerPassword, consumeList).then(result => {
-									console.log('[LOADOUT RETRY] Consumed items from previous game:', result);
-								}).catch(err => {
-									console.error('[LOADOUT RETRY] Failed to consume items:', err);
-								});
-							}
-
+							// Items are already consumed at game over, just proceed with retry
 							// Hide popup and proceed with retry
 							game.retryWarningPopup.hide();
 							game.showMessage = '';
