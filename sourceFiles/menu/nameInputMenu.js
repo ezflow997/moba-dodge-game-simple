@@ -464,12 +464,11 @@ export class NameInputMenu {
             }
         }
 
-        // Submit/Next button (password state)
+        // Submit button (password state)
         if (this.inputState === 'password') {
-            // For existing players, show Submit; for new players, show Next
-            const btn = this.isNewPlayer ? this.nextButton : this.submitButton;
-            btn.update(inX, inY);
-            if (btn.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked && this.password.length >= 4) {
+            // Always use Submit button for password step
+            this.submitButton.update(inX, inY);
+            if (this.submitButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked && this.password.length >= 4) {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.proceedFromPassword();
@@ -548,7 +547,7 @@ export class NameInputMenu {
 
         // Calculate panel height based on state
         let panelHeight = 320;
-        if (this.inputState === 'password') panelHeight = this.showForgotPassword ? 460 : 420;
+        if (this.inputState === 'password') panelHeight = this.showForgotPassword ? 480 : 440;
         if (this.inputState === 'security') panelHeight = 520;
 
         // Input panel (centered: x=830 for 900 width on 2560 reference)
@@ -605,14 +604,13 @@ export class NameInputMenu {
             this.drawInputField(context, rX, rY, 900, 470, 560, 'password', this.password, this.maxPasswordLength, "Enter password...");
             this.togglePasswordButton.draw(context);
 
-            // Show Next for new players, Submit for existing
-            const btn = this.isNewPlayer ? this.nextButton : this.submitButton;
+            // Always show Submit button for password step
             if (this.password.length >= 4) {
-                btn.draw(context);
+                this.submitButton.draw(context);
             } else {
                 context.save();
                 context.globalAlpha = 0.3;
-                btn.draw(context);
+                this.submitButton.draw(context);
                 context.restore();
             }
 
