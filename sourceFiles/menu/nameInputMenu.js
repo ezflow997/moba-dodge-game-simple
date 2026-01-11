@@ -694,7 +694,7 @@ export class NameInputMenu {
 
         // Error message
         if (this.errorMessage) {
-            this.super.drawGlowText(context, 1280, 780, this.errorMessage, 28, '#ff4444', '#ff0000', 8, true);
+            this.super.drawGlowText(context, 1280, 750, this.errorMessage, 28, '#ff4444', '#ff0000', 8, true);
         }
     }
 
