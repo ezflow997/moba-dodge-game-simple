@@ -254,16 +254,56 @@ export class RewardManager {
         return false;
     }
 
+    // Get the base type of a reward (e.g., 'q_cd_common' -> 'q_cd', 'shield_rare' -> 'shield')
+    getRewardBaseType(reward) {
+        const id = reward.id;
+        // Remove rarity suffix (_common, _uncommon, _rare, _epic, _legendary, _stier)
+        const suffixes = ['_common', '_uncommon', '_rare', '_epic', '_legendary', '_stier'];
+        for (const suffix of suffixes) {
+            if (id.endsWith(suffix)) {
+                return id.slice(0, -suffix.length);
+            }
+        }
+        return id;
+    }
+
+    // Get rarity tier value (higher = better tier)
+    getRarityTier(rarity) {
+        // Weight is inverted (common has highest weight), so we invert for comparison
+        const tierMap = {
+            'Common': 1,
+            'Uncommon': 2,
+            'Rare': 3,
+            'Epic': 4,
+            'Legendary': 5,
+            'S-Tier': 6
+        };
+        return tierMap[rarity.name] || 0;
+    }
+
+    // Get duration bonus multiplier based on tier
+    getDurationBonusMultiplier(rarity) {
+        const bonusMap = {
+            'Common': 0.25,
+            'Uncommon': 0.40,
+            'Rare': 0.55,
+            'Epic': 0.70,
+            'Legendary': 0.85,
+            'S-Tier': 1.0
+        };
+        return bonusMap[rarity.name] || 0.25;
+    }
+
     // Apply a collected reward
     applyReward(reward) {
         const now = performance.now();
 
-        // Add collection notification
-        this.addNotification(`${reward.name}!`, reward.rarity.color);
-
         // Handle by category
         switch (reward.category) {
             case CATEGORY.GUN:
+                // Add collection notification
+                this.addNotification(`${reward.name}!`, reward.rarity.color);
+
                 // Check if player already has a weapon
                 if (this.hasUpgradeWeapon()) {
                     // Store pending weapon and show choice UI
@@ -280,25 +320,66 @@ export class RewardManager {
                 }
                 break;
 
-            case CATEGORY.COOLDOWN:
-                this.applyCooldownReward(reward, now);
-                break;
+            default:
+                // For non-weapon rewards, check for existing same-type reward
+                if (reward.duration && reward.duration > 0) {
+                    const baseType = this.getRewardBaseType(reward);
+                    const newTier = this.getRarityTier(reward.rarity);
 
-            case CATEGORY.SURVIVABILITY:
-                this.applySurvivabilityReward(reward, now);
-                break;
+                    // Find existing active reward of same type
+                    const existingIndex = this.activeRewards.findIndex(ar => {
+                        if (!ar.reward.duration || ar.reward.duration <= 0) return false;
+                        return this.getRewardBaseType(ar.reward) === baseType;
+                    });
 
-            case CATEGORY.MOVEMENT:
-                this.applyMovementReward(reward, now);
-                break;
+                    if (existingIndex !== -1) {
+                        const existing = this.activeRewards[existingIndex];
+                        const existingTier = this.getRarityTier(existing.reward.rarity);
 
-            case CATEGORY.OFFENSE:
-                this.applyOffenseReward(reward, now);
+                        if (newTier <= existingTier) {
+                            // New reward is lower or equal tier - extend existing duration
+                            const bonusMultiplier = this.getDurationBonusMultiplier(reward.rarity);
+                            const bonusDuration = reward.duration * bonusMultiplier;
+                            existing.duration += bonusDuration;
+
+                            const bonusSeconds = Math.round(bonusDuration / 1000);
+                            this.addNotification(`${reward.name} → +${bonusSeconds}s duration!`, reward.rarity.color);
+                            return; // Don't apply new effect, just extended duration
+                        } else {
+                            // New reward is higher tier - remove old effect and apply new
+                            this.removeRewardEffects(existing.reward);
+                            this.activeRewards.splice(existingIndex, 1);
+                            this.addNotification(`${reward.name}! (Upgraded)`, reward.rarity.color);
+                        }
+                    } else {
+                        // No existing reward of this type
+                        this.addNotification(`${reward.name}!`, reward.rarity.color);
+                    }
+                } else {
+                    // Permanent or no duration
+                    this.addNotification(`${reward.name}!`, reward.rarity.color);
+                }
+
+                // Apply the reward effect
+                switch (reward.category) {
+                    case CATEGORY.COOLDOWN:
+                        this.applyCooldownReward(reward, now);
+                        break;
+                    case CATEGORY.SURVIVABILITY:
+                        this.applySurvivabilityReward(reward, now);
+                        break;
+                    case CATEGORY.MOVEMENT:
+                        this.applyMovementReward(reward, now);
+                        break;
+                    case CATEGORY.OFFENSE:
+                        this.applyOffenseReward(reward, now);
+                        break;
+                }
                 break;
         }
 
-        // Add to active rewards for tracking (if timed)
-        if (reward.duration && reward.duration > 0) {
+        // Add to active rewards for tracking (if timed) - skip for guns and extended rewards
+        if (reward.category !== CATEGORY.GUN && reward.duration && reward.duration > 0) {
             this.activeRewards.push({
                 reward: reward,
                 startTime: now,
