@@ -755,7 +755,7 @@ window.addEventListener('load', function () {
 			const nameInputJustClosed = game.nameInputMenu.closedAt && (performance.now() - game.nameInputMenu.closedAt < 200);
 			const accountMenuJustClosed = game.accountMenu.closedAt && (performance.now() - game.accountMenu.closedAt < 200);
 			const menuJustClosed = nameInputJustClosed || accountMenuJustClosed;
-			if(game.input.escapePressed && !game.pauseMenu.isPaused && !game.leaderboardMenu.isVisible && !game.rankedMenu.isVisible && !game.nameInputMenu.isVisible && !game.accountMenu.isVisible && !game.pauseMenu.waitingForKey && !menuJustClosed) {
+			if(game.input.escapePressed && !game.pauseMenu.isPaused && !game.leaderboardMenu.isVisible && !game.rankedMenu.isVisible && !game.nameInputMenu.isVisible && !game.accountMenu.isVisible && !game.shopMenu.isVisible && !game.loadoutMenu.isVisible && !game.pauseMenu.waitingForKey && !menuJustClosed) {
 				game.pauseMenu.toggle(true); // Pass true to indicate we're in main menu
 				game.input.escapePressed = false;
 			}
