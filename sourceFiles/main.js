@@ -706,7 +706,75 @@ window.addEventListener('load', function () {
 
 					game.drawGameOverWindow(ctx, msPassed);
 
-					// Check for retry button click
+					// Handle retry warning popup first if visible
+					if (game.retryWarningPopup.isVisible) {
+						const popupResult = game.retryWarningPopup.update(game);
+						game.retryWarningPopup.draw(ctx);
+
+						if (popupResult === 'retry') {
+							// Get removed item IDs and update the loadout
+							const removedIds = game.retryWarningPopup.getRemovedItemIds();
+
+							if (removedIds.length > 0) {
+								// Filter out removed items from pendingLoadoutRewards
+								game.pendingLoadoutRewards = game.pendingLoadoutRewards.filter(r => !removedIds.includes(r.id));
+
+								// Update usedLoadoutRewardIds
+								game.usedLoadoutRewardIds = game.usedLoadoutRewardIds.filter(id => !removedIds.includes(id));
+
+								// Clear weapon if it was removed
+								if (game.pendingLoadoutWeapon && removedIds.includes(game.pendingLoadoutWeapon.reward.id)) {
+									game.pendingLoadoutWeapon = null;
+								}
+
+								console.log('[LOADOUT] Removed items from loadout:', removedIds);
+							}
+
+							// Hide popup and proceed with retry
+							game.retryWarningPopup.hide();
+							game.showMessage = '';
+							game.retryButtonBounds = null;
+							game.pendingScore = null;
+							game.pendingRankedScore = null;
+							game.isRankedGame = false;
+
+							if (game.devMode) {
+								game.devMode.resetSession();
+							}
+
+							// Preserve loadout data before set_difficulty (which clears it)
+							const savedLoadoutRewards = game.pendingLoadoutRewards;
+							const savedUsedIds = game.usedLoadoutRewardIds;
+							const savedWeapon = game.pendingLoadoutWeapon;
+
+							game.gameOver = false;
+							game.game_time = window.performance.now();
+							game.set_difficulty();
+
+							// Restore loadout data after reset
+							game.pendingLoadoutRewards = savedLoadoutRewards;
+							game.usedLoadoutRewardIds = savedUsedIds;
+							game.pendingLoadoutWeapon = savedWeapon;
+
+							poki.gameplayStart();
+
+							if (window.gameSound) {
+								window.gameSound.playGameMusic();
+							}
+
+							requestAnimationFrame(animate);
+							return;
+						} else if (popupResult === 'cancel') {
+							// Hide popup and stay on game over screen
+							game.retryWarningPopup.hide();
+						}
+
+						// Don't process other clicks while popup is visible
+						requestAnimationFrame(animate);
+						return;
+					}
+
+					// Check for retry button click (only if popup not visible)
 					const clicked = game.input.buttons.indexOf(0) > -1;
 					const retryButtonDelay = 1500;
 					let clickedRetry = false;
@@ -788,74 +856,6 @@ window.addEventListener('load', function () {
 							requestAnimationFrame(animate);
 							return;
 						}
-					}
-
-					// Handle retry warning popup if visible
-					if (game.retryWarningPopup.isVisible) {
-						const popupResult = game.retryWarningPopup.update(game);
-						game.retryWarningPopup.draw(ctx);
-
-						if (popupResult === 'retry') {
-							// Get removed item IDs and update the loadout
-							const removedIds = game.retryWarningPopup.getRemovedItemIds();
-
-							if (removedIds.length > 0) {
-								// Filter out removed items from pendingLoadoutRewards
-								game.pendingLoadoutRewards = game.pendingLoadoutRewards.filter(r => !removedIds.includes(r.id));
-
-								// Update usedLoadoutRewardIds
-								game.usedLoadoutRewardIds = game.usedLoadoutRewardIds.filter(id => !removedIds.includes(id));
-
-								// Clear weapon if it was removed
-								if (game.pendingLoadoutWeapon && removedIds.includes(game.pendingLoadoutWeapon.reward.id)) {
-									game.pendingLoadoutWeapon = null;
-								}
-
-								console.log('[LOADOUT] Removed items from loadout:', removedIds);
-							}
-
-							// Hide popup and proceed with retry
-							game.retryWarningPopup.hide();
-							game.showMessage = '';
-							game.retryButtonBounds = null;
-							game.pendingScore = null;
-							game.pendingRankedScore = null;
-							game.isRankedGame = false;
-
-							if (game.devMode) {
-								game.devMode.resetSession();
-							}
-
-							// Preserve loadout data before set_difficulty (which clears it)
-							const savedLoadoutRewards = game.pendingLoadoutRewards;
-							const savedUsedIds = game.usedLoadoutRewardIds;
-							const savedWeapon = game.pendingLoadoutWeapon;
-
-							game.gameOver = false;
-							game.game_time = window.performance.now();
-							game.set_difficulty();
-
-							// Restore loadout data after reset
-							game.pendingLoadoutRewards = savedLoadoutRewards;
-							game.usedLoadoutRewardIds = savedUsedIds;
-							game.pendingLoadoutWeapon = savedWeapon;
-
-							poki.gameplayStart();
-
-							if (window.gameSound) {
-								window.gameSound.playGameMusic();
-							}
-
-							requestAnimationFrame(animate);
-							return;
-						} else if (popupResult === 'cancel') {
-							// Hide popup and stay on game over screen
-							game.retryWarningPopup.hide();
-						}
-
-						// Don't process other clicks while popup is visible
-						requestAnimationFrame(animate);
-						return;
 					}
 
 					// Allow click elsewhere to skip after minimum read time (500ms)
