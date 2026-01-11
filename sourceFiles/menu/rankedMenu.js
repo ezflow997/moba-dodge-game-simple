@@ -87,7 +87,9 @@ export class RankedMenu {
         this.errorMessage = null;
         // Reset queue view page when entering
         if (state === 'queue_view') {
-            this.queueViewPage = 0;
+            // Default to Last Queue tab if player is not in a queue
+            // If queued, show My Queue tab
+            this.queueViewPage = this.isQueued ? 0 : 2;
             this.scrollOffset = 0;
         }
         // Setup admin input state
@@ -307,19 +309,47 @@ export class RankedMenu {
                 return 'start_ranked';
             }
         } else if (this.state === 'queue_view') {
-            // Page navigation buttons at top (3 tabs)
+            const devModeEnabled = window.game && window.game.devMode && window.game.devMode.enabled;
+
+            // Determine which tabs are visible
+            // My Queue: only if player is in a queue
+            // All Queues: only if player is in a queue OR dev mode enabled
+            // Last Queue: always visible
+            const showMyQueue = this.isQueued;
+            const showAllQueues = this.isQueued || devModeEnabled;
+
+            // If player is not queued and somehow on a restricted tab, switch to Last Queue
+            if (!showMyQueue && this.queueViewPage === 0) {
+                this.queueViewPage = 2;
+            }
+            if (!showAllQueues && this.queueViewPage === 1) {
+                this.queueViewPage = 2;
+            }
+
+            // Page navigation buttons at top
             const refPanelTop = 720 - refPanelH / 2;
             const pageNavY = refPanelTop + 70;
-            setButtonPos(this.prevPageButton, refCenterX - 220, pageNavY, 130, 50);
-            setButtonPos(this.nextPageButton, refCenterX - 65, pageNavY, 130, 50);
-            setButtonPos(this.lastQueueButton, refCenterX + 90, pageNavY, 130, 50);
 
-            this.prevPageButton.update(inX, inY);
-            this.nextPageButton.update(inX, inY);
+            // Position tabs based on which are visible
+            if (showMyQueue && showAllQueues) {
+                // All 3 tabs visible
+                setButtonPos(this.prevPageButton, refCenterX - 220, pageNavY, 130, 50);
+                setButtonPos(this.nextPageButton, refCenterX - 65, pageNavY, 130, 50);
+                setButtonPos(this.lastQueueButton, refCenterX + 90, pageNavY, 130, 50);
+            } else if (showAllQueues) {
+                // Only All Queues and Last Queue visible (dev mode, not queued)
+                setButtonPos(this.nextPageButton, refCenterX - 140, pageNavY, 130, 50);
+                setButtonPos(this.lastQueueButton, refCenterX + 10, pageNavY, 130, 50);
+            } else {
+                // Only Last Queue visible
+                setButtonPos(this.lastQueueButton, refCenterX - 65, pageNavY, 130, 50);
+            }
+
+            if (showMyQueue) this.prevPageButton.update(inX, inY);
+            if (showAllQueues) this.nextPageButton.update(inX, inY);
             this.lastQueueButton.update(inX, inY);
 
             // Fix Queues button (only visible in dev mode) and Back button
-            const devModeEnabled = window.game && window.game.devMode && window.game.devMode.enabled;
             if (devModeEnabled) {
                 setButtonPos(this.fixQueuesButton, refCenterX - 200, buttonY, 180, 70);
                 setButtonPos(this.backButton, refCenterX + 20, buttonY, 180, 70);
@@ -330,8 +360,8 @@ export class RankedMenu {
             }
             this.backButton.update(inX, inY);
 
-            // Page navigation
-            if (this.prevPageButton.isHovered && clicking && !this.clicked) {
+            // Page navigation click handlers
+            if (showMyQueue && this.prevPageButton.isHovered && clicking && !this.clicked) {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.queueViewPage = 0;
@@ -339,7 +369,7 @@ export class RankedMenu {
                 return true;
             }
 
-            if (this.nextPageButton.isHovered && clicking && !this.clicked) {
+            if (showAllQueues && this.nextPageButton.isHovered && clicking && !this.clicked) {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.queueViewPage = 1;
@@ -678,13 +708,19 @@ export class RankedMenu {
             context.shadowBlur = 0;
         }
 
+        // Determine which tabs are visible (same logic as update)
+        const devModeEnabled = window.game && window.game.devMode && window.game.devMode.enabled;
+        const showMyQueue = this.isQueued;
+        const showAllQueues = this.isQueued || devModeEnabled;
+
         // Update tab button colors based on active page
         this.prevPageButton.text_color = this.queueViewPage === 0 ? '#00ffff' : 'white';
         this.nextPageButton.text_color = this.queueViewPage === 1 ? '#00ffff' : 'white';
         this.lastQueueButton.text_color = this.queueViewPage === 2 ? '#00ffff' : 'white';
 
-        this.prevPageButton.draw(context);
-        this.nextPageButton.draw(context);
+        // Only draw visible tabs
+        if (showMyQueue) this.prevPageButton.draw(context);
+        if (showAllQueues) this.nextPageButton.draw(context);
         this.lastQueueButton.draw(context);
 
         if (this.queueViewPage === 0) {
@@ -697,7 +733,6 @@ export class RankedMenu {
 
         // Draw back button and fix queues button (only if dev mode enabled)
         this.backButton.draw(context);
-        const devModeEnabled = window.game && window.game.devMode && window.game.devMode.enabled;
         if (devModeEnabled) {
             this.fixQueuesButton.draw(context);
         }
