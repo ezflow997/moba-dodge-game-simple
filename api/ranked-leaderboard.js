@@ -206,6 +206,20 @@ async function getAllChampions() {
     }
 }
 
+// Get set of banned player names
+async function getBannedPlayerNames() {
+    try {
+        const url = `${SUPABASE_URL}/rest/v1/leaderboard?select=player_name&banned=eq.true`;
+        const response = await fetch(url, { method: 'GET', headers: getHeaders() });
+        if (!response.ok) return new Set();
+        const data = await response.json();
+        return new Set(data.map(p => p.player_name));
+    } catch (error) {
+        console.error('getBannedPlayerNames error:', error);
+        return new Set();
+    }
+}
+
 export default async function handler(req, res) {
     setCorsHeaders(res);
 
@@ -228,9 +242,15 @@ export default async function handler(req, res) {
         const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 50);
         const page = Math.max(parseInt(req.query.page) || 1, 1);
         const offset = (page - 1) * limit;
+        const viewerIsBanned = req.query.viewerBanned === 'true' || req.query.viewerBanned === '1';
 
-        // Get total count
-        const countUrl = `${SUPABASE_URL}/rest/v1/player_elo?select=id`;
+        // Build filter for banned players
+        // We need to join with leaderboard table to check ban status
+        // Since player_elo doesn't have banned column, we'll need a different approach
+        // For now, we filter after fetching by checking against leaderboard table
+
+        // Get total count (we'll adjust after filtering if needed)
+        let countUrl = `${SUPABASE_URL}/rest/v1/player_elo?select=id`;
         const countResponse = await fetch(countUrl, {
             method: 'GET',
             headers: { ...getHeaders(), 'Prefer': 'count=exact' }
@@ -251,11 +271,21 @@ export default async function handler(req, res) {
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-        const entries = await response.json();
+        let entries = await response.json();
 
         // Fetch all champions to mark them in the leaderboard
         const champions = await getAllChampions();
         const championNames = new Set(champions.map(c => c.player_name));
+
+        // Get banned player names and filter if viewer is not banned
+        let bannedNames = new Set();
+        if (!viewerIsBanned) {
+            bannedNames = await getBannedPlayerNames();
+            // Filter out banned players from entries
+            entries = entries.filter(e => !bannedNames.has(e.player_name));
+            // Adjust total count (approximate - this is for display purposes)
+            totalEntries = Math.max(0, totalEntries - bannedNames.size);
+        }
 
         // Add rank and champion status to each entry
         const rankedEntries = entries.map((entry, index) => ({
@@ -269,7 +299,7 @@ export default async function handler(req, res) {
 
         return res.status(200).json({
             entries: rankedEntries,
-            champions: champions, // Include full champion history for client-side use
+            champions: viewerIsBanned ? champions : champions.filter(c => !bannedNames.has(c.player_name)), // Filter champions too
             pagination: {
                 page,
                 limit,

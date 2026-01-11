@@ -91,13 +91,16 @@ export class DevMode {
         this.securityInProgress = false;
         this.maxAnswerLength = 30;
 
-        // Admin password verification for delete/security operations
+        // Admin password verification for delete/security/ban operations
         this.adminPasswordRequired = false;
         this.adminPasswordInput = '';
         this.adminPasswordError = '';
-        this.pendingAdminAction = null; // 'delete' or 'security'
+        this.pendingAdminAction = null; // 'delete', 'security', or 'ban'
         this.adminPasswordVerifying = false;
         this.maxAdminPasswordLength = 50;
+
+        // Ban operation state
+        this.banInProgress = false;
 
         // Button dimensions for hit detection
         this.devMenuButton = {
@@ -761,9 +764,66 @@ export class DevMode {
                 this.securityMode = true;
                 this.securityAnswerInput = '';
                 this.selectedSecurityQuestionIndex = 0;
+            } else if (this.pendingAdminAction === 'ban') {
+                await this.executeBanWithPassword();
             }
         } finally {
             this.adminPasswordVerifying = false;
+        }
+    }
+
+    /**
+     * Execute ban/unban with admin password
+     */
+    async executeBanWithPassword() {
+        const filteredAccounts = this.getFilteredAccounts();
+        const account = filteredAccounts[this.selectedAccountIndex];
+        if (!account) {
+            this.adminPasswordError = 'Account not found';
+            return;
+        }
+
+        this.banInProgress = true;
+
+        const isLocalhost = window.location.hostname === 'localhost' ||
+                           window.location.hostname === '127.0.0.1' ||
+                           window.location.hostname === '';
+        const apiBase = isLocalhost
+            ? 'https://moba-dodge-simple.vercel.app/api'
+            : '/api';
+
+        const action = account.banned ? 'unban' : 'ban';
+
+        try {
+            const response = await fetch(`${apiBase}/admin-ban`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    playerName: account.name,
+                    adminPassword: this.adminPasswordInput,
+                    action: action
+                })
+            });
+
+            if (response.ok) {
+                console.log(`[DevMode] ${action === 'ban' ? 'Banned' : 'Unbanned'} account: ${account.name}`);
+                // Update local account data
+                const originalIndex = this.allAccounts.findIndex(a => a.name === account.name);
+                if (originalIndex >= 0) {
+                    this.allAccounts[originalIndex].banned = action === 'ban';
+                }
+                this.adminPasswordRequired = false;
+                this.adminPasswordInput = '';
+                this.pendingAdminAction = null;
+            } else {
+                const error = await response.json();
+                this.adminPasswordError = error.error || 'Ban operation failed';
+            }
+        } catch (error) {
+            console.error('[DevMode] Ban error:', error);
+            this.adminPasswordError = 'Connection error';
+        } finally {
+            this.banInProgress = false;
         }
     }
 
@@ -1004,9 +1064,13 @@ export class DevMode {
                             }
                         }
                     } else {
-                        // Delete and Security buttons side by side
-                        const deleteX = panelX + panelW / 2 - btnW - 10 * rX;
-                        const securityX = panelX + panelW / 2 + 10 * rX;
+                        // Delete, Security, and Ban buttons (3 buttons)
+                        const btnSpacing = 10 * rX;
+                        const totalWidth = btnW * 3 + btnSpacing * 2;
+                        const startX = panelX + (panelW - totalWidth) / 2;
+                        const deleteX = startX;
+                        const securityX = startX + btnW + btnSpacing;
+                        const banX = startX + (btnW + btnSpacing) * 2;
 
                         if (mouseY >= btnY && mouseY <= btnY + btnH) {
                             if (mouseX >= deleteX && mouseX <= deleteX + btnW) {
@@ -1019,6 +1083,14 @@ export class DevMode {
                                 this.adminPasswordInput = '';
                                 this.adminPasswordError = '';
                                 this.pendingAdminAction = 'security';
+                                return true;
+                            }
+                            if (mouseX >= banX && mouseX <= banX + btnW) {
+                                // Show admin password prompt before ban action
+                                this.adminPasswordRequired = true;
+                                this.adminPasswordInput = '';
+                                this.adminPasswordError = '';
+                                this.pendingAdminAction = 'ban';
                                 return true;
                             }
                         }
@@ -1319,11 +1391,21 @@ export class DevMode {
                 }
 
                 // Player name
-                context.fillStyle = isSelected ? '#ffffff' : '#ffffff';
+                const isBanned = item.banned || false;
+                context.fillStyle = isSelected ? '#ffffff' : (isBanned ? '#ff8888' : '#ffffff');
                 context.textAlign = 'left';
                 const nameX = this.activeTab === 'online' ? contentX + 65 * rX : contentX + 45 * rX;
-                const displayName = item.name.length > 25 ? item.name.substring(0, 25) + '...' : item.name;
+                const displayName = item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name;
                 context.fillText(displayName, nameX, y + 12 * rY);
+
+                // Show banned indicator in accounts tab
+                if (this.activeTab === 'accounts' && isBanned) {
+                    const nameWidth = context.measureText(displayName).width;
+                    context.font = `bold ${12 * rX}px monospace`;
+                    context.fillStyle = '#ff4444';
+                    context.fillText('[BANNED]', nameX + nameWidth + 10 * rX, y + 12 * rY);
+                    context.font = `${16 * rX}px monospace`; // Reset font
+                }
             }
 
             context.restore();
@@ -1400,9 +1482,17 @@ export class DevMode {
                 context.fillStyle = '#ffffff';
                 context.fillText('Cancel', cancelX + btnW / 2, btnY + 26 * rY);
             } else {
-                // Show Delete and Security buttons side by side
-                const deleteX = panelX + panelW / 2 - btnW - 10 * rX;
-                const securityX = panelX + panelW / 2 + 10 * rX;
+                // Show Delete, Security, and Ban buttons (3 buttons)
+                const btnSpacing = 10 * rX;
+                const totalWidth = btnW * 3 + btnSpacing * 2;
+                const startX = panelX + (panelW - totalWidth) / 2;
+                const deleteX = startX;
+                const securityX = startX + btnW + btnSpacing;
+                const banX = startX + (btnW + btnSpacing) * 2;
+
+                // Get selected account to check ban status
+                const selectedAccount = this.getFilteredAccounts()[this.selectedAccountIndex];
+                const isBanned = selectedAccount?.banned || false;
 
                 // Delete button (red)
                 context.fillStyle = 'rgba(150, 50, 50, 0.8)';
@@ -1429,10 +1519,26 @@ export class DevMode {
                 context.fillStyle = '#ffffff';
                 context.fillText('SECURITY', securityX + btnW / 2, btnY + 26 * rY);
 
+                // Ban/Unban button (orange/green depending on status)
+                if (isBanned) {
+                    context.fillStyle = 'rgba(50, 150, 50, 0.8)';
+                    context.strokeStyle = '#44ff44';
+                } else {
+                    context.fillStyle = 'rgba(180, 100, 20, 0.8)';
+                    context.strokeStyle = '#ff8800';
+                }
+                context.beginPath();
+                context.roundRect(banX, btnY, btnW, btnH, 8 * rX);
+                context.fill();
+                context.stroke();
+
+                context.fillStyle = '#ffffff';
+                context.fillText(isBanned ? 'UNBAN' : 'BAN', banX + btnW / 2, btnY + 26 * rY);
+
                 // Hint text
                 context.font = `${11 * rX}px monospace`;
                 context.fillStyle = '#888888';
-                context.fillText('Select account to delete or set security question', panelX + panelW / 2, btnY + 55 * rY);
+                context.fillText('Select account to manage', panelX + panelW / 2, btnY + 55 * rY);
             }
         } else if (this.activeTab === 'accounts' && !this.securityMode) {
             // Show hint to select an account

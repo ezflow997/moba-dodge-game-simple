@@ -13,6 +13,10 @@ export class LeaderboardMenu {
         // Ranked-only mode (opened from ranked menu)
         this.rankedOnly = false;
 
+        // Viewer banned status (for filtering)
+        this.viewerBanned = false;
+        this.viewerPlayerName = null;
+
         // Champions history view (for ranked mode)
         this.showChampionsView = false;
         this.championsData = [];
@@ -91,6 +95,15 @@ export class LeaderboardMenu {
         this.highlightedPlayer = null;
         this.searchCaretPos = 0;
         this.devMode = game && game.devMode && game.devMode.isEnabled();
+
+        // Get viewer's banned status for filtering
+        this.viewerPlayerName = game?.playerName || null;
+        if (this.viewerPlayerName) {
+            this.viewerBanned = await this.supabase.getViewerBannedStatus(this.viewerPlayerName);
+        } else {
+            this.viewerBanned = false;
+        }
+
         document.addEventListener('keydown', this.keyHandler);
         await this.loadLeaderboard();
     }
@@ -107,6 +120,15 @@ export class LeaderboardMenu {
         this.highlightedPlayer = null;
         this.searchCaretPos = 0;
         this.devMode = game && game.devMode && game.devMode.isEnabled();
+
+        // Get viewer's banned status for filtering
+        this.viewerPlayerName = game?.playerName || null;
+        if (this.viewerPlayerName) {
+            this.viewerBanned = await this.supabase.getViewerBannedStatus(this.viewerPlayerName);
+        } else {
+            this.viewerBanned = false;
+        }
+
         document.addEventListener('keydown', this.keyHandler);
         await this.loadLeaderboard();
     }
@@ -290,7 +312,8 @@ export class LeaderboardMenu {
                 // Fetch ranked ELO leaderboard
                 result = await this.supabase.getRankedLeaderboard(
                     this.entriesPerPage,
-                    this.currentPage
+                    this.currentPage,
+                    this.viewerBanned
                 );
             } else {
                 // Fetch regular score leaderboard
@@ -299,7 +322,8 @@ export class LeaderboardMenu {
                     this.entriesPerPage,
                     this.currentPage,
                     this.isDaily,
-                    this.devMode
+                    this.devMode,
+                    this.viewerBanned
                 );
             }
 

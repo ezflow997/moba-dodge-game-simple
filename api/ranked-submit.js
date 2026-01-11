@@ -245,6 +245,29 @@ function getExpectedScore(playerElo, opponentElo) {
     return 1 / (1 + Math.pow(10, (opponentElo - playerElo) / 400));
 }
 
+// Get banned status for a player from leaderboard table
+async function getPlayerBannedStatus(playerName) {
+    try {
+        const url = `${SUPABASE_URL}/rest/v1/leaderboard?player_name=eq.${encodeURIComponent(playerName)}&select=banned&limit=1`;
+        const response = await fetch(url, { method: 'GET', headers: getHeaders() });
+        if (!response.ok) return false;
+        const data = await response.json();
+        return data.length > 0 && data[0].banned === true;
+    } catch (error) {
+        console.error('getPlayerBannedStatus error:', error);
+        return false;
+    }
+}
+
+// Get banned status for all players in a list
+async function getPlayersBannedStatus(playerNames) {
+    const bannedMap = {};
+    for (const name of playerNames) {
+        bannedMap[name] = await getPlayerBannedStatus(name);
+    }
+    return bannedMap;
+}
+
 // Calculate ELO changes for tournament using dynamic ELO system
 // Factors in: player ELO vs average opponent ELO, score performance vs average
 function calculateEloChanges(entries, eloMap) {
@@ -290,12 +313,46 @@ function calculateEloChanges(entries, eloMap) {
     });
 }
 
-// Resolve tournament
+// Resolve tournament with ban-adjusted winner logic
+// If the highest-scoring player is banned and there are non-banned players,
+// the banned player only has 25% chance of winning. If they lose the roll,
+// the win goes to the highest-scoring non-banned player.
 async function resolveTournament(allEntries) {
     const tournamentId = crypto.randomUUID();
 
     // Sort entries by score descending (each entry is already one per player with best score)
-    const sortedEntries = [...allEntries].sort((a, b) => b.score - a.score);
+    let sortedEntries = [...allEntries].sort((a, b) => b.score - a.score);
+
+    // Get banned status for all players
+    const playerNames = sortedEntries.map(e => e.player_name);
+    const bannedMap = await getPlayersBannedStatus(playerNames);
+
+    // Check if winner is banned and if there are non-banned players
+    const originalWinner = sortedEntries[0];
+    const winnerIsBanned = bannedMap[originalWinner.player_name];
+    const nonBannedEntries = sortedEntries.filter(e => !bannedMap[e.player_name]);
+    const allBanned = nonBannedEntries.length === 0;
+
+    // Apply 25% win chance rule for banned winners
+    let banRollResult = null;
+    if (winnerIsBanned && !allBanned) {
+        // Banned player with highest score - 25% chance of winning
+        const roll = Math.random();
+        const bannedWins = roll < 0.25;
+        banRollResult = { roll, bannedWins, originalWinner: originalWinner.player_name };
+
+        if (!bannedWins) {
+            // Banned player loses the roll - reorder so highest non-banned player is first
+            const highestNonBanned = nonBannedEntries[0];
+            console.log(`[RANKED BAN] ${originalWinner.player_name} (banned) lost 25% roll (${(roll * 100).toFixed(1)}%), win goes to ${highestNonBanned.player_name}`);
+
+            // Reorder entries: non-banned players sorted by score, then banned players sorted by score
+            const bannedEntries = sortedEntries.filter(e => bannedMap[e.player_name]);
+            sortedEntries = [...nonBannedEntries, ...bannedEntries];
+        } else {
+            console.log(`[RANKED BAN] ${originalWinner.player_name} (banned) won 25% roll (${(roll * 100).toFixed(1)}%), keeping 1st place`);
+        }
+    }
 
     // Fetch all player ELO records first for the calculation
     const eloRecordMap = {};
@@ -397,7 +454,8 @@ async function resolveTournament(allEntries) {
     return {
         tournamentId,
         results,
-        totalPlayers
+        totalPlayers,
+        banRollResult // Include ban roll info if applicable
     };
 }
 

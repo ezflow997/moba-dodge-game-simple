@@ -28,8 +28,8 @@ export default async function handler(req, res) {
         // Check if requesting full list (dev mode)
         const { list } = req.query;
 
-        // Get registered players (those with password_hash set)
-        const url = `${SUPABASE_URL}/rest/v1/leaderboard?select=player_name,created_at&password_hash=neq.&password_hash=not.is.null&order=created_at.desc`;
+        // Get registered players (those with password_hash set) - include banned status
+        const url = `${SUPABASE_URL}/rest/v1/leaderboard?select=player_name,created_at,banned&password_hash=neq.&password_hash=not.is.null&order=created_at.desc`;
 
         const response = await fetch(url, {
             method: 'GET',
@@ -56,12 +56,13 @@ export default async function handler(req, res) {
             }
         }
 
-        // If list requested, return player names
+        // If list requested, return player names with banned status
         if (list === 'true') {
             const data = await response.json();
             const accounts = data.map(p => ({
                 name: p.player_name,
-                createdAt: p.created_at
+                createdAt: p.created_at,
+                banned: p.banned || false
             }));
             return res.status(200).json({
                 registeredPlayers: totalCount,

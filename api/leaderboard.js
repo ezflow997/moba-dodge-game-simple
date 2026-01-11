@@ -59,15 +59,15 @@ async function getAllChampions() {
     }
 }
 
-async function getLeaderboard(difficulty, limit = 10, offset = 0, dailyOnly = false, showGenerated = false) {
+async function getLeaderboard(difficulty, limit = 10, offset = 0, dailyOnly = false, showGenerated = false, viewerIsBanned = false) {
     const cols = getDifficultyColumns(difficulty);
 
     // Use daily score columns if daily filter, otherwise all-time
     const scoreCol = dailyOnly ? cols.dailyScore : cols.score;
     const dateCol = cols.dailyDate;
 
-    // Select columns we need - include password_hash to check if account is real
-    const selectCols = `player_name,password_hash,${cols.score},${cols.kills},${cols.streak},${cols.dailyScore},${cols.dailyKills},${cols.dailyStreak},${cols.dailyDate},updated_at`;
+    // Select columns we need - include password_hash to check if account is real, include banned status
+    const selectCols = `player_name,password_hash,banned,${cols.score},${cols.kills},${cols.streak},${cols.dailyScore},${cols.dailyKills},${cols.dailyStreak},${cols.dailyDate},updated_at`;
 
     // Build URL with filters
     let url = `${SUPABASE_URL}/rest/v1/leaderboard?select=${selectCols}&${scoreCol}=gt.0&order=${scoreCol}.desc&limit=${limit}&offset=${offset}`;
@@ -81,6 +81,12 @@ async function getLeaderboard(difficulty, limit = 10, offset = 0, dailyOnly = fa
     // Filter out generated accounts unless showGenerated is true
     if (!showGenerated) {
         url += `&password_hash=neq.&password_hash=not.is.null`;
+    }
+
+    // If viewer is NOT banned, filter out banned players
+    // Banned players see all players (including other banned players)
+    if (!viewerIsBanned) {
+        url += `&or=(banned.is.null,banned.eq.false)`;
     }
 
     const response = await fetch(url, {
@@ -132,7 +138,7 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { difficulty, limit, page, daily, devMode } = req.query;
+        const { difficulty, limit, page, daily, devMode, viewerBanned } = req.query;
 
         if (!difficulty) {
             return res.status(400).json({ error: 'Difficulty required' });
@@ -149,8 +155,9 @@ export default async function handler(req, res) {
         const offset = (pageNum - 1) * maxLimit;
         const dailyOnly = daily === 'true' || daily === '1';
         const showGenerated = devMode === 'true' || devMode === '1';
+        const viewerIsBanned = viewerBanned === 'true' || viewerBanned === '1';
 
-        const result = await getLeaderboard(diff, maxLimit, offset, dailyOnly, showGenerated);
+        const result = await getLeaderboard(diff, maxLimit, offset, dailyOnly, showGenerated, viewerIsBanned);
         const { data, totalCount } = result;
         const cols = getDifficultyColumns(diff);
 

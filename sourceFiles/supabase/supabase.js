@@ -10,6 +10,47 @@ const API_BASE = window.location.hostname === 'localhost' || window.location.hos
 export class SupabaseLeaderboard {
     constructor() {
         this.apiBase = API_BASE;
+        // Cache the viewer's banned status
+        this._viewerBannedStatus = null;
+        this._viewerBannedPlayerName = null;
+    }
+
+    // Get the viewer's banned status (cached for current player)
+    async getViewerBannedStatus(playerName) {
+        // Return cached value if available for same player
+        if (this._viewerBannedPlayerName === playerName && this._viewerBannedStatus !== null) {
+            return this._viewerBannedStatus;
+        }
+
+        if (!playerName) {
+            return false;
+        }
+
+        try {
+            const response = await fetch(`${this.apiBase}/check-player`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ playerName })
+            });
+
+            if (!response.ok) {
+                return false;
+            }
+
+            const data = await response.json();
+            this._viewerBannedStatus = data.banned || false;
+            this._viewerBannedPlayerName = playerName;
+            return this._viewerBannedStatus;
+        } catch (error) {
+            console.error('getViewerBannedStatus error:', error);
+            return false;
+        }
+    }
+
+    // Clear cached banned status (call when player changes)
+    clearBannedStatusCache() {
+        this._viewerBannedStatus = null;
+        this._viewerBannedPlayerName = null;
     }
 
     // Check if a player name exists
@@ -195,7 +236,7 @@ export class SupabaseLeaderboard {
     }
 
     // Get leaderboard for a specific difficulty with pagination and daily filter
-    async getLeaderboard(difficulty, limit = 10, page = 1, daily = false, devMode = false) {
+    async getLeaderboard(difficulty, limit = 10, page = 1, daily = false, devMode = false, viewerBanned = false) {
         try {
             let url = `${this.apiBase}/leaderboard?difficulty=${encodeURIComponent(difficulty)}&limit=${limit}&page=${page}`;
             if (daily) {
@@ -203,6 +244,9 @@ export class SupabaseLeaderboard {
             }
             if (devMode) {
                 url += '&devMode=true';
+            }
+            if (viewerBanned) {
+                url += '&viewerBanned=true';
             }
 
             const response = await fetch(url, { method: 'GET' });
@@ -291,9 +335,12 @@ export class SupabaseLeaderboard {
     }
 
     // Get ELO-based ranked leaderboard
-    async getRankedLeaderboard(limit = 10, page = 1) {
+    async getRankedLeaderboard(limit = 10, page = 1, viewerBanned = false) {
         try {
-            const url = `${this.apiBase}/ranked-leaderboard?limit=${limit}&page=${page}`;
+            let url = `${this.apiBase}/ranked-leaderboard?limit=${limit}&page=${page}`;
+            if (viewerBanned) {
+                url += '&viewerBanned=true';
+            }
             const response = await fetch(url, { method: 'GET' });
 
             if (!response.ok) {
