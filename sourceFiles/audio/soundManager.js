@@ -16,6 +16,44 @@ export class SoundManager {
         this.musicUnlocked = false;
         this.pendingMusic = null; // Store which music to play after unlock
 
+        // Game music playlist for shuffle playback
+        this.gameMusicPlaylist = [
+            'audio/music/game-music.mp3',
+            'audio/music/high-energy-edm-synthesizer-259761.mp3',
+            'audio/music/night-city-lights-energetic-cyberpunk-dubstep-edm-electronic-184398.mp3'
+        ];
+        this.shuffledPlaylist = [];
+        this.currentTrackIndex = 0;
+        this.currentGameTrack = null;
+
+        // Menu music playlist for shuffle playback
+        this.menuMusicPlaylist = [
+            'audio/music/menu-music.mp3',
+            'audio/music/high-energy-edm-synthesizer-259761.mp3',
+            'audio/music/night-city-lights-energetic-cyberpunk-dubstep-edm-electronic-184398.mp3'
+        ];
+        this.shuffledMenuPlaylist = [];
+        this.currentMenuTrackIndex = 0;
+        this.currentMenuTrack = null;
+        this.lastPlayedMenuTrack = null;
+
+        // Track display names for UI
+        this.trackNames = {
+            'audio/music/menu-music.mp3': 'Original Menu Music',
+            'audio/music/game-music.mp3': 'Original Game Music',
+            'audio/music/high-energy-edm-synthesizer-259761.mp3': 'High Energy EDM Synthesizer',
+            'audio/music/night-city-lights-energetic-cyberpunk-dubstep-edm-electronic-184398.mp3': 'Night City Lights'
+        };
+
+        // Blocked tracks - load from localStorage (separate for game and menu)
+        const savedBlockedTracks = localStorage.getItem('blockedMusicTracks');
+        this.blockedTracks = savedBlockedTracks ? JSON.parse(savedBlockedTracks) : [];
+        const savedBlockedMenuTracks = localStorage.getItem('blockedMenuMusicTracks');
+        this.blockedMenuTracks = savedBlockedMenuTracks ? JSON.parse(savedBlockedMenuTracks) : [];
+
+        // Track the last played track to avoid repeating the same starting song
+        this.lastPlayedTrack = null;
+
         // Load saved volume settings from localStorage or use defaults
         const savedSfxVolume = localStorage.getItem('sfxVolume');
         const savedMusicVolume = localStorage.getItem('musicVolume');
@@ -454,6 +492,113 @@ export class SoundManager {
 
     // ===== BACKGROUND MUSIC METHODS =====
 
+    // Shuffle array using Fisher-Yates algorithm
+    shuffleArray(array) {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    }
+
+    // Get the display name for a track
+    getTrackName(trackPath) {
+        return this.trackNames[trackPath] || trackPath;
+    }
+
+    // Check if a track is blocked
+    isTrackBlocked(trackPath) {
+        return this.blockedTracks.includes(trackPath);
+    }
+
+    // Toggle a track's blocked state
+    toggleTrackBlocked(trackPath) {
+        const index = this.blockedTracks.indexOf(trackPath);
+        if (index > -1) {
+            // Unblock the track
+            this.blockedTracks.splice(index, 1);
+        } else {
+            // Block the track (but don't allow blocking all tracks)
+            const enabledCount = this.gameMusicPlaylist.filter(t => !this.blockedTracks.includes(t)).length;
+            if (enabledCount > 1) {
+                this.blockedTracks.push(trackPath);
+
+                // If this track is currently playing, skip to the next track
+                if (this.currentMusic === 'game' && this.currentGameTrack) {
+                    const currentTrackPath = this.shuffledPlaylist[this.currentTrackIndex];
+                    if (currentTrackPath === trackPath) {
+                        this.skipToNextGameTrack();
+                    }
+                }
+            }
+        }
+        // Save to localStorage
+        localStorage.setItem('blockedMusicTracks', JSON.stringify(this.blockedTracks));
+    }
+
+    // Skip to the next enabled game track
+    skipToNextGameTrack() {
+        const enabledTracks = this.getEnabledTracks();
+        if (enabledTracks.length === 0) return;
+
+        // Rebuild the shuffled playlist with only enabled tracks
+        this.shuffledPlaylist = this.shuffleArray(enabledTracks);
+        this.currentTrackIndex = 0;
+        this.playCurrentGameTrack();
+    }
+
+    // Get the list of enabled (non-blocked) tracks
+    getEnabledTracks() {
+        return this.gameMusicPlaylist.filter(track => !this.blockedTracks.includes(track));
+    }
+
+    // Check if a menu track is blocked
+    isMenuTrackBlocked(trackPath) {
+        return this.blockedMenuTracks.includes(trackPath);
+    }
+
+    // Toggle a menu track's blocked state
+    toggleMenuTrackBlocked(trackPath) {
+        const index = this.blockedMenuTracks.indexOf(trackPath);
+        if (index > -1) {
+            // Unblock the track
+            this.blockedMenuTracks.splice(index, 1);
+        } else {
+            // Block the track (but don't allow blocking all tracks)
+            const enabledCount = this.menuMusicPlaylist.filter(t => !this.blockedMenuTracks.includes(t)).length;
+            if (enabledCount > 1) {
+                this.blockedMenuTracks.push(trackPath);
+
+                // If this track is currently playing, skip to the next track
+                if (this.currentMusic === 'menu' && this.currentMenuTrack) {
+                    const currentTrackPath = this.shuffledMenuPlaylist[this.currentMenuTrackIndex];
+                    if (currentTrackPath === trackPath) {
+                        this.skipToNextMenuTrack();
+                    }
+                }
+            }
+        }
+        // Save to localStorage
+        localStorage.setItem('blockedMenuMusicTracks', JSON.stringify(this.blockedMenuTracks));
+    }
+
+    // Skip to the next enabled menu track
+    skipToNextMenuTrack() {
+        const enabledTracks = this.getEnabledMenuTracks();
+        if (enabledTracks.length === 0) return;
+
+        // Rebuild the shuffled playlist with only enabled tracks
+        this.shuffledMenuPlaylist = this.shuffleArray(enabledTracks);
+        this.currentMenuTrackIndex = 0;
+        this.playCurrentMenuTrack();
+    }
+
+    // Get the list of enabled (non-blocked) menu tracks
+    getEnabledMenuTracks() {
+        return this.menuMusicPlaylist.filter(track => !this.blockedMenuTracks.includes(track));
+    }
+
     // Unlock music on first user interaction
     unlockMusic() {
         if (this.musicUnlocked) return;
@@ -499,13 +644,59 @@ export class SoundManager {
 
         this.stopAllMusic();
 
-        if (!this.menuMusic) this.loadBackgroundMusic();
+        // Get enabled menu tracks and shuffle them
+        const enabledTracks = this.getEnabledMenuTracks();
+        if (enabledTracks.length === 0) {
+            console.warn('No enabled menu tracks to play');
+            return;
+        }
+        this.shuffledMenuPlaylist = this.shuffleArray(enabledTracks);
+        this.currentMenuTrackIndex = 0;
+
+        // Avoid starting with the same track that was playing last time (if we have more than 1 track)
+        if (enabledTracks.length > 1 && this.shuffledMenuPlaylist[0] === this.lastPlayedMenuTrack) {
+            // Move the last played track to the end of the playlist
+            const [firstTrack] = this.shuffledMenuPlaylist.splice(0, 1);
+            this.shuffledMenuPlaylist.push(firstTrack);
+        }
 
         this.pendingMusic = 'menu'; // Mark as attempting
-        this.menuMusic.play().then(() => {
+        this.playCurrentMenuTrack();
+    }
+
+    // Play the current track in the shuffled menu playlist
+    playCurrentMenuTrack() {
+        // Clean up previous track if exists
+        if (this.currentMenuTrack) {
+            this.currentMenuTrack.pause();
+            this.currentMenuTrack.removeEventListener('ended', this.onMenuTrackEnded);
+            this.currentMenuTrack = null;
+        }
+
+        const trackPath = this.shuffledMenuPlaylist[this.currentMenuTrackIndex];
+        console.log(`Playing menu music track ${this.currentMenuTrackIndex + 1}/${this.shuffledMenuPlaylist.length}: ${trackPath}`);
+
+        this.currentMenuTrack = new Audio(trackPath);
+        this.currentMenuTrack.volume = this.bgMusicVolume;
+
+        // Set up the ended event to play next track
+        this.onMenuTrackEnded = () => {
+            this.currentMenuTrackIndex++;
+            // Loop back to start if we've played all tracks
+            if (this.currentMenuTrackIndex >= this.shuffledMenuPlaylist.length) {
+                this.currentMenuTrackIndex = 0;
+                console.log('Menu playlist complete, looping back to first track');
+            }
+            this.playCurrentMenuTrack();
+        };
+        this.currentMenuTrack.addEventListener('ended', this.onMenuTrackEnded);
+
+        this.currentMenuTrack.play().then(() => {
             console.log('Menu music playing');
             this.currentMusic = 'menu';
             this.pendingMusic = null;
+            // Track this as the last played track to avoid repeating on next menu visit
+            this.lastPlayedMenuTrack = trackPath;
         }).catch(err => {
             // Silently wait for user interaction
             this.pendingMusic = 'menu';
@@ -522,13 +713,59 @@ export class SoundManager {
 
         this.stopAllMusic();
 
-        if (!this.gameMusic) this.loadBackgroundMusic();
+        // Get enabled tracks and shuffle them
+        const enabledTracks = this.getEnabledTracks();
+        if (enabledTracks.length === 0) {
+            console.warn('No enabled tracks to play');
+            return;
+        }
+        this.shuffledPlaylist = this.shuffleArray(enabledTracks);
+        this.currentTrackIndex = 0;
+
+        // Avoid starting with the same track that was playing last time (if we have more than 1 track)
+        if (enabledTracks.length > 1 && this.shuffledPlaylist[0] === this.lastPlayedTrack) {
+            // Move the last played track to the end of the playlist
+            const [firstTrack] = this.shuffledPlaylist.splice(0, 1);
+            this.shuffledPlaylist.push(firstTrack);
+        }
 
         this.pendingMusic = 'game'; // Mark as attempting
-        this.gameMusic.play().then(() => {
+        this.playCurrentGameTrack();
+    }
+
+    // Play the current track in the shuffled playlist
+    playCurrentGameTrack() {
+        // Clean up previous track if exists
+        if (this.currentGameTrack) {
+            this.currentGameTrack.pause();
+            this.currentGameTrack.removeEventListener('ended', this.onTrackEnded);
+            this.currentGameTrack = null;
+        }
+
+        const trackPath = this.shuffledPlaylist[this.currentTrackIndex];
+        console.log(`Playing game music track ${this.currentTrackIndex + 1}/${this.shuffledPlaylist.length}: ${trackPath}`);
+
+        this.currentGameTrack = new Audio(trackPath);
+        this.currentGameTrack.volume = this.bgMusicVolume;
+
+        // Set up the ended event to play next track
+        this.onTrackEnded = () => {
+            this.currentTrackIndex++;
+            // Loop back to start if we've played all tracks
+            if (this.currentTrackIndex >= this.shuffledPlaylist.length) {
+                this.currentTrackIndex = 0;
+                console.log('Playlist complete, looping back to first track');
+            }
+            this.playCurrentGameTrack();
+        };
+        this.currentGameTrack.addEventListener('ended', this.onTrackEnded);
+
+        this.currentGameTrack.play().then(() => {
             console.log('Game music playing');
             this.currentMusic = 'game';
             this.pendingMusic = null;
+            // Track this as the last played track to avoid repeating on next game start
+            this.lastPlayedTrack = trackPath;
         }).catch(err => {
             // Silently wait for user interaction
             this.pendingMusic = 'game';
@@ -544,6 +781,18 @@ export class SoundManager {
             this.gameMusic.pause();
             this.gameMusic.currentTime = 0;
         }
+        // Stop the current menu track from the playlist
+        if (this.currentMenuTrack) {
+            this.currentMenuTrack.pause();
+            this.currentMenuTrack.removeEventListener('ended', this.onMenuTrackEnded);
+            this.currentMenuTrack = null;
+        }
+        // Stop the current game track from the playlist
+        if (this.currentGameTrack) {
+            this.currentGameTrack.pause();
+            this.currentGameTrack.removeEventListener('ended', this.onTrackEnded);
+            this.currentGameTrack = null;
+        }
         this.currentMusic = null;
     }
 
@@ -551,24 +800,28 @@ export class SoundManager {
         this.bgMusicVolume = Math.max(0, Math.min(1, vol));
         if (this.menuMusic) this.menuMusic.volume = this.bgMusicVolume;
         if (this.gameMusic) this.gameMusic.volume = this.bgMusicVolume;
+        if (this.currentMenuTrack) this.currentMenuTrack.volume = this.bgMusicVolume;
+        if (this.currentGameTrack) this.currentGameTrack.volume = this.bgMusicVolume;
     }
 
     pauseMusic() {
         if (this.menuMusic) this.menuMusic.pause();
         if (this.gameMusic) this.gameMusic.pause();
+        if (this.currentMenuTrack) this.currentMenuTrack.pause();
+        if (this.currentGameTrack) this.currentGameTrack.pause();
     }
 
     resumeMusic() {
-        if (this.currentMusic === 'menu' && this.menuMusic) {
-            this.menuMusic.play();
-        } else if (this.currentMusic === 'game' && this.gameMusic) {
-            this.gameMusic.play();
+        if (this.currentMusic === 'menu' && this.currentMenuTrack) {
+            this.currentMenuTrack.play();
+        } else if (this.currentMusic === 'game' && this.currentGameTrack) {
+            this.currentGameTrack.play();
         }
     }
 
     // Optional: Fade out music smoothly
     fadeOutMusic(callback, duration = 1000) {
-        const currentAudio = this.currentMusic === 'menu' ? this.menuMusic : this.gameMusic;
+        const currentAudio = this.currentMusic === 'menu' ? this.currentMenuTrack : this.currentGameTrack;
         if (!currentAudio) return;
         
         const startVolume = currentAudio.volume;

@@ -39,12 +39,13 @@ export class PauseMenu {
         this.resumeButton = new Button(btnX, 280, btnW, btnH, "Resume (ESC)", fontSize, 0, 0, false, true, 'white', 'white');
         this.keybindsButton = new Button(btnX, 280 + btnSpace, btnW, btnH, "Keybinds", fontSize, 0, 0, false, true, 'white', 'white');
         this.volumeButton = new Button(btnX, 280 + btnSpace * 2, btnW, btnH, "Volume", fontSize, 0, 0, false, true, 'white', 'white');
-        this.uiScaleButton = new Button(btnX, 280 + btnSpace * 3, btnW, btnH, "UI Scale", fontSize, 0, 0, false, true, 'white', 'white');
-        this.controlSchemeButton = new Button(btnX, 280 + btnSpace * 4, btnW, btnH, "Controls: Mouse", fontSize, 0, 0, false, true, 'white', 'white');
-        this.performanceButton = new Button(btnX, 280 + btnSpace * 5, btnW, btnH, "Performance Mode: OFF", fontSize, 0, 0, false, true, 'white', 'white');
-        this.devModeButton = new Button(btnX, 280 + btnSpace * 6, btnW, btnH, "Dev Mode: OFF", fontSize, 0, 0, false, true, 'white', 'white');
-        this.exitTestRoomButton = new Button(btnX, 280 + btnSpace * 7, btnW, btnH, "Exit Test Room", fontSize, 0, 0, false, true, 'white', 'white');
-        this.quitButton = new Button(btnX, 280 + btnSpace * 8, btnW, btnH, "Quit to Menu", fontSize, 0, 0, false, true, 'white', 'white');
+        this.musicSelectionButton = new Button(btnX, 280 + btnSpace * 3, btnW, btnH, "Music Selection", fontSize, 0, 0, false, true, 'white', 'white');
+        this.uiScaleButton = new Button(btnX, 280 + btnSpace * 4, btnW, btnH, "UI Scale", fontSize, 0, 0, false, true, 'white', 'white');
+        this.controlSchemeButton = new Button(btnX, 280 + btnSpace * 5, btnW, btnH, "Controls: Mouse", fontSize, 0, 0, false, true, 'white', 'white');
+        this.performanceButton = new Button(btnX, 280 + btnSpace * 6, btnW, btnH, "Performance Mode: OFF", fontSize, 0, 0, false, true, 'white', 'white');
+        this.devModeButton = new Button(btnX, 280 + btnSpace * 7, btnW, btnH, "Dev Mode: OFF", fontSize, 0, 0, false, true, 'white', 'white');
+        this.exitTestRoomButton = new Button(btnX, 280 + btnSpace * 8, btnW, btnH, "Exit Test Room", fontSize, 0, 0, false, true, 'white', 'white');
+        this.quitButton = new Button(btnX, 280 + btnSpace * 9, btnW, btnH, "Quit to Menu", fontSize, 0, 0, false, true, 'white', 'white');
 
         // Load performance mode setting from localStorage
         const savedPerfMode = localStorage.getItem('performanceMode') === 'true';
@@ -65,6 +66,7 @@ export class PauseMenu {
         this.showKeybinds = false;
         this.showVolume = false;
         this.showUIScale = false;
+        this.showMusicSelection = false;
 
         // Keybinds submenu
         this.keybindQButton = new Button(700, 300, 600, 80, "Shoot: Q", 50, 140, 60, false, true, 'white', 'white');
@@ -101,6 +103,19 @@ export class PauseMenu {
         this.uiScaleSlider = new Slider(700, 400, 800, 30, 0.5, 2.0);
         this.uiScaleSlider.setValue(uiScale); // Initialize with current value
         this.uiScaleBackButton = new Button(880, 550, 400, 80, "Back", 50, 140, 60, false, true, 'white', 'white');
+
+        // Music Selection submenu
+        this.musicSelectionBackButton = new Button(1280, 680, 300, 60, "Back", 32, 0, 0, false, true, 'white', 'white');
+        this.musicEnableButton = new Button(1030, 580, 200, 55, "Enable", 28, 0, 0, false, true, '#66ff66', '#88ff88');
+        this.musicDisableButton = new Button(1260, 580, 200, 55, "Disable", 28, 0, 0, false, true, '#ff6666', '#ff8888');
+        this.selectedTrackIndex = 0; // Currently selected track in the list
+        this.trackListScrollOffset = 0; // For scrolling if many tracks
+        this.visibleTrackCount = 5; // How many tracks visible at once
+
+        // Music category tabs (game vs menu music)
+        this.musicCategoryTab = 'game'; // 'game' or 'menu'
+        this.gameTabButton = new Button(1030, 140, 200, 45, "Game", 24, 0, 0, false, true, '#00ffff', '#00ffff');
+        this.menuTabButton = new Button(1260, 140, 200, 45, "Menu", 24, 0, 0, false, true, 'white', 'white');
 
         // keyboard key down listener
         this.keydownHandler = (ev) => {
@@ -144,6 +159,7 @@ export class PauseMenu {
             this.showKeybinds = false;
             this.showVolume = false;
             this.showUIScale = false;
+            this.showMusicSelection = false;
             this.waitingForKey = null;
             // Reset konami progress
             this.konamiProgress = 0;
@@ -361,7 +377,7 @@ export class PauseMenu {
         }
 
         // Main pause menu
-        if (!this.showKeybinds && !this.showVolume && !this.showUIScale) {
+        if (!this.showKeybinds && !this.showVolume && !this.showUIScale && !this.showMusicSelection) {
             this.resumeButton.update(inX, inY);
             if (this.resumeButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
                 this.clicked = true;
@@ -397,12 +413,22 @@ export class PauseMenu {
                 this.uiScaleSlider.setValue(uiScale);
             }
 
+            this.musicSelectionButton.update(inX, inY);
+            if (this.musicSelectionButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.showMusicSelection = true;
+                // Reset selection and scroll
+                this.selectedTrackIndex = 0;
+                this.trackListScrollOffset = 0;
+            }
+
             // Calculate button positions based on what's visible
             const inTestRoom = game.testRoom && game.testRoom.active;
             const devModeVisible = game.devMode && (this.devModeVisible || game.devMode.isEnabled());
 
-            // Base position after Performance button (index 5, since UI Scale is index 3)
-            let nextButtonIndex = 6;
+            // Base position after Performance button (index 6, since Music Selection is index 3 and UI Scale is index 4)
+            let nextButtonIndex = 7;
 
             // Dev mode takes slot 5 if visible
             if (devModeVisible) nextButtonIndex++;
@@ -420,6 +446,7 @@ export class PauseMenu {
                     this.showKeybinds = false;
                     this.showVolume = false;
                     this.showUIScale = false;
+                    this.showMusicSelection = false;
                     // Resume music since we bypassed toggle()
                     if (window.gameSound) window.gameSound.resumeMusic();
                 }
@@ -455,6 +482,7 @@ export class PauseMenu {
                 this.showKeybinds = false;
                 this.showVolume = false;
                 this.showUIScale = false;
+                this.showMusicSelection = false;
             }
 
             this.controlSchemeButton.update(inX, inY);
@@ -603,6 +631,187 @@ export class PauseMenu {
                 this.showUIScale = false;
             }
         }
+        // Music Selection submenu
+        else if (this.showMusicSelection) {
+            if (!window.gameSound) return;
+
+            // Get the correct playlist based on selected tab
+            const playlist = this.musicCategoryTab === 'game'
+                ? window.gameSound.gameMusicPlaylist
+                : window.gameSound.menuMusicPlaylist;
+            const rX = window.innerWidth / 2560;
+            const rY = window.innerHeight / 1440;
+
+            // Use same positioning as draw method
+            const panelY = 200;
+
+            // Tab buttons positioning
+            const tabY = panelY + 40;
+            const tabSpacing = 30;
+            const totalTabWidth = 200 + 200 + tabSpacing;
+            const tabStartX = (2560 - totalTabWidth) / 2;
+
+            this.gameTabButton.x = tabStartX;
+            this.gameTabButton.y = tabY;
+            this.menuTabButton.x = tabStartX + 200 + tabSpacing;
+            this.menuTabButton.y = tabY;
+
+            // Update tab button colors based on selection
+            this.gameTabButton.color = this.musicCategoryTab === 'game' ? '#00ffff' : 'white';
+            this.gameTabButton.hoverColor = this.musicCategoryTab === 'game' ? '#00ffff' : '#aaffff';
+            this.menuTabButton.color = this.musicCategoryTab === 'menu' ? '#00ffff' : 'white';
+            this.menuTabButton.hoverColor = this.musicCategoryTab === 'menu' ? '#00ffff' : '#aaffff';
+
+            // Tab button clicks
+            this.gameTabButton.update(inX, inY);
+            if (this.gameTabButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                if (this.musicCategoryTab !== 'game') {
+                    this.musicCategoryTab = 'game';
+                    this.selectedTrackIndex = 0;
+                    this.trackListScrollOffset = 0;
+                }
+            }
+
+            this.menuTabButton.update(inX, inY);
+            if (this.menuTabButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                if (this.musicCategoryTab !== 'menu') {
+                    this.musicCategoryTab = 'menu';
+                    this.selectedTrackIndex = 0;
+                    this.trackListScrollOffset = 0;
+                }
+            }
+
+            const listWidth = 700;
+            const listX = (2560 - listWidth) / 2;
+            const listY = panelY + 140;
+            const itemHeight = 55;
+            const listHeight = this.visibleTrackCount * itemHeight;
+
+            // Convert to screen coordinates
+            const listXScreen = listX * rX;
+            const listYScreen = listY * rY;
+            const listWidthScreen = listWidth * rX;
+            const itemHeightScreen = itemHeight * rY;
+            const listHeightScreen = listHeight * rY;
+
+            // Check for clicks on track items
+            const visibleCount = Math.min(this.visibleTrackCount, playlist.length);
+            for (let i = 0; i < visibleCount; i++) {
+                const trackIndex = i + this.trackListScrollOffset;
+                if (trackIndex >= playlist.length) break;
+
+                const itemYScreen = listYScreen + i * itemHeightScreen;
+                const isHovered = inX >= listXScreen && inX <= listXScreen + listWidthScreen &&
+                                  inY >= itemYScreen && inY <= itemYScreen + itemHeightScreen;
+
+                if (isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                    this.clicked = true;
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    this.selectedTrackIndex = trackIndex;
+                }
+            }
+
+            // Scroll up/down detection
+            const canScrollUp = this.trackListScrollOffset > 0;
+            const canScrollDown = this.trackListScrollOffset + this.visibleTrackCount < playlist.length;
+
+            // Scroll button areas (wider clickable area for easier use)
+            const scrollBtnWidth = 200 * rX;
+            const scrollBtnHeight = 30 * rY;
+            const centerXScreen = (2560 / 2) * rX;
+            const scrollBtnX = centerXScreen - scrollBtnWidth / 2;
+
+            // Check scroll up click
+            if (canScrollUp) {
+                const scrollUpY = listYScreen - 35 * rY;
+                const isHoveredUp = inX >= scrollBtnX && inX <= scrollBtnX + scrollBtnWidth &&
+                                    inY >= scrollUpY && inY <= scrollUpY + scrollBtnHeight;
+                if (isHoveredUp && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                    this.clicked = true;
+                    this.trackListScrollOffset--;
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                }
+            }
+
+            // Check scroll down click
+            if (canScrollDown) {
+                const scrollDownY = listYScreen + listHeightScreen + 5 * rY;
+                const isHoveredDown = inX >= scrollBtnX && inX <= scrollBtnX + scrollBtnWidth &&
+                                      inY >= scrollDownY && inY <= scrollDownY + scrollBtnHeight;
+                if (isHoveredDown && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                    this.clicked = true;
+                    this.trackListScrollOffset++;
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                }
+            }
+
+            // Update button positions to match draw method
+            const buttonsY = listY + listHeight + 60;
+            const buttonSpacing = 30;
+            const totalButtonWidth = 200 + 200 + buttonSpacing;
+            const buttonsStartX = (2560 - totalButtonWidth) / 2;
+
+            this.musicEnableButton.x = buttonsStartX;
+            this.musicEnableButton.y = buttonsY;
+            this.musicDisableButton.x = buttonsStartX + 200 + buttonSpacing;
+            this.musicDisableButton.y = buttonsY;
+
+            // Enable button - use correct methods based on tab
+            this.musicEnableButton.update(inX, inY);
+            if (this.musicEnableButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) {
+                    window.gameSound.playMenuClick();
+                    const trackPath = playlist[this.selectedTrackIndex];
+                    if (this.musicCategoryTab === 'game') {
+                        if (window.gameSound.isTrackBlocked(trackPath)) {
+                            window.gameSound.toggleTrackBlocked(trackPath);
+                        }
+                    } else {
+                        if (window.gameSound.isMenuTrackBlocked(trackPath)) {
+                            window.gameSound.toggleMenuTrackBlocked(trackPath);
+                        }
+                    }
+                }
+            }
+
+            // Disable button - use correct methods based on tab
+            this.musicDisableButton.update(inX, inY);
+            if (this.musicDisableButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) {
+                    window.gameSound.playMenuClick();
+                    const trackPath = playlist[this.selectedTrackIndex];
+                    if (this.musicCategoryTab === 'game') {
+                        if (!window.gameSound.isTrackBlocked(trackPath)) {
+                            window.gameSound.toggleTrackBlocked(trackPath);
+                        }
+                    } else {
+                        if (!window.gameSound.isMenuTrackBlocked(trackPath)) {
+                            window.gameSound.toggleMenuTrackBlocked(trackPath);
+                        }
+                    }
+                }
+            }
+
+            // Update back button position
+            const noteY = buttonsY + 70;
+            const backY = noteY + 40;
+            this.musicSelectionBackButton.x = 2560 / 2;
+            this.musicSelectionBackButton.y = backY;
+
+            // Back button
+            this.musicSelectionBackButton.update(inX, inY);
+            if (this.musicSelectionBackButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.showMusicSelection = false;
+            }
+        }
     }
 
     updateKeybindButtons() {
@@ -675,14 +884,14 @@ export class PauseMenu {
         context.restore();
 
         // Main pause menu
-        if (!this.showKeybinds && !this.showVolume && !this.showUIScale) {
+        if (!this.showKeybinds && !this.showVolume && !this.showUIScale && !this.showMusicSelection) {
             // Check if in test room for extra button
             const inTestRoom = game.testRoom && game.testRoom.active;
             const devModeVisible = game.devMode && (this.devModeVisible || game.devMode.isEnabled());
 
             // Calculate panel height based on visible buttons
-            // Base: Resume, Keybinds, Volume, UI Scale, Controls, Performance = 6 buttons
-            let buttonCount = 6;
+            // Base: Resume, Keybinds, Volume, Music Selection, UI Scale, Controls, Performance = 7 buttons
+            let buttonCount = 7;
             if (devModeVisible) buttonCount++;  // Dev Mode button
             if (inTestRoom) buttonCount++;      // Exit Test Room button
             if (!inMainMenu) buttonCount++;     // Quit button
@@ -716,6 +925,7 @@ export class PauseMenu {
             this.resumeButton.draw(context);
             this.keybindsButton.draw(context);
             this.volumeButton.draw(context);
+            this.musicSelectionButton.draw(context);
             this.uiScaleButton.draw(context);
             this.controlSchemeButton.draw(context);
             this.performanceButton.draw(context);
@@ -725,8 +935,8 @@ export class PauseMenu {
             }
             if (!inMainMenu) {
                 // Calculate button positions based on what's visible
-                // Base position after Performance button (index 5), Dev Mode is at index 6
-                let nextButtonIndex = 6;
+                // Base position after Performance button (index 6), Dev Mode is at index 7
+                let nextButtonIndex = 7;
 
                 // Dev mode takes slot 6 if visible
                 if (devModeVisible) nextButtonIndex++;
@@ -833,6 +1043,188 @@ export class PauseMenu {
 
             // Draw back button
             this.uiScaleBackButton.draw(context);
+        }
+        // Music Selection submenu
+        else if (this.showMusicSelection) {
+            if (!window.gameSound) return;
+
+            // Get the correct playlist based on selected tab
+            const playlist = this.musicCategoryTab === 'game'
+                ? window.gameSound.gameMusicPlaylist
+                : window.gameSound.menuMusicPlaylist;
+
+            // Panel dimensions - centered
+            const panelWidth = 800;
+            const panelHeight = 600;
+            const panelX = (2560 - panelWidth) / 2; // Center horizontally
+            const panelY = 200;
+
+            // Draw music selection background
+            context.save();
+            context.fillStyle = 'rgba(10, 20, 40, 0.95)';
+            context.fillRect(panelX * rX, panelY * rY, panelWidth * rX, panelHeight * rY);
+            context.strokeStyle = '#00ffff';
+            context.shadowColor = '#00ffff';
+            context.shadowBlur = 15 * rX;
+            context.lineWidth = 3 * rY;
+            context.strokeRect(panelX * rX, panelY * rY, panelWidth * rX, panelHeight * rY);
+            context.restore();
+
+            // Center X for text
+            const centerX = 2560 / 2;
+
+            // Draw title
+            this.super.drawGlowText(context, centerX, panelY + 35, "MUSIC SELECTION", 40, '#ffffff', '#00ffff', 12, true);
+
+            // Draw tab buttons
+            const tabY = panelY + 55;
+            const tabSpacing = 30;
+            const totalTabWidth = 200 + 200 + tabSpacing;
+            const tabStartX = (2560 - totalTabWidth) / 2;
+
+            this.gameTabButton.x = tabStartX;
+            this.gameTabButton.y = tabY;
+            this.menuTabButton.x = tabStartX + 200 + tabSpacing;
+            this.menuTabButton.y = tabY;
+
+            // Draw tab underline for selected tab
+            context.save();
+            const underlineY = (tabY + 45) * rY;
+            context.strokeStyle = '#00ffff';
+            context.shadowColor = '#00ffff';
+            context.shadowBlur = 8 * rX;
+            context.lineWidth = 3 * rY;
+            context.beginPath();
+            if (this.musicCategoryTab === 'game') {
+                context.moveTo(tabStartX * rX, underlineY);
+                context.lineTo((tabStartX + 200) * rX, underlineY);
+            } else {
+                context.moveTo((tabStartX + 200 + tabSpacing) * rX, underlineY);
+                context.lineTo((tabStartX + 200 + tabSpacing + 200) * rX, underlineY);
+            }
+            context.stroke();
+            context.restore();
+
+            this.gameTabButton.draw(context);
+            this.menuTabButton.draw(context);
+
+            // Draw subtitle
+            const categoryLabel = this.musicCategoryTab === 'game' ? 'In-Game Music' : 'Menu Music';
+            this.super.drawGlowText(context, centerX, panelY + 115, categoryLabel, 22, '#888888', '#666666', 4, true);
+
+            // Track list area - centered in panel
+            const listWidth = 700;
+            const listX = (2560 - listWidth) / 2;
+            const listY = panelY + 140;
+            const itemHeight = 55;
+            const listHeight = this.visibleTrackCount * itemHeight;
+
+            // Draw list background
+            context.save();
+            context.fillStyle = 'rgba(20, 30, 50, 0.8)';
+            context.fillRect(listX * rX, listY * rY, listWidth * rX, listHeight * rY);
+            context.strokeStyle = '#006688';
+            context.lineWidth = 2 * rY;
+            context.strokeRect(listX * rX, listY * rY, listWidth * rX, listHeight * rY);
+            context.restore();
+
+            // Draw scroll up indicator if can scroll
+            const canScrollUp = this.trackListScrollOffset > 0;
+            const canScrollDown = this.trackListScrollOffset + this.visibleTrackCount < playlist.length;
+
+            if (canScrollUp) {
+                this.super.drawGlowText(context, centerX, listY - 15, "▲ Click to Scroll Up ▲", 18, '#00ffff', '#0088aa', 4, true);
+            }
+
+            // Draw visible tracks
+            const visibleCount = Math.min(this.visibleTrackCount, playlist.length);
+            for (let i = 0; i < visibleCount; i++) {
+                const trackIndex = i + this.trackListScrollOffset;
+                if (trackIndex >= playlist.length) break;
+
+                const trackPath = playlist[trackIndex];
+                const trackName = window.gameSound.getTrackName(trackPath);
+                // Use correct isBlocked method based on tab
+                const isBlocked = this.musicCategoryTab === 'game'
+                    ? window.gameSound.isTrackBlocked(trackPath)
+                    : window.gameSound.isMenuTrackBlocked(trackPath);
+                const isSelected = trackIndex === this.selectedTrackIndex;
+
+                const itemY = listY + i * itemHeight;
+
+                // Draw selection highlight
+                context.save();
+                if (isSelected) {
+                    context.fillStyle = 'rgba(0, 150, 200, 0.4)';
+                    context.fillRect(listX * rX, itemY * rY, listWidth * rX, itemHeight * rY);
+                    context.strokeStyle = '#00ffff';
+                    context.lineWidth = 2 * rY;
+                    context.strokeRect(listX * rX, itemY * rY, listWidth * rX, itemHeight * rY);
+                }
+                context.restore();
+
+                // Draw track status indicator
+                const statusColor = isBlocked ? '#ff4444' : '#44ff44';
+                const statusText = isBlocked ? 'OFF' : 'ON';
+
+                // Draw status box
+                context.save();
+                context.fillStyle = isBlocked ? 'rgba(100, 30, 30, 0.8)' : 'rgba(30, 100, 30, 0.8)';
+                context.fillRect((listX + 10) * rX, (itemY + 12) * rY, 50 * rX, 30 * rY);
+                context.strokeStyle = statusColor;
+                context.lineWidth = 2 * rY;
+                context.strokeRect((listX + 10) * rX, (itemY + 12) * rY, 50 * rX, 30 * rY);
+                context.restore();
+
+                // Draw status text
+                context.save();
+                context.font = `bold ${16 * rY}px Arial`;
+                context.fillStyle = statusColor;
+                context.textAlign = 'center';
+                context.fillText(statusText, (listX + 35) * rX, (itemY + 33) * rY);
+                context.restore();
+
+                // Draw track name
+                const nameColor = isSelected ? '#ffffff' : (isBlocked ? '#aa8888' : '#88ffaa');
+                context.save();
+                context.font = `${22 * rY}px Arial`;
+                context.fillStyle = nameColor;
+                context.textAlign = 'left';
+                context.fillText(trackName, (listX + 75) * rX, (itemY + 35) * rY);
+                context.restore();
+            }
+
+            // Draw scroll down indicator if can scroll
+            if (canScrollDown) {
+                const scrollDownY = listY + listHeight + 20;
+                this.super.drawGlowText(context, centerX, scrollDownY, "▼ Click to Scroll Down ▼", 18, '#00ffff', '#0088aa', 4, true);
+            }
+
+            // Buttons positioned below the list with proper spacing
+            const buttonsY = listY + listHeight + 60;
+            this.musicEnableButton.y = buttonsY;
+            this.musicDisableButton.y = buttonsY;
+
+            // Center the enable/disable buttons
+            const buttonSpacing = 30;
+            const totalButtonWidth = 200 + 200 + buttonSpacing;
+            const buttonsStartX = (2560 - totalButtonWidth) / 2;
+            this.musicEnableButton.x = buttonsStartX;
+            this.musicDisableButton.x = buttonsStartX + 200 + buttonSpacing;
+
+            // Draw Enable/Disable buttons
+            this.musicEnableButton.draw(context);
+            this.musicDisableButton.draw(context);
+
+            // Draw note about minimum tracks
+            const noteY = buttonsY + 70;
+            this.super.drawGlowText(context, centerX, noteY, "At least one song must remain enabled", 18, '#ffaa00', '#ff8800', 4, true);
+
+            // Position and draw back button
+            const backY = noteY + 40;
+            this.musicSelectionBackButton.y = backY;
+            this.musicSelectionBackButton.x = centerX;
+            this.musicSelectionBackButton.draw(context);
         }
     }
 }
