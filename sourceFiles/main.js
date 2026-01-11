@@ -603,6 +603,7 @@ window.addEventListener('load', function () {
 				if(game.showMessage == '' && game.score != 0){
 					// Notify Poki that gameplay stopped
 					poki.gameplayStop();
+					game.retryDisabled = false;
 
 					// Check if dev mode was used this session - don't save scores
 					if (game.devMode && game.devMode.wasUsedThisSession()) {
@@ -792,8 +793,9 @@ window.addEventListener('load', function () {
 							requestAnimationFrame(animate);
 							return;
 						} else if (popupResult === 'cancel') {
-							// Hide popup and stay on game over screen
+							// Hide popup and disable retry button
 							game.retryWarningPopup.hide();
+							game.retryDisabled = true;
 						}
 
 						// Don't process other clicks while popup is visible
@@ -801,12 +803,12 @@ window.addEventListener('load', function () {
 						return;
 					}
 
-					// Check for retry button click (only if popup not visible)
+					// Check for retry button click (only if popup not visible and retry not disabled)
 					const clicked = game.input.buttons.indexOf(0) > -1;
 					const retryButtonDelay = 1500;
 					let clickedRetry = false;
 
-					if (clicked && msPassed > retryButtonDelay && game.retryButtonBounds) {
+					if (clicked && msPassed > retryButtonDelay && game.retryButtonBounds && !game.retryDisabled) {
 						const bounds = game.retryButtonBounds;
 						const mouseX = game.input.mouseX;
 						const mouseY = game.input.mouseY;
@@ -903,6 +905,7 @@ window.addEventListener('load', function () {
 					if(msPassed > 5000 || (msPassed > minReadTime && clicked && !clickedRetry)){
 						game.showMessage = 'None';
 						game.retryButtonBounds = null;
+						game.retryDisabled = false;
 
 						// Handle ranked score submission
 						if (game.pendingRankedScore) {
