@@ -275,6 +275,23 @@ export class PhantomBoss {
         this.teleportTarget.x = Math.max(margin, Math.min(w - margin, this.teleportTarget.x));
         this.teleportTarget.y = Math.max(margin, Math.min(h - margin, this.teleportTarget.y));
 
+        // Ensure minimum distance from player (prevent teleporting on top of player)
+        const minDistanceFromPlayer = 250;
+        const dx = this.teleportTarget.x - player.x;
+        const dy = this.teleportTarget.y - player.y;
+        const distToPlayer = Math.sqrt(dx * dx + dy * dy);
+
+        if (distToPlayer < minDistanceFromPlayer) {
+            // Push teleport target away from player
+            const pushAngle = Math.atan2(dy, dx);
+            this.teleportTarget.x = player.x + Math.cos(pushAngle) * minDistanceFromPlayer;
+            this.teleportTarget.y = player.y + Math.sin(pushAngle) * minDistanceFromPlayer;
+
+            // Re-clamp to screen bounds after pushing
+            this.teleportTarget.x = Math.max(margin, Math.min(w - margin, this.teleportTarget.x));
+            this.teleportTarget.y = Math.max(margin, Math.min(h - margin, this.teleportTarget.y));
+        }
+
         // Play teleport sound (throttled)
         if (window.gameSound && this.canPlaySound('teleport')) {
             window.gameSound.playBossTeleport();
@@ -320,7 +337,7 @@ export class PhantomBoss {
 
                 // Fire 3 projectiles toward player
                 const baseAngle = Math.atan2(player.y - img.y, player.x - img.x);
-                const spreadAngles = [-0.2, 0, 0.2];
+                const spreadAngles = [-0.4, 0, 0.4];
 
                 for (const spread of spreadAngles) {
                     const angle = baseAngle + spread;
@@ -425,7 +442,7 @@ export class PhantomBoss {
         const rX = window.innerWidth / 2560;
         const baseAngle = Math.atan2(player.y - this.y, player.x - this.x);
         const projectileCount = 5;
-        const spreadAngle = Math.PI / 6; // 30 degrees spread
+        const spreadAngle = Math.PI / 4; // 45 degrees spread
 
         // Play burst sound (throttled)
         if (window.gameSound && this.canPlaySound('burst')) {
