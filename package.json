@@ -1,7 +1,7 @@
 {
-  "name": "moba-dodge-simple",
+  "name": "bullet-rush",
   "version": "1.0.0",
-  "description": "MOBA Dodge Game - Simple Edition",
+  "description": "Bullet Rush - Fast-paced bullet hell action",
   "type": "module",
   "scripts": {
     "build": "node build.js",

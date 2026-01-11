@@ -311,7 +311,7 @@ export class Menu{
 
         // Draw game title centered at top (single line)
         const titleX = game.width / 2 / rX;  // Center of screen
-        this.menuEffects.drawTitleCentered(context, "MOBA DODGE SIMPLE", titleX, 100, 60);
+        this.menuEffects.drawTitleCentered(context, "BULLET RUSH", titleX, 100, 60);
 
         // Draw online player count below title
         if (game.onlineCount > 0) {
