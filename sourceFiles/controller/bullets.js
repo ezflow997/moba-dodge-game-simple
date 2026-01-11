@@ -103,9 +103,11 @@ export class Bullets {
         const homingTargets = [...enemies.enemiesList];
         if (enemies.bossActive) {
             // Add the active boss to homing targets
-            if (enemies.boss) homingTargets.push(enemies.boss);
-            if (enemies.chargeBoss) homingTargets.push(enemies.chargeBoss);
-            if (enemies.vortexBoss) homingTargets.push(enemies.vortexBoss);
+            if (enemies.boss) {
+                homingTargets.push(enemies.boss);
+                console.log(`[HOMING-TARGETS] Added boss at (${Math.round(enemies.boss.x)}, ${Math.round(enemies.boss.y)}), total targets: ${homingTargets.length}`);
+            }
+            // Note: chargeBoss and vortexBoss don't exist as separate properties - all bosses use enemies.boss
         }
         // Store for use by createHomingBullets
         this.currentHomingTargets = homingTargets;
@@ -412,6 +414,11 @@ export class Bullets {
 
         this.prevWindowWidth = window.innerWidth;
         this.prevWindowHeight = window.innerHeight;
+
+        // Debug: log final state at end of update
+        if (this.bulletsList.length > 0 && this.bulletsList.some(b => b && b.gunType === 'homing')) {
+            console.log(`[FRAME-END] bullets=${this.bulletsList.length}`);
+        }
     }
 
     // Chain lightning callback

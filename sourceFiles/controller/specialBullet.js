@@ -217,20 +217,30 @@ export class SpecialBullet {
         const sortedEnemies = [];
 
         for (const enemy of enemies) {
-            if (this.piercedEnemies.has(enemy)) continue;
+            // Check if this is a boss (has health property)
+            const isBoss = enemy.health !== undefined && enemy.maxHealth !== undefined;
+
+            if (this.piercedEnemies.has(enemy)) {
+                if (isBoss) console.log(`[HOMING-SKIP] Boss skipped: already pierced`);
+                continue;
+            }
 
             // Skip enemies that are out of bounds (off-screen)
             if (enemy.x < 0 || enemy.x > window.innerWidth ||
-                enemy.y < 0 || enemy.y > window.innerHeight) continue;
+                enemy.y < 0 || enemy.y > window.innerHeight) {
+                if (isBoss) console.log(`[HOMING-SKIP] Boss skipped: out of bounds (${Math.round(enemy.x)}, ${Math.round(enemy.y)})`);
+                continue;
+            }
 
-            // Skip enemies already killed this frame
-            if (enemy.bulletCollision) continue;
+            // Skip enemies already killed this frame (but not bosses - they use health system)
+            if (enemy.bulletCollision && !isBoss) continue;
 
             const dx = enemy.x - this.x;
             const dy = enemy.y - this.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
 
             sortedEnemies.push({ enemy, dist });
+            if (isBoss) console.log(`[HOMING-TARGET] Boss added as potential target at dist ${Math.round(dist)}`);
         }
 
         // Sort by distance (closest first)
@@ -244,7 +254,8 @@ export class SpecialBullet {
         if (targetEnemy) {
             // Lock onto this target
             this.lockedTarget = targetEnemy;
-            console.log(`[HOMING] Missile ${this.targetPreference} locked onto enemy at index ${targetIndex} pos (${Math.round(targetEnemy.x)}, ${Math.round(targetEnemy.y)})`);
+            const isBoss = targetEnemy.health !== undefined && targetEnemy.maxHealth !== undefined;
+            console.log(`[HOMING] Missile ${this.targetPreference} locked onto ${isBoss ? 'BOSS' : 'enemy'} at index ${targetIndex} pos (${Math.round(targetEnemy.x)}, ${Math.round(targetEnemy.y)})`);
             this.homeToward(targetEnemy);
         } else {
             console.log(`[HOMING] Missile ${this.targetPreference} found no valid target (${sortedEnemies.length} in list)`);

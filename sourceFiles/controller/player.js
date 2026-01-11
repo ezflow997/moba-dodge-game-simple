@@ -136,12 +136,15 @@ export class Player {
             // Use regular bullets if in normal mode OR if a gun is equipped in challenging mode
             const useRegularBullets = game.challenge_level == 0 || activeGun != null;
 
+            // Check if in test room for no cooldowns
+            const inTestRoom = game.testRoom && game.testRoom.active;
+
             if(useRegularBullets){
                 // Normal mode or equipped gun - regular bullets
                 // For rapid fire guns, allow continuous shooting when held (skip q_key check)
-                const canShoot = this.qPressed == false && this.qTriggered == true && (isRapidFire || input.q_key <= 30);
+                const canShoot = this.qPressed == false && this.qTriggered == true && (isRapidFire || inTestRoom || input.q_key <= 30);
                 if(canShoot){
-                    if (!isRapidFire) input.q_key += 30;
+                    if (!isRapidFire && !inTestRoom) input.q_key += 30;
                     this.qPresses += 1;
                     this.qPressed = true;
                     this.qPressedNow = window.performance.now();
@@ -151,8 +154,8 @@ export class Player {
             } else {
                 // Vel'koz mode without gun - void bolts
                 // Use q_key <= 30 check to prevent double-firing when cooldown resets while button held
-                if(this.qPressed == false && this.qTriggered == true && input.q_key <= 30){
-                    input.q_key += 30; // Prevent immediate re-fire
+                if(this.qPressed == false && this.qTriggered == true && (inTestRoom || input.q_key <= 30)){
+                    if (!inTestRoom) input.q_key += 30; // Prevent immediate re-fire (skip in test room)
                     this.qPresses += 1;
                     this.qPressed = true;
                     this.qPressedNow = window.performance.now();
@@ -245,11 +248,15 @@ export class Player {
             this.desiredY = input.mouseY + this.size/2 - 10;
         }
 
+        // Check if in test room for no cooldowns
+        const inTestRoomDash = game.testRoom && game.testRoom.active;
+
         if(this.ePressed == true){
             let msNow = window.performance.now();
             // Apply time scale from dev mode if available
             const timescale = game.devMode ? game.devMode.timescale : 1.0;
-            this.eCoolDownElapsed = (msNow - this.ePressedNow) * timescale;
+            // In test room, instantly complete cooldown
+            this.eCoolDownElapsed = inTestRoomDash ? this.eCoolDown + 1 : (msNow - this.ePressedNow) * timescale;
             if(this.eCoolDownElapsed > this.eCoolDown){
                 this.ePressed = false;
             }
@@ -267,20 +274,21 @@ export class Player {
             this.speed = this.speed * (20 * dashMod * innerWidth/2560);
             this.ePresses += 1;
             game.score = game.score + this.ePenalty;
-            
+
             // In WASD mode, dash towards mouse
             if (controlScheme === 'wasd') {
                 this.desiredX = input.mouseX;
                 this.desiredY = input.mouseY;
             }
-            
+
             if (window.gameSound) window.gameSound.playDash();
         }
         if(this.fPressed == true){
             let msNow = window.performance.now();
             // Apply time scale from dev mode if available
             const timescale = game.devMode ? game.devMode.timescale : 1.0;
-            this.fCoolDownElapsed = (msNow - this.fPressedNow) * timescale;
+            // In test room, instantly complete cooldown
+            this.fCoolDownElapsed = inTestRoomDash ? this.fCoolDown + 1 : (msNow - this.fPressedNow) * timescale;
             if(this.fCoolDownElapsed > this.fCoolDown){
                 this.fPressed = false;
             }
@@ -298,13 +306,13 @@ export class Player {
             this.speed = this.speed * (20 * dashMod * innerWidth/2560);
             this.fPresses += 1;
             game.score = game.score + this.fPenalty;
-            
+
             // In WASD mode, dash towards mouse
             if (controlScheme === 'wasd') {
                 this.desiredX = input.mouseX;
                 this.desiredY = input.mouseY;
             }
-            
+
             if (window.gameSound) window.gameSound.playDash();
         }
         this.prevWindowWidth = window.innerWidth;
