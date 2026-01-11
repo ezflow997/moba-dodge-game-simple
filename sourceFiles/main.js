@@ -730,6 +730,26 @@ window.addEventListener('load', function () {
 								console.log('[LOADOUT] Removed items from loadout:', removedIds);
 							}
 
+							// Consume used loadout items from the previous game before retry
+							if (game.usedLoadoutRewardIds && game.usedLoadoutRewardIds.length > 0 && game.playerName && game.playerPassword) {
+								const consumeList = [...game.usedLoadoutRewardIds];
+
+								// Check for loadout weapon uses
+								const weaponUsesConsumed = game.rewardManager.getLoadoutWeaponUsesConsumed();
+								if (game.pendingLoadoutWeapon && !game.pendingLoadoutWeapon.isPermanent && weaponUsesConsumed > 1) {
+									const weaponId = game.pendingLoadoutWeapon.reward.id;
+									for (let i = 1; i < weaponUsesConsumed; i++) {
+										consumeList.push(weaponId);
+									}
+								}
+
+								game.supabase.consumeItems(game.playerName, game.playerPassword, consumeList).then(result => {
+									console.log('[LOADOUT RETRY] Consumed items from previous game:', result);
+								}).catch(err => {
+									console.error('[LOADOUT RETRY] Failed to consume items:', err);
+								});
+							}
+
 							// Hide popup and proceed with retry
 							game.retryWarningPopup.hide();
 							game.showMessage = '';
@@ -755,6 +775,17 @@ window.addEventListener('load', function () {
 							game.pendingLoadoutRewards = savedLoadoutRewards;
 							game.usedLoadoutRewardIds = savedUsedIds;
 							game.pendingLoadoutWeapon = savedWeapon;
+
+							// Apply loadout rewards to the new game
+							if (game.pendingLoadoutRewards && game.pendingLoadoutRewards.length > 0) {
+								game.rewardManager.applyStarterRewards(game.pendingLoadoutRewards);
+								console.log('[LOADOUT RETRY] Applied', game.pendingLoadoutRewards.length, 'starter rewards');
+
+								if (game.pendingLoadoutWeapon) {
+									game.rewardManager.setLoadoutWeapon(game.pendingLoadoutWeapon);
+									console.log('[LOADOUT RETRY] Weapon set:', game.pendingLoadoutWeapon.reward.name);
+								}
+							}
 
 							poki.gameplayStart();
 
@@ -837,6 +868,7 @@ window.addEventListener('load', function () {
 
 							// Preserve loadout data before set_difficulty (which clears it)
 							const savedLoadoutRewards = game.pendingLoadoutRewards;
+							const savedUsedIds = game.usedLoadoutRewardIds;
 							const savedWeapon = game.pendingLoadoutWeapon;
 
 							game.gameOver = false;
@@ -845,7 +877,19 @@ window.addEventListener('load', function () {
 
 							// Restore loadout data after reset
 							game.pendingLoadoutRewards = savedLoadoutRewards;
+							game.usedLoadoutRewardIds = savedUsedIds;
 							game.pendingLoadoutWeapon = savedWeapon;
+
+							// Apply loadout rewards to the new game
+							if (game.pendingLoadoutRewards && game.pendingLoadoutRewards.length > 0) {
+								game.rewardManager.applyStarterRewards(game.pendingLoadoutRewards);
+								console.log('[LOADOUT RETRY] Applied', game.pendingLoadoutRewards.length, 'starter rewards');
+
+								if (game.pendingLoadoutWeapon) {
+									game.rewardManager.setLoadoutWeapon(game.pendingLoadoutWeapon);
+									console.log('[LOADOUT RETRY] Weapon set:', game.pendingLoadoutWeapon.reward.name);
+								}
+							}
 
 							poki.gameplayStart();
 
