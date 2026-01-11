@@ -370,10 +370,6 @@ export class ShopMenu {
             adRewards.dismissNotification();
         }
 
-        // Scale factors for coordinate conversion
-        const rX = window.innerWidth / 2560;
-        const rY = window.innerHeight / 1440;
-
         // Handle item grid clicks and scrolling
         // Grid coordinates (matching draw function)
         const refPanelLeft = refCenterX - 700; // Panel half-width is 700
