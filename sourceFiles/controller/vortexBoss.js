@@ -297,6 +297,13 @@ export class VortexBoss {
     shootHomingMissile(player) {
         const rX = window.innerWidth / 2560;
 
+        // Don't shoot if player is out of bounds
+        const margin = 50;
+        if (player.x < -margin || player.x > window.innerWidth + margin ||
+            player.y < -margin || player.y > window.innerHeight + margin) {
+            return;
+        }
+
         // Play homing missile sound
         if (window.gameSound) window.gameSound.playBossHomingMissile();
 
