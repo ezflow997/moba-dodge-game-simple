@@ -42,6 +42,10 @@ export class VortexBoss {
         this.entryTargetX = this.centerX;
         this.entryTargetY = this.centerY;
 
+        // Track window size for resize handling
+        this.prevWindowW = window.innerWidth;
+        this.prevWindowH = window.innerHeight;
+
         // Orbital rings
         this.orbitalRings = [];
         this.createOrbitalRing(1); // Start with 1 ring
@@ -97,6 +101,47 @@ export class VortexBoss {
     }
 
     update(player, game) {
+        // Handle window resize - recalculate coordinates
+        if (window.innerWidth !== this.prevWindowW || window.innerHeight !== this.prevWindowH) {
+            const scaleX = window.innerWidth / this.prevWindowW;
+            const scaleY = window.innerHeight / this.prevWindowH;
+
+            // Scale current position
+            this.x *= scaleX;
+            this.y *= scaleY;
+
+            // Recalculate center and entry target based on new window size
+            this.centerX = window.innerWidth * 0.6;
+            this.centerY = window.innerHeight * 0.5;
+            this.entryTargetX = this.centerX;
+            this.entryTargetY = this.centerY;
+
+            // Scale void zones
+            for (const zone of this.voidZones) {
+                zone.x *= scaleX;
+                zone.y *= scaleY;
+            }
+
+            // Scale homing missiles
+            for (const missile of this.homingMissiles) {
+                missile.x *= scaleX;
+                missile.y *= scaleY;
+                for (const t of missile.trail) {
+                    t.x *= scaleX;
+                    t.y *= scaleY;
+                }
+            }
+
+            // Scale spiral projectiles
+            for (const proj of this.spiralProjectiles) {
+                proj.x *= scaleX;
+                proj.y *= scaleY;
+            }
+
+            this.prevWindowW = window.innerWidth;
+            this.prevWindowH = window.innerHeight;
+        }
+
         const rX = window.innerWidth / 2560;
         this.size = this.baseSize * rX;
         this.speed = this.baseSpeed * rX;

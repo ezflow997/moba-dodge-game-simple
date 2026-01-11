@@ -35,6 +35,10 @@ export class ChargeBoss {
         this.entryTargetX = window.innerWidth * 0.8;
         this.entryTargetY = window.innerHeight * 0.3;
 
+        // Track window size for resize handling
+        this.prevWindowW = window.innerWidth;
+        this.prevWindowH = window.innerHeight;
+
         // Hovering behavior
         this.hovering = false;
         this.hoverTarget = { x: 0, y: 0 };
@@ -62,6 +66,31 @@ export class ChargeBoss {
     }
 
     update(player, game) {
+        // Handle window resize - recalculate coordinates
+        if (window.innerWidth !== this.prevWindowW || window.innerHeight !== this.prevWindowH) {
+            const scaleX = window.innerWidth / this.prevWindowW;
+            const scaleY = window.innerHeight / this.prevWindowH;
+
+            // Scale current position
+            this.x *= scaleX;
+            this.y *= scaleY;
+
+            // Recalculate entry target based on new window size
+            this.entryTargetX = window.innerWidth * 0.8;
+            this.entryTargetY = window.innerHeight * 0.3;
+
+            // Scale hover target
+            this.hoverTarget.x *= scaleX;
+            this.hoverTarget.y *= scaleY;
+
+            // Scale charge target
+            this.chargeTargetX *= scaleX;
+            this.chargeTargetY *= scaleY;
+
+            this.prevWindowW = window.innerWidth;
+            this.prevWindowH = window.innerHeight;
+        }
+
         const rX = window.innerWidth / 2560;
         this.size = this.baseSize * rX;
         this.hoverSpeed = this.baseHoverSpeed * rX;

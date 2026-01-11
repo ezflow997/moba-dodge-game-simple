@@ -37,6 +37,10 @@ export class PhantomBoss {
         this.entryTargetX = window.innerWidth * 0.65;
         this.entryTargetY = window.innerHeight * 0.5;
 
+        // Track window size for resize handling
+        this.prevWindowW = window.innerWidth;
+        this.prevWindowH = window.innerHeight;
+
         // Teleportation mechanics
         this.teleporting = false;
         this.teleportPhase = 'none'; // 'none', 'glitching', 'invisible', 'reappearing'
@@ -101,6 +105,53 @@ export class PhantomBoss {
     }
 
     update(player, game) {
+        // Handle window resize - recalculate coordinates
+        if (window.innerWidth !== this.prevWindowW || window.innerHeight !== this.prevWindowH) {
+            const scaleX = window.innerWidth / this.prevWindowW;
+            const scaleY = window.innerHeight / this.prevWindowH;
+
+            // Scale current position
+            this.x *= scaleX;
+            this.y *= scaleY;
+
+            // Recalculate entry target based on new window size
+            this.entryTargetX = window.innerWidth * 0.65;
+            this.entryTargetY = window.innerHeight * 0.5;
+
+            // Scale teleport target
+            this.teleportTarget.x *= scaleX;
+            this.teleportTarget.y *= scaleY;
+
+            // Scale afterimages
+            for (const img of this.afterimages) {
+                img.x *= scaleX;
+                img.y *= scaleY;
+            }
+
+            // Scale toxic fogs
+            for (const fog of this.toxicFogs) {
+                fog.x *= scaleX;
+                fog.y *= scaleY;
+            }
+
+            // Scale projectiles
+            for (const proj of this.projectiles) {
+                proj.x *= scaleX;
+                proj.y *= scaleY;
+                proj.targetX *= scaleX;
+                proj.targetY *= scaleY;
+            }
+
+            // Scale particles
+            for (const p of this.particles) {
+                p.x *= scaleX;
+                p.y *= scaleY;
+            }
+
+            this.prevWindowW = window.innerWidth;
+            this.prevWindowH = window.innerHeight;
+        }
+
         const rX = window.innerWidth / 2560;
         this.size = this.baseSize * rX;
 
