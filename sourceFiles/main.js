@@ -120,6 +120,9 @@ window.addEventListener('load', function () {
 					last_score: [new SimpleScore(), new SimpleScore(), new SimpleScore(), new SimpleScore(), new SimpleScore()]
 				};
 
+				// Load high scores from database if player is logged in
+				this.loadPlayerHighScores();
+
 				// Set up one-time music unlock on first click
 				this.setupMusicUnlock();
 
@@ -157,6 +160,37 @@ window.addEventListener('load', function () {
 					return 'https://moba-dodge-simple.vercel.app';
 				}
 				return '';
+			}
+
+			async loadPlayerHighScores() {
+				// Only load if player has saved credentials
+				if (!this.playerName || !this.playerPassword) {
+					return;
+				}
+
+				try {
+					const result = await this.supabase.getPlayerScores(this.playerName, this.playerPassword);
+
+					if (result.exists && result.valid && result.scores) {
+						const difficulties = ['easy', 'medium', 'hard', 'expert', 'insane'];
+
+						for (let i = 0; i < difficulties.length; i++) {
+							const diff = difficulties[i];
+							const scoreData = result.scores[diff];
+
+							if (scoreData) {
+								this.player_data.high_score[i].value = scoreData.score || 0;
+								this.player_data.high_score[i].kills = scoreData.kills || 0;
+								this.player_data.high_score[i].best_streak = scoreData.streak || 0;
+							}
+						}
+
+						this.loggedIn = true;
+						console.log('[HighScores] Loaded player high scores from database');
+					}
+				} catch (error) {
+					console.error('[HighScores] Failed to load high scores:', error);
+				}
 			}
 
 			async pingPresence() {

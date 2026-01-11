@@ -376,6 +376,28 @@ export class SupabaseLeaderboard {
         }
     }
 
+    // Get player's high scores for all difficulties
+    async getPlayerScores(playerName, password) {
+        try {
+            const response = await fetch(`${this.apiBase}/get-player-scores`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ playerName, password })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                return { error: data.error };
+            }
+
+            return data;
+        } catch (error) {
+            console.error('getPlayerScores error:', error);
+            return { error: error.message };
+        }
+    }
+
     // Change security question (requires password verification)
     async changeSecurityQuestion(playerName, password, securityQuestion, securityAnswer) {
         try {
