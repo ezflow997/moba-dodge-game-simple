@@ -569,7 +569,7 @@ export class RewardManager {
 
         // Damage aura tick
         if (this.damageAura && game && game.enemies) {
-            const tickInterval = 500; // Damage every 0.5 seconds
+            const tickInterval = 150; // Damage every 0.15 seconds
             if (now - this.damageAura.lastTick > tickInterval) {
                 this.damageAura.lastTick = now;
                 this.applyDamageAura(player, game);
