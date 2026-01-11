@@ -1127,10 +1127,10 @@ export class PauseMenu {
             // Draw UI scale slider
             this.super.drawGlowText(context, 1280, 310, "HUD Size", 32, '#ffffff', '#00ffff', 8, true);
             this.uiScaleSlider.draw(context);
-            this.super.drawGlowText(context, 1280, 400, `${Math.round(this.uiScaleSlider.value * 100)}%`, 32, '#00ff88', '#00ff00', 6, true);
+            this.super.drawGlowText(context, 1280, 420, `${Math.round(this.uiScaleSlider.value * 100)}%`, 32, '#00ff88', '#00ff00', 6, true);
 
             // Draw preview hint
-            this.super.drawGlowText(context, 1280, 440, "Adjusts ability bar, powerups, and weapon slots", 18, '#888888', '#666666', 4, true);
+            this.super.drawGlowText(context, 1280, 460, "Adjusts ability bar, powerups, and weapon slots", 18, '#888888', '#666666', 4, true);
 
             // Draw back button
             this.uiScaleBackButton.draw(context);
