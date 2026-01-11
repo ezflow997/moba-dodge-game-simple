@@ -54,11 +54,7 @@ export class Boss {
         }
 
         this.updateMovement(player);
-
-        if (this.phase >= 2) {
-            this.updateProjectiles(player, game);
-        }
-
+        this.updateProjectiles(player, game);
         this.updateVisuals();
 
         if (this.invulnerable) {
