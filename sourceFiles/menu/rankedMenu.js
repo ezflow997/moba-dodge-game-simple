@@ -68,6 +68,14 @@ export class RankedMenu {
 
         // Admin button for fixing stuck queues
         this.fixQueuesButton = new Button(0, 0, 180, 50, "Fix Queues", 18, 0, 0, false, true, 'white', 'white');
+
+        // Admin input state for password entry
+        this.adminPassword = '';
+        this.maxPasswordLength = 50;
+        this.cursorBlink = 0;
+        this.adminInputSubmitButton = new Button(0, 0, 200, 60, "Submit", 28, 0, 0, false, true, 'white', 'white');
+        this.adminInputCancelButton = new Button(0, 0, 200, 60, "Cancel", 28, 0, 0, false, true, 'white', 'white');
+        this.adminKeyHandler = null;
     }
 
     show(state = 'confirm') {
@@ -80,6 +88,11 @@ export class RankedMenu {
             this.queueViewPage = 0;
             this.scrollOffset = 0;
         }
+        // Setup admin input state
+        if (state === 'admin_input') {
+            this.adminPassword = '';
+            this.setupAdminKeyHandler();
+        }
     }
 
     hide() {
@@ -88,6 +101,45 @@ export class RankedMenu {
         this.tournamentResults = null;
         this.playerResult = null;
         this.errorMessage = null;
+        this.cleanupAdminKeyHandler();
+    }
+
+    setupAdminKeyHandler() {
+        this.cleanupAdminKeyHandler();
+        this.adminKeyHandler = (e) => {
+            if (this.state !== 'admin_input') return;
+
+            if (e.key === 'Backspace') {
+                this.adminPassword = this.adminPassword.slice(0, -1);
+                e.preventDefault();
+                return;
+            }
+
+            if (e.key === 'Enter') {
+                // Will be handled by update() button click
+                return;
+            }
+
+            if (e.key === 'Escape') {
+                this.state = 'queue_view';
+                this.cleanupAdminKeyHandler();
+                return;
+            }
+
+            // Only allow printable characters
+            if (e.key.length === 1 && this.adminPassword.length < this.maxPasswordLength) {
+                this.adminPassword += e.key;
+                e.preventDefault();
+            }
+        };
+        document.addEventListener('keydown', this.adminKeyHandler);
+    }
+
+    cleanupAdminKeyHandler() {
+        if (this.adminKeyHandler) {
+            document.removeEventListener('keydown', this.adminKeyHandler);
+            this.adminKeyHandler = null;
+        }
     }
 
     setQueueStatus(status) {
@@ -332,7 +384,40 @@ export class RankedMenu {
             if (this.fixQueuesButton.isHovered && clicking && !this.clicked) {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
-                return 'fix_stuck_queues';
+                this.state = 'admin_input';
+                this.adminPassword = '';
+                this.setupAdminKeyHandler();
+                return true;
+            }
+        } else if (this.state === 'admin_input') {
+            // Admin password input state
+            this.cursorBlink += 0.05;
+
+            const btnW = 200;
+            const gap = 20;
+            setButtonPos(this.adminInputSubmitButton, refCenterX - btnW - gap / 2, buttonY, btnW, 60);
+            setButtonPos(this.adminInputCancelButton, refCenterX + gap / 2, buttonY, btnW, 60);
+
+            this.adminInputSubmitButton.update(inX, inY);
+            this.adminInputCancelButton.update(inX, inY);
+
+            if (this.adminInputCancelButton.isHovered && clicking && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.state = 'queue_view';
+                this.cleanupAdminKeyHandler();
+                return true;
+            }
+
+            if (this.adminInputSubmitButton.isHovered && clicking && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                if (this.adminPassword.length > 0) {
+                    const password = this.adminPassword;
+                    this.state = 'queue_view';
+                    this.cleanupAdminKeyHandler();
+                    return { action: 'fix_stuck_queues', password: password };
+                }
             }
         } else if (this.state === 'queued') {
             const closeBtnW = 280;
@@ -408,6 +493,8 @@ export class RankedMenu {
             this.drawQueuedState(context, centerX, panelY, rX, rY);
         } else if (this.state === 'results') {
             this.drawResultsState(context, centerX, panelY, rX, rY);
+        } else if (this.state === 'admin_input') {
+            this.drawAdminInputState(context, centerX, panelY, rX, rY);
         }
 
         // Draw error message if any
@@ -962,6 +1049,55 @@ export class RankedMenu {
         context.textAlign = 'center';
         context.fillStyle = '#666666';
         context.fillText(text, bx + bw / 2, by + bh / 2 + 8 * rY);
+    }
+
+    drawAdminInputState(context, centerX, panelY, rX, rY) {
+        // Title
+        context.font = `bold ${42 * rX}px Arial`;
+        context.textAlign = 'center';
+        context.fillStyle = '#ff6644';
+        context.shadowColor = '#ff6644';
+        context.shadowBlur = 10 * rX;
+        context.fillText('ADMIN: FIX STUCK QUEUES', centerX, panelY + 80 * rY);
+        context.shadowBlur = 0;
+
+        // Instructions
+        context.font = `${24 * rX}px Arial`;
+        context.fillStyle = '#aaaaaa';
+        context.fillText('Enter admin password to force-resolve all stuck queues:', centerX, panelY + 160 * rY);
+
+        // Password input field
+        const inputW = 500 * rX;
+        const inputH = 60 * rY;
+        const inputX = centerX - inputW / 2;
+        const inputY = panelY + 200 * rY;
+
+        // Input background
+        context.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        context.strokeStyle = '#ffaa00';
+        context.lineWidth = 2 * rX;
+        context.beginPath();
+        context.roundRect(inputX, inputY, inputW, inputH, 8 * rX);
+        context.fill();
+        context.stroke();
+
+        // Password text (masked)
+        context.font = `${28 * rX}px Arial`;
+        context.fillStyle = '#ffffff';
+        context.textAlign = 'left';
+        const maskedPassword = '*'.repeat(this.adminPassword.length);
+        const cursor = Math.sin(this.cursorBlink * 3) > 0 ? '|' : '';
+        context.fillText(maskedPassword + cursor, inputX + 15 * rX, inputY + inputH / 2 + 10 * rY);
+
+        // Hint text
+        context.font = `${18 * rX}px Arial`;
+        context.textAlign = 'center';
+        context.fillStyle = '#666666';
+        context.fillText('Press ESC to cancel, or use the buttons below', centerX, panelY + 300 * rY);
+
+        // Draw buttons
+        this.adminInputSubmitButton.draw(context);
+        this.adminInputCancelButton.draw(context);
     }
 
     drawRoundedRect(context, x, y, w, h, r) {

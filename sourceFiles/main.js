@@ -892,25 +892,22 @@ window.addEventListener('load', function () {
 					});
 				}
 
-				// Handle fix stuck queues (admin action)
-				if (rankedResult === 'fix_stuck_queues') {
-					const adminPassword = prompt('Enter admin password to force-resolve all stuck queues:');
-					if (adminPassword) {
-						game.supabase.fixStuckQueues(adminPassword).then(result => {
-							if (result.success) {
-								const resolvedCount = result.resolved ? result.resolved.length : 0;
-								alert(`Successfully resolved ${resolvedCount} queue(s).`);
-								// Refresh the queue status
-								game.supabase.getRankedStatus(game.playerName).then(status => {
-									game.rankedMenu.setQueueStatus(status);
-								});
-							} else {
-								alert('Failed: ' + (result.error || 'Unknown error'));
-							}
-						}).catch(err => {
-							alert('Error: ' + err.message);
-						});
-					}
+				// Handle fix stuck queues (admin action) - now uses in-game password input
+				if (rankedResult && rankedResult.action === 'fix_stuck_queues' && rankedResult.password) {
+					game.supabase.fixStuckQueues(rankedResult.password).then(result => {
+						if (result.success) {
+							const resolvedCount = result.resolved ? result.resolved.length : 0;
+							game.rankedMenu.errorMessage = `Success: Resolved ${resolvedCount} queue(s)`;
+							// Refresh the queue status
+							game.supabase.getRankedStatus(game.playerName).then(status => {
+								game.rankedMenu.setQueueStatus(status);
+							});
+						} else {
+							game.rankedMenu.errorMessage = 'Failed: ' + (result.error || 'Unknown error');
+						}
+					}).catch(err => {
+						game.rankedMenu.errorMessage = 'Error: ' + err.message;
+					});
 				}
 			}
 
