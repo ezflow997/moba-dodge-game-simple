@@ -292,11 +292,17 @@ export class RankedMenu {
             this.prevPageButton.update(inX, inY);
             this.nextPageButton.update(inX, inY);
 
-            // Fix Queues button and Back button
-            setButtonPos(this.fixQueuesButton, refCenterX - 200, buttonY, 180, 70);
-            setButtonPos(this.backButton, refCenterX + 20, buttonY, 180, 70);
+            // Fix Queues button (only visible in dev mode) and Back button
+            const devModeEnabled = window.game && window.game.devMode && window.game.devMode.enabled;
+            if (devModeEnabled) {
+                setButtonPos(this.fixQueuesButton, refCenterX - 200, buttonY, 180, 70);
+                setButtonPos(this.backButton, refCenterX + 20, buttonY, 180, 70);
+                this.fixQueuesButton.update(inX, inY);
+            } else {
+                // Center the back button when fix queues is hidden
+                setButtonPos(this.backButton, refCenterX - 90, buttonY, 180, 70);
+            }
             this.backButton.update(inX, inY);
-            this.fixQueuesButton.update(inX, inY);
 
             // Page navigation
             if (this.prevPageButton.isHovered && clicking && !this.clicked) {
@@ -381,7 +387,7 @@ export class RankedMenu {
                 return true;
             }
 
-            if (this.fixQueuesButton.isHovered && clicking && !this.clicked) {
+            if (devModeEnabled && this.fixQueuesButton.isHovered && clicking && !this.clicked) {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.state = 'admin_input';
@@ -647,9 +653,12 @@ export class RankedMenu {
             this.drawAllQueuesPage(context, centerX, panelY, rX, rY);
         }
 
-        // Draw back button and fix queues button
+        // Draw back button and fix queues button (only if dev mode enabled)
         this.backButton.draw(context);
-        this.fixQueuesButton.draw(context);
+        const devModeEnabled = window.game && window.game.devMode && window.game.devMode.enabled;
+        if (devModeEnabled) {
+            this.fixQueuesButton.draw(context);
+        }
     }
 
     // Calculate live time remaining based on fetch time

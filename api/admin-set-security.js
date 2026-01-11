@@ -1,10 +1,11 @@
-// API endpoint to set security question for any account (admin/dev mode)
+// API endpoint to set security question for any account (admin/dev mode, requires admin password)
 
 import crypto from 'crypto';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 function setCorsHeaders(res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -89,8 +90,17 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Server configuration error' });
     }
 
+    if (!ADMIN_PASSWORD) {
+        return res.status(500).json({ error: 'Admin not configured' });
+    }
+
     try {
-        const { playerName, securityQuestion, securityAnswer } = req.body;
+        const { playerName, securityQuestion, securityAnswer, adminPassword } = req.body;
+
+        // Verify admin password
+        if (!adminPassword || adminPassword !== ADMIN_PASSWORD) {
+            return res.status(401).json({ error: 'Invalid admin password' });
+        }
 
         // Validate required fields
         if (!playerName || playerName.trim() === '') {

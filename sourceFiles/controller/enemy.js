@@ -48,6 +48,13 @@ export class Enemy {
         this.prevWindowH = window.innerHeight;
     }
     draw(context){
+        // Viewport culling - skip drawing if outside visible area
+        const cullBuffer = this.size * 1.5;
+        if (this.x < -cullBuffer || this.x > window.innerWidth + cullBuffer ||
+            this.y < -cullBuffer || this.y > window.innerHeight + cullBuffer) {
+            return;
+        }
+
         // Use simplified rendering in performance mode
         if (performanceMode) {
             this.drawSimple(context);

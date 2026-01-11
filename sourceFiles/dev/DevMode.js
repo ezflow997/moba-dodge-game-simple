@@ -91,6 +91,14 @@ export class DevMode {
         this.securityInProgress = false;
         this.maxAnswerLength = 30;
 
+        // Admin password verification for delete/security operations
+        this.adminPasswordRequired = false;
+        this.adminPasswordInput = '';
+        this.adminPasswordError = '';
+        this.pendingAdminAction = null; // 'delete' or 'security'
+        this.adminPasswordVerifying = false;
+        this.maxAdminPasswordLength = 50;
+
         // Button dimensions for hit detection
         this.devMenuButton = {
             x: 0, // Will be calculated based on screen width
@@ -99,9 +107,14 @@ export class DevMode {
             height: 40
         };
 
-        // Set up keyboard listener for security input and search
+        // Set up keyboard listener for security input, admin password, and search
         this.keyHandler = (e) => {
-            if (this.securityMode && this.devMenuOpen) {
+            if (this.adminPasswordRequired && this.devMenuOpen) {
+                if (this.handleAdminPasswordKeyInput(e.key)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            } else if (this.securityMode && this.devMenuOpen) {
                 if (this.handleSecurityKeyInput(e.key)) {
                     e.preventDefault();
                     e.stopPropagation();
@@ -517,9 +530,17 @@ export class DevMode {
             this.fetchAllAccounts();
             this.fetchOnlinePlayers();
         } else {
-            // Reset search when closing
+            // Reset all states when closing
             this.accountSearchQuery = '';
             this.accountSearchFocused = false;
+            this.selectedAccountIndex = -1;
+            this.deleteConfirmMode = false;
+            this.securityMode = false;
+            this.securityAnswerInput = '';
+            this.adminPasswordRequired = false;
+            this.adminPasswordInput = '';
+            this.adminPasswordError = '';
+            this.pendingAdminAction = null;
         }
     }
 
@@ -537,54 +558,11 @@ export class DevMode {
             // Reset search when switching tabs
             this.accountSearchQuery = '';
             this.accountSearchFocused = false;
-        }
-    }
-
-    /**
-     * Delete selected account
-     */
-    async deleteSelectedAccount() {
-        if (this.selectedAccountIndex < 0 || this.deleteInProgress) return;
-
-        const filteredAccounts = this.getFilteredAccounts();
-        const account = filteredAccounts[this.selectedAccountIndex];
-        if (!account) return;
-
-        this.deleteInProgress = true;
-
-        const isLocalhost = window.location.hostname === 'localhost' ||
-                           window.location.hostname === '127.0.0.1' ||
-                           window.location.hostname === '';
-        const apiBase = isLocalhost
-            ? 'https://moba-dodge-simple.vercel.app/api'
-            : '/api';
-
-        try {
-            const response = await fetch(`${apiBase}/delete-account`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ playerName: account.name })
-            });
-
-            if (response.ok) {
-                console.log(`[DevMode] Deleted account: ${account.name}`);
-                // Remove from original list (find by name since index may differ due to filtering)
-                const originalIndex = this.allAccounts.findIndex(a => a.name === account.name);
-                if (originalIndex >= 0) {
-                    this.allAccounts.splice(originalIndex, 1);
-                }
-                this.selectedAccountIndex = -1;
-                this.deleteConfirmMode = false;
-                // Update count
-                if (this.uniquePlayerCount) this.uniquePlayerCount--;
-            } else {
-                const error = await response.json();
-                console.error('[DevMode] Delete failed:', error);
-            }
-        } catch (error) {
-            console.error('[DevMode] Delete error:', error);
-        } finally {
-            this.deleteInProgress = false;
+            // Reset admin password states
+            this.adminPasswordRequired = false;
+            this.adminPasswordInput = '';
+            this.adminPasswordError = '';
+            this.pendingAdminAction = null;
         }
     }
 
@@ -615,7 +593,8 @@ export class DevMode {
                 body: JSON.stringify({
                     playerName: account.name,
                     securityQuestion: this.securityQuestions[this.selectedSecurityQuestionIndex],
-                    securityAnswer: this.securityAnswerInput.trim()
+                    securityAnswer: this.securityAnswerInput.trim(),
+                    adminPassword: this.adminPasswordInput
                 })
             });
 
@@ -623,6 +602,8 @@ export class DevMode {
                 console.log(`[DevMode] Set security question for: ${account.name}`);
                 this.securityMode = false;
                 this.securityAnswerInput = '';
+                this.adminPasswordInput = '';
+                this.pendingAdminAction = null;
             } else {
                 const error = await response.json();
                 console.error('[DevMode] Set security failed:', error);
@@ -711,6 +692,130 @@ export class DevMode {
         }
 
         return false;
+    }
+
+    /**
+     * Handle keyboard input for admin password
+     */
+    handleAdminPasswordKeyInput(key) {
+        if (!this.adminPasswordRequired) return false;
+
+        if (key === 'Backspace') {
+            this.adminPasswordInput = this.adminPasswordInput.slice(0, -1);
+            this.adminPasswordError = '';
+            return true;
+        }
+
+        if (key === 'Escape') {
+            this.cancelAdminPasswordPrompt();
+            return true;
+        }
+
+        if (key === 'Enter' && this.adminPasswordInput.length > 0) {
+            this.verifyAdminPassword();
+            return true;
+        }
+
+        // Regular character input
+        if (key.length === 1 && this.adminPasswordInput.length < this.maxAdminPasswordLength) {
+            this.adminPasswordInput += key;
+            this.adminPasswordError = '';
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Cancel admin password prompt
+     */
+    cancelAdminPasswordPrompt() {
+        this.adminPasswordRequired = false;
+        this.adminPasswordInput = '';
+        this.adminPasswordError = '';
+        this.pendingAdminAction = null;
+    }
+
+    /**
+     * Verify admin password and proceed with pending action
+     */
+    async verifyAdminPassword() {
+        if (this.adminPasswordVerifying || this.adminPasswordInput.length === 0) return;
+
+        this.adminPasswordVerifying = true;
+        this.adminPasswordError = '';
+
+        const isLocalhost = window.location.hostname === 'localhost' ||
+                           window.location.hostname === '127.0.0.1' ||
+                           window.location.hostname === '';
+        const apiBase = isLocalhost
+            ? 'https://moba-dodge-simple.vercel.app/api'
+            : '/api';
+
+        try {
+            if (this.pendingAdminAction === 'delete') {
+                await this.executeDeleteWithPassword();
+            } else if (this.pendingAdminAction === 'security') {
+                // Password verified, proceed to security question mode
+                this.adminPasswordRequired = false;
+                this.securityMode = true;
+                this.securityAnswerInput = '';
+                this.selectedSecurityQuestionIndex = 0;
+            }
+        } finally {
+            this.adminPasswordVerifying = false;
+        }
+    }
+
+    /**
+     * Execute delete with admin password
+     */
+    async executeDeleteWithPassword() {
+        const filteredAccounts = this.getFilteredAccounts();
+        const account = filteredAccounts[this.selectedAccountIndex];
+        if (!account) {
+            this.adminPasswordError = 'Account not found';
+            return;
+        }
+
+        const isLocalhost = window.location.hostname === 'localhost' ||
+                           window.location.hostname === '127.0.0.1' ||
+                           window.location.hostname === '';
+        const apiBase = isLocalhost
+            ? 'https://moba-dodge-simple.vercel.app/api'
+            : '/api';
+
+        try {
+            const response = await fetch(`${apiBase}/delete-account`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    playerName: account.name,
+                    adminPassword: this.adminPasswordInput
+                })
+            });
+
+            if (response.ok) {
+                console.log(`[DevMode] Deleted account: ${account.name}`);
+                // Remove from original list
+                const originalIndex = this.allAccounts.findIndex(a => a.name === account.name);
+                if (originalIndex >= 0) {
+                    this.allAccounts.splice(originalIndex, 1);
+                }
+                this.selectedAccountIndex = -1;
+                this.deleteConfirmMode = false;
+                this.adminPasswordRequired = false;
+                this.adminPasswordInput = '';
+                this.pendingAdminAction = null;
+                if (this.uniquePlayerCount) this.uniquePlayerCount--;
+            } else {
+                const error = await response.json();
+                this.adminPasswordError = error.error || 'Delete failed';
+            }
+        } catch (error) {
+            console.error('[DevMode] Delete error:', error);
+            this.adminPasswordError = 'Connection error';
+        }
     }
 
     /**
@@ -840,8 +945,40 @@ export class DevMode {
                     }
                 }
 
+                // Check admin password modal clicks first
+                if (this.adminPasswordRequired) {
+                    const modalW = 450 * rX;
+                    const modalH = 220 * rY;
+                    const modalX = (window.innerWidth - modalW) / 2;
+                    const modalY = (window.innerHeight - modalH) / 2;
+
+                    // Submit and Cancel buttons
+                    const btnY = modalY + modalH - 60 * rY;
+                    const btnH = 40 * rY;
+                    const btnW = 120 * rX;
+                    const submitX = modalX + modalW / 2 - btnW - 15 * rX;
+                    const cancelX = modalX + modalW / 2 + 15 * rX;
+
+                    if (mouseY >= btnY && mouseY <= btnY + btnH) {
+                        if (mouseX >= submitX && mouseX <= submitX + btnW && this.adminPasswordInput.length > 0) {
+                            this.verifyAdminPassword();
+                            return true;
+                        }
+                        if (mouseX >= cancelX && mouseX <= cancelX + btnW) {
+                            this.cancelAdminPasswordPrompt();
+                            return true;
+                        }
+                    }
+
+                    // Click inside modal - consume
+                    if (mouseX >= modalX && mouseX <= modalX + modalW &&
+                        mouseY >= modalY && mouseY <= modalY + modalH) {
+                        return true;
+                    }
+                }
+
                 // Check delete/security button clicks (only in accounts tab)
-                if (this.activeTab === 'accounts' && this.selectedAccountIndex >= 0 && !this.securityMode) {
+                if (this.activeTab === 'accounts' && this.selectedAccountIndex >= 0 && !this.securityMode && !this.adminPasswordRequired) {
                     const btnY = panelY + panelH - 60 * rY;
                     const btnH = 40 * rY;
                     const btnW = 120 * rX;
@@ -853,8 +990,11 @@ export class DevMode {
 
                         if (mouseY >= btnY && mouseY <= btnY + btnH) {
                             if (mouseX >= confirmX && mouseX <= confirmX + btnW) {
-                                // Confirm delete
-                                this.deleteSelectedAccount();
+                                // Confirm delete - show admin password prompt
+                                this.adminPasswordRequired = true;
+                                this.adminPasswordInput = '';
+                                this.adminPasswordError = '';
+                                this.pendingAdminAction = 'delete';
                                 return true;
                             }
                             if (mouseX >= cancelX && mouseX <= cancelX + btnW) {
@@ -874,9 +1014,11 @@ export class DevMode {
                                 return true;
                             }
                             if (mouseX >= securityX && mouseX <= securityX + btnW) {
-                                this.securityMode = true;
-                                this.securityAnswerInput = '';
-                                this.selectedSecurityQuestionIndex = 0;
+                                // Show admin password prompt before security mode
+                                this.adminPasswordRequired = true;
+                                this.adminPasswordInput = '';
+                                this.adminPasswordError = '';
+                                this.pendingAdminAction = 'security';
                                 return true;
                             }
                         }
@@ -1418,8 +1560,105 @@ export class DevMode {
             context.fillText('Use arrows to change question | Type answer | Enter to save', modalX + modalW / 2, modalY + modalH - 10 * rY);
         }
 
-        // Close hint (only show when not in security mode)
-        if (!this.securityMode) {
+        // Admin password modal (shown on top of everything)
+        if (this.adminPasswordRequired) {
+            const selectedAccount = this.getFilteredAccounts()[this.selectedAccountIndex];
+            const modalW = 450 * rX;
+            const modalH = 220 * rY;
+            const modalX = (window.innerWidth - modalW) / 2;
+            const modalY = (window.innerHeight - modalH) / 2;
+
+            // Modal background
+            context.fillStyle = 'rgba(0, 20, 40, 0.98)';
+            context.beginPath();
+            context.roundRect(modalX, modalY, modalW, modalH, 12 * rX);
+            context.fill();
+            context.strokeStyle = '#ff6644';
+            context.lineWidth = 3 * rX;
+            context.stroke();
+
+            // Title
+            context.font = `bold ${20 * rX}px monospace`;
+            context.fillStyle = '#ff6644';
+            context.textAlign = 'center';
+            const actionTitle = this.pendingAdminAction === 'delete' ? 'ADMIN: CONFIRM DELETE' : 'ADMIN: SET SECURITY';
+            context.fillText(actionTitle, modalX + modalW / 2, modalY + 35 * rY);
+
+            // Account name
+            context.font = `${14 * rX}px monospace`;
+            context.fillStyle = '#aaaaaa';
+            context.fillText(`Account: ${selectedAccount?.name || 'Unknown'}`, modalX + modalW / 2, modalY + 55 * rY);
+
+            // Password input label
+            context.font = `${14 * rX}px monospace`;
+            context.fillStyle = '#888888';
+            context.textAlign = 'left';
+            context.fillText('Enter Admin Password:', modalX + 40 * rX, modalY + 85 * rY);
+
+            // Password input field
+            const inputX = modalX + 40 * rX;
+            const inputY = modalY + 95 * rY;
+            const inputW = modalW - 80 * rX;
+            const inputH = 40 * rY;
+
+            context.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            context.fillRect(inputX, inputY, inputW, inputH);
+            context.strokeStyle = this.adminPasswordError ? '#ff4444' : '#ff6644';
+            context.lineWidth = 2 * rX;
+            context.strokeRect(inputX, inputY, inputW, inputH);
+
+            // Password text (masked)
+            context.font = `${18 * rX}px monospace`;
+            context.fillStyle = this.adminPasswordInput.length > 0 ? '#ffffff' : '#555555';
+            context.textAlign = 'left';
+            const maskedPassword = '*'.repeat(this.adminPasswordInput.length);
+            const displayText = this.adminPasswordInput.length > 0 ? maskedPassword : 'Type password...';
+            context.fillText(displayText, inputX + 10 * rX, inputY + 28 * rY);
+
+            // Error message
+            if (this.adminPasswordError) {
+                context.font = `${14 * rX}px monospace`;
+                context.fillStyle = '#ff4444';
+                context.textAlign = 'center';
+                context.fillText(this.adminPasswordError, modalX + modalW / 2, inputY + inputH + 18 * rY);
+            }
+
+            // Buttons
+            const btnY = modalY + modalH - 60 * rY;
+            const btnH = 40 * rY;
+            const btnW = 120 * rX;
+            const submitX = modalX + modalW / 2 - btnW - 15 * rX;
+            const cancelX = modalX + modalW / 2 + 15 * rX;
+
+            // Submit button
+            const canSubmit = this.adminPasswordInput.length > 0 && !this.adminPasswordVerifying;
+            context.fillStyle = canSubmit ? 'rgba(150, 80, 50, 0.8)' : 'rgba(80, 50, 40, 0.5)';
+            context.beginPath();
+            context.roundRect(submitX, btnY, btnW, btnH, 8 * rX);
+            context.fill();
+            context.strokeStyle = canSubmit ? '#ff8844' : '#664422';
+            context.lineWidth = 2 * rX;
+            context.stroke();
+
+            context.font = `bold ${14 * rX}px monospace`;
+            context.fillStyle = canSubmit ? '#ffffff' : '#666666';
+            context.textAlign = 'center';
+            context.fillText(this.adminPasswordVerifying ? 'Verifying...' : 'SUBMIT', submitX + btnW / 2, btnY + 26 * rY);
+
+            // Cancel button
+            context.fillStyle = 'rgba(80, 80, 80, 0.8)';
+            context.beginPath();
+            context.roundRect(cancelX, btnY, btnW, btnH, 8 * rX);
+            context.fill();
+            context.strokeStyle = '#888888';
+            context.stroke();
+
+            context.fillStyle = '#ffffff';
+            context.fillText('Cancel', cancelX + btnW / 2, btnY + 26 * rY);
+        }
+
+        // Close hint (only show when not in security mode or admin password mode)
+        if (!this.securityMode && !this.adminPasswordRequired) {
             context.fillStyle = '#555555';
             context.font = `${14 * rX}px monospace`;
             context.textAlign = 'center';

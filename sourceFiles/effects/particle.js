@@ -62,6 +62,13 @@ export class Particle {
         // Skip very small particles
         if (scaledSize < 0.5) return;
 
+        // Viewport culling - skip drawing if outside visible area
+        const cullBuffer = scaledSize + (this.glow ? this.glowSize * rX : 0);
+        if (this.x < -cullBuffer || this.x > window.innerWidth + cullBuffer ||
+            this.y < -cullBuffer || this.y > window.innerHeight + cullBuffer) {
+            return;
+        }
+
         // Only use glow for visible, larger particles (shadowBlur is expensive)
         const useGlow = this.glow && this.alpha > 0.3 && scaledSize > 2;
 

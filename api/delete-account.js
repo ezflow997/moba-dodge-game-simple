@@ -1,7 +1,8 @@
-// API endpoint to delete a player account (dev mode only)
+// API endpoint to delete a player account (dev mode only, requires admin password)
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 function setCorsHeaders(res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -24,7 +25,16 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Server configuration error' });
     }
 
-    const { playerName } = req.body;
+    if (!ADMIN_PASSWORD) {
+        return res.status(500).json({ error: 'Admin not configured' });
+    }
+
+    const { playerName, adminPassword } = req.body;
+
+    // Verify admin password
+    if (!adminPassword || adminPassword !== ADMIN_PASSWORD) {
+        return res.status(401).json({ error: 'Invalid admin password' });
+    }
 
     if (!playerName) {
         return res.status(400).json({ error: 'playerName required' });

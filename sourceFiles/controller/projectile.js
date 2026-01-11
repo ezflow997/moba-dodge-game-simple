@@ -75,6 +75,13 @@ export class Projectile{
     }
     
     draw(context){
+        // Viewport culling - skip drawing if outside visible area
+        const cullBuffer = this.size * 2;
+        if (this.x < -cullBuffer || this.x > window.innerWidth + cullBuffer ||
+            this.y < -cullBuffer || this.y > window.innerHeight + cullBuffer) {
+            return;
+        }
+
         const rX = window.innerWidth / 2560;
         const pulse = 0.8 + Math.sin(this.pulsePhase) * 0.2;
 
