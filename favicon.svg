@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Background circle -->
+  <circle cx="16" cy="16" r="15" fill="#1a1a2e" stroke="#00ffff" stroke-width="2"/>
+  <!-- Inner target rings -->
+  <circle cx="16" cy="16" r="10" fill="none" stroke="#ff4444" stroke-width="2"/>
+  <circle cx="16" cy="16" r="5" fill="none" stroke="#ffff00" stroke-width="2"/>
+  <!-- Center dot (player) -->
+  <circle cx="16" cy="16" r="2" fill="#00ff00"/>
+  <!-- Dodge arrows -->
+  <path d="M16 2 L14 6 L18 6 Z" fill="#00ffff"/>
+  <path d="M16 30 L14 26 L18 26 Z" fill="#00ffff"/>
+  <path d="M2 16 L6 14 L6 18 Z" fill="#00ffff"/>
+  <path d="M30 16 L26 14 L26 18 Z" fill="#00ffff"/>
+</svg>

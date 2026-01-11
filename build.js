@@ -51,6 +51,12 @@ copyDir('audio', `${DIST_DIR}/audio`);
 console.log('Copying API functions...');
 copyDir('api', `${DIST_DIR}/api`);
 
+// Copy favicon
+console.log('Copying favicon...');
+if (fs.existsSync('favicon.svg')) {
+    fs.copyFileSync('favicon.svg', `${DIST_DIR}/favicon.svg`);
+}
+
 // Create production index.html
 console.log('Creating index.html...');
 const indexHtml = `<!DOCTYPE html>
@@ -58,6 +64,7 @@ const indexHtml = `<!DOCTYPE html>
 <head>
     <meta name="viewport" content="width=device-width, height=device-height">
     <title>MOBA Dodge Game - Simple</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body oncontextmenu="return false">

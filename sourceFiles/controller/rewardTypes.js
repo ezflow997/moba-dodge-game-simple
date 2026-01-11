@@ -363,72 +363,72 @@ export const REWARDS = {
         bulletCount: 3
     },
 
-    // Twin/Multi Shot - Multiple parallel bullets
+    // Twin/Multi Shot - Multiple parallel bullets (consistent spacing for visual clarity)
     TWIN_COMMON: {
         id: 'twin_common',
         name: 'Twin Shot',
-        description: 'Fire 2 bullets',
+        description: 'Fire 2 parallel bullets',
         category: CATEGORY.GUN,
         rarity: RARITY.COMMON,
         gunType: 'twin',
         durability: 15,
         bulletCount: 2,
-        spacing: 20
+        spacing: 30
     },
     TWIN_UNCOMMON: {
         id: 'twin_uncommon',
         name: 'Triple Shot',
-        description: 'Fire 3 bullets',
+        description: 'Fire 3 parallel bullets',
         category: CATEGORY.GUN,
         rarity: RARITY.UNCOMMON,
         gunType: 'twin',
         durability: 22,
         bulletCount: 3,
-        spacing: 18
+        spacing: 30
     },
     TWIN_RARE: {
         id: 'twin_rare',
         name: 'Quad Shot',
-        description: 'Fire 4 bullets',
+        description: 'Fire 4 parallel bullets',
         category: CATEGORY.GUN,
         rarity: RARITY.RARE,
         gunType: 'twin',
         durability: 30,
         bulletCount: 4,
-        spacing: 15
+        spacing: 30
     },
     TWIN_EPIC: {
         id: 'twin_epic',
         name: 'Penta Shot',
-        description: 'Fire 5 bullets',
+        description: 'Fire 5 parallel bullets',
         category: CATEGORY.GUN,
         rarity: RARITY.EPIC,
         gunType: 'twin',
         durability: 40,
         bulletCount: 5,
-        spacing: 12
+        spacing: 30
     },
     TWIN_LEGENDARY: {
         id: 'twin_legendary',
         name: 'Hexa Cannon',
-        description: 'Fire 6 bullets',
+        description: 'Fire 6 parallel bullets',
         category: CATEGORY.GUN,
         rarity: RARITY.LEGENDARY,
         gunType: 'twin',
         durability: 50,
         bulletCount: 6,
-        spacing: 10
+        spacing: 30
     },
     TWIN_STIER: {
         id: 'twin_stier',
         name: 'Bullet Storm',
-        description: 'Fire 8 bullets',
+        description: 'Fire 8 parallel bullets',
         category: CATEGORY.GUN,
         rarity: RARITY.STIER,
         gunType: 'twin',
         durability: 65,
         bulletCount: 8,
-        spacing: 8
+        spacing: 30
     },
 
     // Nova - 360 degree burst

@@ -59,15 +59,15 @@ async function getAllChampions() {
     }
 }
 
-async function getLeaderboard(difficulty, limit = 10, offset = 0, dailyOnly = false) {
+async function getLeaderboard(difficulty, limit = 10, offset = 0, dailyOnly = false, showGenerated = false) {
     const cols = getDifficultyColumns(difficulty);
 
     // Use daily score columns if daily filter, otherwise all-time
     const scoreCol = dailyOnly ? cols.dailyScore : cols.score;
     const dateCol = cols.dailyDate;
 
-    // Select columns we need
-    const selectCols = `player_name,${cols.score},${cols.kills},${cols.streak},${cols.dailyScore},${cols.dailyKills},${cols.dailyStreak},${cols.dailyDate},updated_at`;
+    // Select columns we need - include password_hash to check if account is real
+    const selectCols = `player_name,password_hash,${cols.score},${cols.kills},${cols.streak},${cols.dailyScore},${cols.dailyKills},${cols.dailyStreak},${cols.dailyDate},updated_at`;
 
     // Build URL with filters
     let url = `${SUPABASE_URL}/rest/v1/leaderboard?select=${selectCols}&${scoreCol}=gt.0&order=${scoreCol}.desc&limit=${limit}&offset=${offset}`;
@@ -76,6 +76,11 @@ async function getLeaderboard(difficulty, limit = 10, offset = 0, dailyOnly = fa
     if (dailyOnly) {
         const today = getTodayDate();
         url += `&${dateCol}=eq.${today}`;
+    }
+
+    // Filter out generated accounts unless showGenerated is true
+    if (!showGenerated) {
+        url += `&password_hash=neq.&password_hash=not.is.null`;
     }
 
     const response = await fetch(url, {
@@ -127,7 +132,7 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { difficulty, limit, page, daily } = req.query;
+        const { difficulty, limit, page, daily, devMode } = req.query;
 
         if (!difficulty) {
             return res.status(400).json({ error: 'Difficulty required' });
@@ -143,8 +148,9 @@ export default async function handler(req, res) {
         const pageNum = Math.max(parseInt(page) || 1, 1);
         const offset = (pageNum - 1) * maxLimit;
         const dailyOnly = daily === 'true' || daily === '1';
+        const showGenerated = devMode === 'true' || devMode === '1';
 
-        const result = await getLeaderboard(diff, maxLimit, offset, dailyOnly);
+        const result = await getLeaderboard(diff, maxLimit, offset, dailyOnly, showGenerated);
         const { data, totalCount } = result;
         const cols = getDifficultyColumns(diff);
 
@@ -153,14 +159,19 @@ export default async function handler(req, res) {
         const championNames = new Set(champions.map(c => c.player_name));
 
         // Transform to expected format - use daily stats if daily filter
-        const safeData = data.map(entry => ({
-            player_name: entry.player_name,
-            score: dailyOnly ? (entry[cols.dailyScore] || 0) : (entry[cols.score] || 0),
-            kills: dailyOnly ? (entry[cols.dailyKills] || 0) : (entry[cols.kills] || 0),
-            best_streak: dailyOnly ? (entry[cols.dailyStreak] || 0) : (entry[cols.streak] || 0),
-            difficulty: diff,
-            isChampion: championNames.has(entry.player_name)
-        }));
+        // Include isGenerated flag for dev mode display
+        const safeData = data.map(entry => {
+            const hasPassword = entry.password_hash && entry.password_hash.trim() !== '';
+            return {
+                player_name: entry.player_name,
+                score: dailyOnly ? (entry[cols.dailyScore] || 0) : (entry[cols.score] || 0),
+                kills: dailyOnly ? (entry[cols.dailyKills] || 0) : (entry[cols.kills] || 0),
+                best_streak: dailyOnly ? (entry[cols.dailyStreak] || 0) : (entry[cols.streak] || 0),
+                difficulty: diff,
+                isChampion: championNames.has(entry.player_name),
+                isGenerated: !hasPassword
+            };
+        });
 
         // Calculate total pages
         const totalPages = Math.ceil(totalCount / maxLimit);

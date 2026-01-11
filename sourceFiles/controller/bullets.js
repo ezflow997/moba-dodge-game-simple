@@ -100,6 +100,8 @@ export class Bullets {
             if (enemies.chargeBoss) homingTargets.push(enemies.chargeBoss);
             if (enemies.vortexBoss) homingTargets.push(enemies.vortexBoss);
         }
+        // Store for use by createHomingBullets
+        this.currentHomingTargets = homingTargets;
 
         if(player.qPressed == true){
             let msNow = window.performance.now();
@@ -297,7 +299,21 @@ export class Bullets {
                 this.createBullets(player, activeGun, rewardManager);
 
                 this.bulletsCreated = true;
-                if (window.gameSound) window.gameSound.playShoot();
+                // Play weapon-specific sound
+                if (window.gameSound) {
+                    const gunType = activeGun ? activeGun.gunType : null;
+                    switch (gunType) {
+                        case 'shotgun': window.gameSound.playShootShotgun(); break;
+                        case 'rapidfire': window.gameSound.playShootRapidfire(); break;
+                        case 'piercing': window.gameSound.playShootPiercing(); break;
+                        case 'ricochet': window.gameSound.playShootRicochet(); break;
+                        case 'homing': window.gameSound.playShootHoming(); break;
+                        case 'twin': window.gameSound.playShootTwin(); break;
+                        case 'nova': window.gameSound.playShootNova(); break;
+                        case 'chain': window.gameSound.playShootChain(); break;
+                        default: window.gameSound.playShoot(); break;
+                    }
+                }
                 this.bulletsSpawnNow = window.performance.now();
             }
         }
@@ -551,8 +567,22 @@ export class Bullets {
 
     createHomingBullets(player, gunData, sizeMultiplier) {
         const baseAngle = this.getFullAngle();
-        for (let i = 0; i < 3; i++) {
-            const spreadAngle = (i - 1) * 0.3;
+
+        // Only create missiles for the number of available targets (max 3)
+        const targetCount = this.currentHomingTargets ? this.currentHomingTargets.length : 0;
+        const missileCount = Math.min(Math.max(targetCount, 1), 3); // At least 1, max 3
+
+        for (let i = 0; i < missileCount; i++) {
+            // Spread missiles based on count
+            let spreadAngle;
+            if (missileCount === 1) {
+                spreadAngle = 0;
+            } else if (missileCount === 2) {
+                spreadAngle = (i - 0.5) * 0.3;
+            } else {
+                spreadAngle = (i - 1) * 0.3;
+            }
+
             const bulletAngle = baseAngle + spreadAngle;
             const maxTravel = this.bulletsMaxTravel * (gunData.rangeMultiplier || 1);
             const endX = player.x + Math.cos(bulletAngle) * maxTravel;
@@ -566,6 +596,8 @@ export class Bullets {
                 'homing',
                 gunData
             );
+            // Assign target preference so each missile targets a different enemy
+            b.targetPreference = i; // 0 = closest, 1 = 2nd closest, 2 = 3rd closest
             this.bulletsList.push(b);
         }
     }

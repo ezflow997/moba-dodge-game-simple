@@ -196,11 +196,14 @@ export class SupabaseLeaderboard {
     }
 
     // Get leaderboard for a specific difficulty with pagination and daily filter
-    async getLeaderboard(difficulty, limit = 10, page = 1, daily = false) {
+    async getLeaderboard(difficulty, limit = 10, page = 1, daily = false, devMode = false) {
         try {
             let url = `${this.apiBase}/leaderboard?difficulty=${encodeURIComponent(difficulty)}&limit=${limit}&page=${page}`;
             if (daily) {
                 url += '&daily=true';
+            }
+            if (devMode) {
+                url += '&devMode=true';
             }
 
             console.log('[Supabase] Fetching:', url);

@@ -131,6 +131,79 @@ window.addEventListener('load', function () {
 
 				// HUD system
 				this.powerupHUD = new PowerupHUD();
+
+				// Online presence tracking
+				this.sessionId = this.generateSessionId();
+				this.onlineCount = 0;
+				this.lastPresencePing = 0;
+				this.presencePingInterval = 5 * 60 * 1000; // 5 minutes
+				console.log('[Presence] Initializing with session:', this.sessionId);
+				this.pingPresence(); // Initial ping
+			}
+
+			generateSessionId() {
+				// Reuse existing session ID from sessionStorage, or generate a new one
+				let sessionId = sessionStorage.getItem('presenceSessionId');
+				if (!sessionId) {
+					sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+					sessionStorage.setItem('presenceSessionId', sessionId);
+				}
+				return sessionId;
+			}
+
+			getApiBaseUrl() {
+				// If running on localhost (Go Live), use production API
+				// Otherwise use relative path (works on Vercel)
+				if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+					return 'https://moba-dodge-simple.vercel.app';
+				}
+				return '';
+			}
+
+			async pingPresence() {
+				const baseUrl = this.getApiBaseUrl();
+
+				// Only track presence for logged-in users
+				if (!this.playerName) {
+					// Still fetch online count for display
+					try {
+						const response = await fetch(`${baseUrl}/api/presence`, { method: 'GET' });
+						if (response.ok) {
+							const data = await response.json();
+							this.onlineCount = data.online || 0;
+							console.log('[Presence] Online count (anonymous):', this.onlineCount);
+						} else {
+							console.error('[Presence] GET failed:', response.status);
+						}
+					} catch (error) {
+						console.error('[Presence] GET error:', error);
+					}
+					this.lastPresencePing = performance.now();
+					return;
+				}
+
+				console.log('[Presence] Pinging as:', this.playerName);
+				try {
+					const response = await fetch(`${baseUrl}/api/presence`, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							sessionId: this.sessionId,
+							playerName: this.playerName
+						})
+					});
+					if (response.ok) {
+						const data = await response.json();
+						this.onlineCount = data.online || 0;
+						console.log('[Presence] Online count:', this.onlineCount);
+					} else {
+						const errorText = await response.text();
+						console.error('[Presence] API error:', response.status, errorText);
+					}
+				} catch (error) {
+					console.error('[Presence] Ping failed:', error);
+				}
+				this.lastPresencePing = performance.now();
 			}
 
 			setupMusicUnlock() {
@@ -162,7 +235,10 @@ window.addEventListener('load', function () {
 					
 					// Update FPS counter
 					this.devMode.updateFPS();
-					
+
+					// Fetch player count for dev stats
+					this.devMode.fetchPlayerCount();
+
 					// Update test room if active
 					if (this.testRoom.active) {
 						this.testRoom.update();
@@ -180,6 +256,21 @@ window.addEventListener('load', function () {
 				if(this.input.escapePressed && !this.pauseMenu.waitingForKey) {
 					this.pauseMenu.toggle();
 					this.input.escapePressed = false;
+				}
+
+				// Handle dev menu button click and scroll
+				if (this.devMode.isEnabled()) {
+					if (this.input.buttons.indexOf(0) > -1) {
+						if (this.devMode.handleClick(this.input.mouseX, this.input.mouseY)) {
+							// Click was handled by dev menu, consume it
+							this.input.buttons = this.input.buttons.filter(b => b !== 0);
+						}
+					}
+					// Handle scroll when dev menu is open
+					if (this.devMode.devMenuOpen && this.input.wheelDelta) {
+						this.devMode.handleScroll(this.input.wheelDelta);
+						this.input.resetWheelDelta();
+					}
 				}
 
 				// Don't update game if paused
@@ -317,6 +408,8 @@ window.addEventListener('load', function () {
 					this.devMode.drawIndicators(context, this);
 					this.devMode.drawFPS(context);
 					this.devMode.drawStats(context, this);
+					this.devMode.drawDevMenuButton(context);
+					this.devMode.drawDevMenuPanel(context);
 				}
 				
 				this.pauseMenu.draw(context, this, false);
@@ -652,6 +745,11 @@ window.addEventListener('load', function () {
 				window.gameSound.playMenuMusic();
 			}
 
+			// Periodic presence ping (every 5 minutes)
+			if (performance.now() - game.lastPresencePing > game.presencePingInterval) {
+				game.pingPresence();
+			}
+
 			// Check for pause menu toggle in main menu (not when leaderboard, ranked menu, or name input is open)
 			// Also skip if a menu was just closed (to prevent key repeat from opening pause menu)
 			const nameInputJustClosed = game.nameInputMenu.closedAt && (performance.now() - game.nameInputMenu.closedAt < 200);
@@ -669,6 +767,21 @@ window.addEventListener('load', function () {
 				if(game.input.escapePressed && !game.pauseMenu.waitingForKey) {
 					game.pauseMenu.toggle(true);
 					game.input.escapePressed = false;
+				}
+			}
+
+			// Handle dev menu button click and scroll (before other menus)
+			if (game.devMode.isEnabled()) {
+				if (game.input.buttons.indexOf(0) > -1) {
+					if (game.devMode.handleClick(game.input.mouseX, game.input.mouseY)) {
+						// Click was handled by dev menu, consume it
+						game.input.buttons = game.input.buttons.filter(b => b !== 0);
+					}
+				}
+				// Handle scroll when dev menu is open
+				if (game.devMode.devMenuOpen && game.input.wheelDelta) {
+					game.devMode.handleScroll(game.input.wheelDelta);
+					game.input.resetWheelDelta();
 				}
 			}
 
@@ -711,7 +824,7 @@ window.addEventListener('load', function () {
 				// Check if player wants to open ranked leaderboard
 				if (rankedResult === 'open_ranked_leaderboard') {
 					game.rankedMenu.hide();
-					game.leaderboardMenu.showRanked();
+					game.leaderboardMenu.showRanked(game);
 				}
 
 				// Check if player wants to view queue standings
@@ -825,6 +938,15 @@ window.addEventListener('load', function () {
 				} else if (loadoutResult === 'cancel') {
 					game.loadoutMenu.hide();
 				}
+			}
+
+			// Dev mode and debug console in main menu
+			game.debugConsole.update(game);
+			if (game.devMode.isEnabled()) {
+				game.devMode.drawIndicators(ctx, game);
+				game.devMode.drawDevMenuButton(ctx);
+				game.devMode.drawDevMenuPanel(ctx);
+				game.debugConsole.draw(ctx, game);
 			}
 
 			game.pauseMenu.draw(ctx, game, true);

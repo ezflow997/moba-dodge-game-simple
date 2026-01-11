@@ -47,6 +47,7 @@ export class SpecialBullet {
         this.isHoming = gunType === 'homing';
         this.turnSpeed = gunData.turnSpeed || 0.03;
         this.targetEnemy = null;
+        this.targetPreference = 0; // Which nth-closest enemy to target (0 = closest)
 
         // Chain lightning
         this.chainCount = gunData.chainCount || 0;
@@ -190,9 +191,8 @@ export class SpecialBullet {
     }
 
     updateHoming(enemies) {
-        // Find closest enemy
-        let closestDist = Infinity;
-        let closestEnemy = null;
+        // Build list of enemies sorted by distance
+        const sortedEnemies = [];
 
         for (const enemy of enemies) {
             if (this.piercedEnemies.has(enemy)) continue;
@@ -201,15 +201,20 @@ export class SpecialBullet {
             const dy = enemy.y - this.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
 
-            if (dist < closestDist) {
-                closestDist = dist;
-                closestEnemy = enemy;
-            }
+            sortedEnemies.push({ enemy, dist });
         }
 
-        if (closestEnemy) {
+        // Sort by distance (closest first)
+        sortedEnemies.sort((a, b) => a.dist - b.dist);
+
+        // Pick the nth-closest enemy based on targetPreference
+        // If not enough enemies, fall back to closest available
+        const targetIndex = Math.min(this.targetPreference, sortedEnemies.length - 1);
+        const targetEnemy = sortedEnemies[targetIndex]?.enemy;
+
+        if (targetEnemy) {
             // Turn towards enemy
-            const targetAngle = Math.atan2(closestEnemy.y - this.y, closestEnemy.x - this.x);
+            const targetAngle = Math.atan2(targetEnemy.y - this.y, targetEnemy.x - this.x);
             let angleDiff = targetAngle - this.angle;
 
             // Normalize angle difference

@@ -31,3 +31,4 @@ test-results.json
 # Build artifacts
 dist/
 build/
+node_modules/

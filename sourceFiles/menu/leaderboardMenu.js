@@ -78,7 +78,7 @@ export class LeaderboardMenu {
         this.championsToggleButton = new Button(1620, 220, 200, 60, "Hall of Fame", 24, 20, 42, false, true, '#ffd700', '#ffd700');
     }
 
-    async show(initialDifficulty = 0) {
+    async show(initialDifficulty = 0, game = null) {
         this.isVisible = true;
         this.rankedOnly = false;
         this.currentDifficulty = initialDifficulty;
@@ -88,11 +88,12 @@ export class LeaderboardMenu {
         this.searchResults = [];
         this.currentResultIndex = 0;
         this.highlightedPlayer = null;
+        this.devMode = game && game.devMode && game.devMode.isEnabled();
         document.addEventListener('keydown', this.keyHandler);
         await this.loadLeaderboard();
     }
 
-    async showRanked() {
+    async showRanked(game = null) {
         this.isVisible = true;
         this.rankedOnly = true;
         this.showChampionsView = false;
@@ -102,6 +103,7 @@ export class LeaderboardMenu {
         this.searchResults = [];
         this.currentResultIndex = 0;
         this.highlightedPlayer = null;
+        this.devMode = game && game.devMode && game.devMode.isEnabled();
         document.addEventListener('keydown', this.keyHandler);
         await this.loadLeaderboard();
     }
@@ -251,7 +253,8 @@ export class LeaderboardMenu {
                     this.difficulties[this.currentDifficulty],
                     this.entriesPerPage,
                     this.currentPage,
-                    this.isDaily
+                    this.isDaily,
+                    this.devMode
                 );
             }
 
@@ -825,6 +828,9 @@ export class LeaderboardMenu {
             // Check if this player is a champion (won a monthly season)
             const isChampion = entry.isChampion === true;
 
+            // Check if this is a generated account (dev mode only)
+            const isGenerated = entry.isGenerated === true;
+
             if (isChampion) {
                 // Draw animated rainbow champion name
                 this.drawChampionName(context, colName, y, displayName, 34, rX, isHighlighted);
@@ -833,6 +839,15 @@ export class LeaderboardMenu {
                 const nameGlow = isHighlighted ? '#00ffff' : '#00ffff';
                 const nameGlowSize = isHighlighted ? 15 : 8;
                 this.super.drawGlowText(context, colName, y, displayName, 34, nameColor, nameGlow, nameGlowSize);
+            }
+
+            // Show [GEN] indicator for generated accounts in dev mode
+            if (isGenerated && this.devMode) {
+                context.save();
+                context.font = `bold ${34 * rX}px Arial`;
+                const nameWidth = context.measureText(displayName).width / rX;
+                context.restore();
+                this.super.drawGlowText(context, colName + nameWidth + 15, y, "[GEN]", 18, '#ff8800', '#ff6600', 4);
             }
 
             if (isRanked) {

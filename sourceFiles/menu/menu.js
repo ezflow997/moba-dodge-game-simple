@@ -195,7 +195,7 @@ export class Menu{
             if(this.leaderboardButton.isHovered == true && game.input.buttons.indexOf(0) > -1 && this.clicked == false){
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
-                game.leaderboardMenu.show(game.difficulty_level);
+                game.leaderboardMenu.show(game.difficulty_level, game);
                 // Refresh player scores when opening leaderboard
                 if (game.playerName) {
                     this.forceRefreshScores();
@@ -289,10 +289,21 @@ export class Menu{
         this.menuEffects.drawAnimatedBackground(context, game.width, game.height);
         this.menuEffects.drawFloatingParticles(context);
 
-        // Draw game title centered at top
+        // Draw game title centered at top (single line)
         const titleX = game.width / 2 / rX;  // Center of screen
-        this.menuEffects.drawTitleCentered(context, "MOBA DODGE", titleX, 80, 70);
-        this.menuEffects.drawTitleCentered(context, "SIMPLE", titleX, 145, 40);
+        this.menuEffects.drawTitleCentered(context, "MOBA DODGE SIMPLE", titleX, 100, 60);
+
+        // Draw online player count below title
+        if (game.onlineCount > 0) {
+            context.save();
+            context.font = `bold ${28 * rX}px Arial`;
+            context.textAlign = 'center';
+            context.fillStyle = '#88ff88';
+            context.shadowColor = '#00ff00';
+            context.shadowBlur = 10 * rX;
+            context.fillText(`${game.onlineCount} player${game.onlineCount !== 1 ? 's' : ''} online`, titleX * rX, 150 * rY);
+            context.restore();
+        }
 
         // Update button text with current values
         this.challengeButton.text = "Mode: " + game.challenges[game.challenge_level];

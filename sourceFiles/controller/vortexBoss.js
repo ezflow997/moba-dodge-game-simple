@@ -167,6 +167,9 @@ export class VortexBoss {
 
         // Leave void zones in phase 2+
         if (this.phase >= 2 && Math.random() < 0.02) {
+            // Play void zone sound
+            if (window.gameSound) window.gameSound.playBossVoidZone();
+
             this.voidZones.push({
                 x: this.x,
                 y: this.y,
@@ -293,6 +296,10 @@ export class VortexBoss {
 
     shootHomingMissile(player) {
         const rX = window.innerWidth / 2560;
+
+        // Play homing missile sound
+        if (window.gameSound) window.gameSound.playBossHomingMissile();
+
         this.homingMissiles.push({
             x: this.x,
             y: this.y,
@@ -346,6 +353,9 @@ export class VortexBoss {
     }
 
     executePulse() {
+        // Play pulse sound
+        if (window.gameSound) window.gameSound.playBossPulse();
+
         for (let ring of this.orbitalRings) {
             ring.expanding = true;
         }
@@ -354,7 +364,10 @@ export class VortexBoss {
     executeSpiralAttack() {
         const rX = window.innerWidth / 2560;
         const projectileCount = 16;
-        
+
+        // Play spiral attack sound
+        if (window.gameSound) window.gameSound.playBossSpiralAttack();
+
         for (let i = 0; i < projectileCount; i++) {
             const angle = (Math.PI * 2 / projectileCount) * i;
             const delay = i * 50;
@@ -699,7 +712,7 @@ export class VortexBoss {
                             }
 
                             hitOrbital = true;
-                            if (window.gameSound) window.gameSound.playMenuClick();
+                            if (window.gameSound) window.gameSound.playOrbitalHit();
                             break;
                         }
                     }

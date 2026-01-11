@@ -183,6 +183,9 @@ export class ChargeBoss {
 
         // Add random delay to wind-up duration for unpredictability
         this.chargeWindupDuration = this.baseChargeWindupDuration + Math.random() * this.chargeWindupRandomDelay;
+
+        // Play charge windup sound
+        if (window.gameSound) window.gameSound.playBossChargeWindup();
     }
 
     updateChargeWindup(player) {
@@ -210,9 +213,8 @@ export class ChargeBoss {
             const rX = window.innerWidth / 2560;
             this.chargeSpeed = this.baseChargeSpeed * rX;
 
-            if (window.gameSound) {
-                window.gameSound.playMenuClick(); // Use existing sound or add boss charge sound
-            }
+            // Play charge dash sound
+            if (window.gameSound) window.gameSound.playBossChargeDash();
         }
     }
 

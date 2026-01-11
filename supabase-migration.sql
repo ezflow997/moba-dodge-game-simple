@@ -101,3 +101,25 @@ CREATE POLICY "Allow public update ranked_queue" ON ranked_queue FOR UPDATE USIN
 ALTER TABLE ranked_history ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow public read ranked_history" ON ranked_history FOR SELECT USING (true);
 CREATE POLICY "Allow public insert ranked_history" ON ranked_history FOR INSERT WITH CHECK (true);
+
+-- =====================================================
+-- PLAYER PRESENCE TRACKING (Online Player Count)
+-- =====================================================
+
+-- Track player presence via heartbeat pings
+CREATE TABLE player_presence (
+    id SERIAL PRIMARY KEY,
+    session_id TEXT UNIQUE NOT NULL,
+    player_name TEXT,
+    last_ping TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_player_presence_last_ping ON player_presence(last_ping);
+CREATE INDEX idx_player_presence_session ON player_presence(session_id);
+
+-- Enable RLS for presence table
+ALTER TABLE player_presence ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read player_presence" ON player_presence FOR SELECT USING (true);
+CREATE POLICY "Allow public insert player_presence" ON player_presence FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update player_presence" ON player_presence FOR UPDATE USING (true);
+CREATE POLICY "Allow public delete player_presence" ON player_presence FOR DELETE USING (true);

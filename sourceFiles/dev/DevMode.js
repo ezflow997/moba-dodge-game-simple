@@ -64,7 +64,7 @@ export class DevMode {
         this.scrollOffset = 0;
         this.maxScrollOffset = 0;
         this.itemHeight = 28;
-        this.visibleItems = 12;
+        this.visibleItems = 18; // Increased for larger panel
 
         // Button dimensions for hit detection
         this.devMenuButton = {
@@ -520,9 +520,9 @@ export class DevMode {
 
         // If menu is open, handle panel interactions
         if (this.devMenuOpen) {
-            // Panel dimensions (centered)
-            const panelW = 500 * rX;
-            const panelH = 550 * rY;
+            // Panel dimensions (centered) - 1.5x size
+            const panelW = 750 * rX;
+            const panelH = 825 * rY;
             const panelX = (window.innerWidth - panelW) / 2;
             const panelY = (window.innerHeight - panelH) / 2;
 
@@ -607,116 +607,181 @@ export class DevMode {
     }
 
     /**
-     * Draw the dev menu panel
+     * Draw the dev menu panel (centered, with tabs)
      */
     drawDevMenuPanel(context) {
         if (!this.enabled || !this.devMenuOpen) return;
 
         const rX = window.innerWidth / 2560;
-        const panelX = window.innerWidth - 320 * rX;
-        const panelY = 60 * rX;
-        const panelW = 300 * rX;
-        const panelH = 400 * rX;
+        const rY = window.innerHeight / 1440;
+
+        // Panel dimensions (centered) - 1.5x size
+        const panelW = 750 * rX;
+        const panelH = 825 * rY;
+        const panelX = (window.innerWidth - panelW) / 2;
+        const panelY = (window.innerHeight - panelH) / 2;
 
         context.save();
 
+        // Darken background
+        context.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        context.fillRect(0, 0, window.innerWidth, window.innerHeight);
+
         // Panel background
-        context.fillStyle = 'rgba(0, 20, 0, 0.95)';
+        context.fillStyle = 'rgba(0, 20, 0, 0.98)';
         context.strokeStyle = '#00ff00';
-        context.lineWidth = 2 * rX;
+        context.lineWidth = 3 * rX;
         context.shadowColor = '#00ff00';
-        context.shadowBlur = 15 * rX;
+        context.shadowBlur = 20 * rX;
 
         context.beginPath();
-        context.roundRect(panelX, panelY, panelW, panelH, 10 * rX);
+        context.roundRect(panelX, panelY, panelW, panelH, 12 * rX);
         context.fill();
         context.stroke();
 
         // Title
-        context.font = `bold ${20 * rX}px monospace`;
+        context.font = `bold ${28 * rX}px monospace`;
         context.fillStyle = '#00ff00';
         context.textAlign = 'center';
-        context.shadowBlur = 5 * rX;
-        context.fillText('DEV STATS', panelX + panelW / 2, panelY + 30 * rX);
+        context.shadowBlur = 8 * rX;
+        context.fillText('DEV STATS', panelX + panelW / 2, panelY + 35 * rY);
 
-        // Divider line
-        context.strokeStyle = 'rgba(0, 255, 0, 0.5)';
-        context.lineWidth = 1;
-        context.beginPath();
-        context.moveTo(panelX + 20 * rX, panelY + 45 * rX);
-        context.lineTo(panelX + panelW - 20 * rX, panelY + 45 * rX);
-        context.stroke();
+        // Tabs
+        const tabY = panelY + 50 * rY;
+        const tabH = 40 * rY;
+        const tabW = panelW / 2;
 
-        // Accounts count
+        // Accounts tab
+        context.fillStyle = this.activeTab === 'accounts' ? 'rgba(0, 255, 0, 0.3)' : 'rgba(0, 50, 0, 0.5)';
+        context.fillRect(panelX, tabY, tabW, tabH);
+        context.strokeStyle = this.activeTab === 'accounts' ? '#00ff00' : '#004400';
+        context.lineWidth = 2 * rX;
+        context.strokeRect(panelX, tabY, tabW, tabH);
+
+        context.font = `bold ${18 * rX}px monospace`;
+        context.fillStyle = this.activeTab === 'accounts' ? '#00ff00' : '#666666';
+        context.textAlign = 'center';
+        context.shadowBlur = this.activeTab === 'accounts' ? 5 * rX : 0;
+        const accountsCount = this.allAccounts.length || this.uniquePlayerCount || 0;
+        context.fillText(`All Accounts (${accountsCount})`, panelX + tabW / 2, tabY + 26 * rY);
+
+        // Online tab
+        context.fillStyle = this.activeTab === 'online' ? 'rgba(0, 255, 0, 0.3)' : 'rgba(0, 50, 0, 0.5)';
+        context.fillRect(panelX + tabW, tabY, tabW, tabH);
+        context.strokeStyle = this.activeTab === 'online' ? '#00ff00' : '#004400';
+        context.strokeRect(panelX + tabW, tabY, tabW, tabH);
+
+        context.fillStyle = this.activeTab === 'online' ? '#00ff00' : '#666666';
+        context.shadowBlur = this.activeTab === 'online' ? 5 * rX : 0;
+        context.fillText(`Online (${this.onlinePlayers.length})`, panelX + tabW + tabW / 2, tabY + 26 * rY);
+
+        // Content area
+        const contentY = tabY + tabH + 15 * rY;
+        const contentH = panelH - (contentY - panelY) - 20 * rY;
+        const contentX = panelX + 20 * rX;
+        const contentW = panelW - 40 * rX;
+
+        // Draw list based on active tab
+        const currentList = this.activeTab === 'accounts' ? this.allAccounts : this.onlinePlayers;
+        const isLoading = this.activeTab === 'accounts' ? this.allAccountsLoading : this.onlinePlayersLoading;
+
+        // Update max scroll
+        this.maxScrollOffset = Math.max(0, currentList.length - this.visibleItems);
+
         context.font = `${16 * rX}px monospace`;
         context.textAlign = 'left';
-        context.fillStyle = '#00ffff';
-        let currentY = panelY + 70 * rX;
+        context.shadowBlur = 0;
 
-        const accountsText = this.playerCountLoading && this.uniquePlayerCount === null
-            ? 'Accounts: Loading...'
-            : this.playerCountError && this.uniquePlayerCount === null
-                ? 'Accounts: [Error]'
-                : `Accounts: ${this.uniquePlayerCount ?? '--'}`;
-        context.fillText(accountsText, panelX + 20 * rX, currentY);
-        currentY += 25 * rX;
+        const lineHeight = 32 * rY;
+        const listStartY = contentY + 10 * rY;
 
-        // Online players count
-        context.fillStyle = '#ffff00';
-        context.fillText(`Online: ${this.onlinePlayers.length}`, panelX + 20 * rX, currentY);
-        currentY += 35 * rX;
-
-        // Online players header
-        context.fillStyle = '#888888';
-        context.font = `${14 * rX}px monospace`;
-        context.fillText('ONLINE PLAYERS:', panelX + 20 * rX, currentY);
-        currentY += 20 * rX;
-
-        // Divider
-        context.strokeStyle = 'rgba(0, 255, 0, 0.3)';
-        context.beginPath();
-        context.moveTo(panelX + 20 * rX, currentY - 5 * rX);
-        context.lineTo(panelX + panelW - 20 * rX, currentY - 5 * rX);
-        context.stroke();
-
-        // Online players list
-        context.font = `${14 * rX}px monospace`;
-        const maxVisiblePlayers = 10;
-        const lineHeight = 22 * rX;
-
-        if (this.onlinePlayersLoading && this.onlinePlayers.length === 0) {
-            context.fillStyle = '#666666';
-            context.fillText('Loading...', panelX + 25 * rX, currentY + lineHeight);
-        } else if (this.onlinePlayers.length === 0) {
-            context.fillStyle = '#666666';
-            context.fillText('No players online', panelX + 25 * rX, currentY + lineHeight);
+        if (isLoading && currentList.length === 0) {
+            context.fillStyle = '#888888';
+            context.textAlign = 'center';
+            context.fillText('Loading...', panelX + panelW / 2, listStartY + 50 * rY);
+        } else if (currentList.length === 0) {
+            context.fillStyle = '#888888';
+            context.textAlign = 'center';
+            const emptyMsg = this.activeTab === 'accounts' ? 'No accounts found' : 'No players online';
+            context.fillText(emptyMsg, panelX + panelW / 2, listStartY + 50 * rY);
         } else {
-            const playersToShow = this.onlinePlayers.slice(0, maxVisiblePlayers);
-            for (let i = 0; i < playersToShow.length; i++) {
-                const player = playersToShow[i];
-                const y = currentY + (i + 1) * lineHeight;
+            // Clip content area
+            context.save();
+            context.beginPath();
+            context.rect(contentX - 5 * rX, contentY, contentW + 10 * rX, contentH);
+            context.clip();
 
-                // Online indicator dot
-                context.fillStyle = '#00ff00';
-                context.beginPath();
-                context.arc(panelX + 25 * rX, y - 4 * rX, 4 * rX, 0, Math.PI * 2);
-                context.fill();
+            const visibleStart = this.scrollOffset;
+            const visibleEnd = Math.min(visibleStart + this.visibleItems, currentList.length);
+
+            for (let i = visibleStart; i < visibleEnd; i++) {
+                const item = currentList[i];
+                const y = listStartY + (i - visibleStart) * lineHeight;
+
+                // Row background (alternating)
+                if ((i - visibleStart) % 2 === 0) {
+                    context.fillStyle = 'rgba(0, 255, 0, 0.05)';
+                    context.fillRect(contentX, y - 8 * rY, contentW, lineHeight - 4 * rY);
+                }
+
+                // Index number
+                context.fillStyle = '#555555';
+                context.textAlign = 'right';
+                context.fillText(`${i + 1}.`, contentX + 35 * rX, y + 12 * rY);
+
+                // Status indicator
+                if (this.activeTab === 'online') {
+                    // Green dot for online
+                    context.fillStyle = '#00ff00';
+                    context.beginPath();
+                    context.arc(contentX + 50 * rX, y + 8 * rY, 5 * rX, 0, Math.PI * 2);
+                    context.fill();
+                }
 
                 // Player name
                 context.fillStyle = '#ffffff';
-                const displayName = player.name.length > 18
-                    ? player.name.substring(0, 18) + '...'
-                    : player.name;
-                context.fillText(displayName, panelX + 40 * rX, y);
+                context.textAlign = 'left';
+                const nameX = this.activeTab === 'online' ? contentX + 65 * rX : contentX + 45 * rX;
+                const displayName = item.name.length > 25 ? item.name.substring(0, 25) + '...' : item.name;
+                context.fillText(displayName, nameX, y + 12 * rY);
             }
 
-            // Show "+X more" if there are more players
-            if (this.onlinePlayers.length > maxVisiblePlayers) {
-                const moreCount = this.onlinePlayers.length - maxVisiblePlayers;
-                context.fillStyle = '#888888';
-                context.fillText(`+${moreCount} more...`, panelX + 25 * rX, currentY + (maxVisiblePlayers + 1) * lineHeight);
+            context.restore();
+
+            // Draw scrollbar if needed
+            if (currentList.length > this.visibleItems) {
+                const scrollbarX = panelX + panelW - 15 * rX;
+                const scrollbarY = contentY;
+                const scrollbarH = contentH;
+                const scrollbarW = 8 * rX;
+
+                // Scrollbar track
+                context.fillStyle = 'rgba(0, 255, 0, 0.2)';
+                context.fillRect(scrollbarX, scrollbarY, scrollbarW, scrollbarH);
+
+                // Scrollbar thumb
+                const thumbRatio = this.visibleItems / currentList.length;
+                const thumbH = Math.max(scrollbarH * thumbRatio, 30 * rY);
+                const thumbY = scrollbarY + (this.scrollOffset / this.maxScrollOffset) * (scrollbarH - thumbH);
+
+                context.fillStyle = '#00ff00';
+                context.beginPath();
+                context.roundRect(scrollbarX, thumbY, scrollbarW, thumbH, 4 * rX);
+                context.fill();
+
+                // Scroll hint
+                context.fillStyle = '#666666';
+                context.font = `${12 * rX}px monospace`;
+                context.textAlign = 'center';
+                context.fillText('Scroll to see more', panelX + panelW / 2, panelY + panelH - 10 * rY);
             }
         }
+
+        // Close hint
+        context.fillStyle = '#555555';
+        context.font = `${14 * rX}px monospace`;
+        context.textAlign = 'center';
+        context.fillText('Click outside to close', panelX + panelW / 2, panelY + panelH + 25 * rY);
 
         context.restore();
     }
