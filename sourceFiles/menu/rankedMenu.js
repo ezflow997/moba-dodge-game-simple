@@ -240,9 +240,9 @@ export class RankedMenu {
             this.prevPageButton.update(inX, inY);
             this.nextPageButton.update(inX, inY);
 
-            // Back button and Fix Queues button
-            setButtonPos(this.backButton, refCenterX - 200, buttonY, 180, 70);
-            setButtonPos(this.fixQueuesButton, refCenterX + 20, buttonY, 180, 70);
+            // Fix Queues button and Back button
+            setButtonPos(this.fixQueuesButton, refCenterX - 200, buttonY, 180, 70);
+            setButtonPos(this.backButton, refCenterX + 20, buttonY, 180, 70);
             this.backButton.update(inX, inY);
             this.fixQueuesButton.update(inX, inY);
 
