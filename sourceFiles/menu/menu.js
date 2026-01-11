@@ -190,18 +190,16 @@ export class Menu{
 
         }
 
-        // Leaderboard button - only active when leaderboard menu is not visible
-        if(!game.leaderboardMenu.isVisible && !game.rankedMenu.isVisible) {
+        // Leaderboard button - only active when logged in and menus are not visible
+        if(game.playerName && !game.leaderboardMenu.isVisible && !game.rankedMenu.isVisible && !game.shopMenu.isVisible) {
             this.leaderboardButton.update(inX, inY);
             if(this.leaderboardButton.isHovered == true && game.input.buttons.indexOf(0) > -1 && this.clicked == false){
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
                 game.leaderboardMenu.show(game.difficulty_level, game);
                 // Refresh player scores when opening leaderboard
-                if (game.playerName) {
-                    this.forceRefreshScores();
-                    this.fetchPlayerScores(game);
-                }
+                this.forceRefreshScores();
+                this.fetchPlayerScores(game);
             }
         }
 
@@ -318,13 +316,12 @@ export class Menu{
         this.difficultyButton.draw(context);
         this.startButton.draw(context);
 
-        // Draw ranked button (only if logged in)
+        // Draw ranked, shop, and leaderboard buttons (only if logged in)
         if (game.playerName) {
             this.rankedButton.draw(context);
             this.shopButton.draw(context);
+            this.leaderboardButton.draw(context);
         }
-
-        this.leaderboardButton.draw(context);
 
         // Show login button or player name based on login state
         if(game.playerName) {
