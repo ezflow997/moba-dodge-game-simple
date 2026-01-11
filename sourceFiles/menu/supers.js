@@ -862,9 +862,10 @@ export class RetryWarningPopup {
 
             // Only update if visible
             if (itemY >= itemStartY - itemHeight && itemY < itemStartY + itemsAreaHeight) {
-                const btnX = panelX + panelW - 130 * rX;
+                // Center button vertically in item row (row height is 50, button height is 35)
+                const btnX = panelX + panelW - 150 * rX;
                 this.removeButtons[i].x = btnX / rX;
-                this.removeButtons[i].y = itemY / rY + 12;
+                this.removeButtons[i].y = itemY / rY + 7; // Centered: (50-35)/2 ≈ 7
                 this.removeButtons[i].text = this.items[i].isRemoved ? 'Restore' : 'Remove';
                 this.removeButtons[i].text_color = this.items[i].isRemoved ? '#88ff88' : '#ff8888';
                 this.removeButtons[i].border_color = this.items[i].isRemoved ? '#66cc66' : '#ff6666';

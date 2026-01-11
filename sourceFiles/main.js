@@ -767,9 +767,18 @@ window.addEventListener('load', function () {
 								game.devMode.resetSession();
 							}
 
+							// Preserve loadout data before set_difficulty (which clears it)
+							const savedLoadoutRewards = game.pendingLoadoutRewards;
+							const savedWeapon = game.pendingLoadoutWeapon;
+
 							game.gameOver = false;
 							game.game_time = window.performance.now();
 							game.set_difficulty();
+
+							// Restore loadout data after reset
+							game.pendingLoadoutRewards = savedLoadoutRewards;
+							game.pendingLoadoutWeapon = savedWeapon;
+
 							poki.gameplayStart();
 
 							if (window.gameSound) {
@@ -817,9 +826,20 @@ window.addEventListener('load', function () {
 								game.devMode.resetSession();
 							}
 
+							// Preserve loadout data before set_difficulty (which clears it)
+							const savedLoadoutRewards = game.pendingLoadoutRewards;
+							const savedUsedIds = game.usedLoadoutRewardIds;
+							const savedWeapon = game.pendingLoadoutWeapon;
+
 							game.gameOver = false;
 							game.game_time = window.performance.now();
 							game.set_difficulty();
+
+							// Restore loadout data after reset
+							game.pendingLoadoutRewards = savedLoadoutRewards;
+							game.usedLoadoutRewardIds = savedUsedIds;
+							game.pendingLoadoutWeapon = savedWeapon;
+
 							poki.gameplayStart();
 
 							if (window.gameSound) {
