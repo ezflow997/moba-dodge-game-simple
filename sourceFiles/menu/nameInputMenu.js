@@ -42,12 +42,13 @@ export class NameInputMenu {
         this.passwordCaretPos = 0;
         this.securityAnswerCaretPos = 0;
 
-        this.submitButton = new Button(1080, 510, 280, 60, "Submit", 40, 75, 43, false, true, 'white', 'white');
-        this.togglePasswordButton = new Button(1470, 470, 50, 60, "*", 35, 12, 43, false, true, 'white', 'white');
+        this.submitButton = new Button(1140, 510, 280, 60, "Submit", 40, 75, 43, false, true, 'white', 'white');
+        this.nextButton = new Button(1140, 510, 280, 60, "Next", 40, 85, 43, false, true, 'white', 'white');
+        this.togglePasswordButton = new Button(1570, 450, 50, 60, "*", 35, 12, 43, false, true, 'white', 'white');
 
-        // Security question navigation buttons
-        this.prevQuestionButton = new Button(900, 440, 50, 50, "<", 35, 12, 38, false, true, 'white', 'white');
-        this.nextQuestionButton = new Button(1410, 440, 50, 50, ">", 35, 12, 38, false, true, 'white', 'white');
+        // Security question navigation buttons (centered around x=1280)
+        this.prevQuestionButton = new Button(950, 420, 50, 50, "<", 35, 12, 38, false, true, 'white', 'white');
+        this.nextQuestionButton = new Button(1560, 420, 50, 50, ">", 35, 12, 38, false, true, 'white', 'white');
 
         // Forgot password link (shown after failed login)
         this.showForgotPassword = false;
@@ -373,15 +374,19 @@ export class NameInputMenu {
         const inY = game.input.mouseY;
         const clicking = game.input.buttons.indexOf(0) > -1;
 
-        // Click outside to close (panel: x=830, y=280, w=900, h=520 max)
+        // Click outside to close (panel: x=830, y=280, w=900, h=varies by state)
         // Only check when not in a loading state
         if (this.inputState !== 'checkingName' && this.inputState !== 'submitting') {
             const rX = window.innerWidth / 2560;
             const rY = window.innerHeight / 1440;
+            // Calculate panel height based on state (must match draw() method)
+            let panelHeight = 380;
+            if (this.inputState === 'password') panelHeight = this.showForgotPassword ? 500 : 460;
+            if (this.inputState === 'security') panelHeight = 540;
             const panelLeft = 830 * rX;
             const panelRight = (830 + 900) * rX;
             const panelTop = 280 * rY;
-            const panelBottom = (280 + 520) * rY;
+            const panelBottom = (280 + panelHeight) * rY;
 
             if (clicking && !this.clicked) {
                 if (inX < panelLeft || inX > panelRight || inY < panelTop || inY > panelBottom) {
@@ -413,10 +418,10 @@ export class NameInputMenu {
             // Approximate character width for 36px Arial font
             const charWidth = 36 * 0.55 * rX;
 
-            // Name input field (name state): x=900, y=420, w=560, h=60
-            if (this.inputState === 'name' && this.isClickInInputField(inX, inY, 900, 420, 560, 60, rX, rY)) {
+            // Name input field (name state): x=1000, y=420, w=560, h=60
+            if (this.inputState === 'name' && this.isClickInInputField(inX, inY, 1000, 420, 560, 60, rX, rY)) {
                 this.clicked = true;
-                const textStartX = (900 + 20) * rX;
+                const textStartX = (1000 + 20) * rX;
                 const relativeX = inX - textStartX;
                 if (relativeX <= 0) {
                     this.nameCaretPos = 0;
@@ -426,10 +431,10 @@ export class NameInputMenu {
                 }
             }
 
-            // Password input field (password state): x=900, y=470, w=560, h=60
-            if (this.inputState === 'password' && this.isClickInInputField(inX, inY, 900, 470, 560, 60, rX, rY)) {
+            // Password input field (password state): x=1000, y=450, w=560, h=60
+            if (this.inputState === 'password' && this.isClickInInputField(inX, inY, 1000, 450, 560, 60, rX, rY)) {
                 this.clicked = true;
-                const textStartX = (900 + 20) * rX;
+                const textStartX = (1000 + 20) * rX;
                 const relativeX = inX - textStartX;
                 if (relativeX <= 0) {
                     this.passwordCaretPos = 0;
@@ -439,10 +444,10 @@ export class NameInputMenu {
                 }
             }
 
-            // Security answer field (security state): x=900, y=530, w=560, h=60
-            if (this.inputState === 'security' && this.isClickInInputField(inX, inY, 900, 530, 560, 60, rX, rY)) {
+            // Security answer field (security state): x=1000, y=520, w=560, h=60
+            if (this.inputState === 'security' && this.isClickInInputField(inX, inY, 1000, 520, 560, 60, rX, rY)) {
                 this.clicked = true;
-                const textStartX = (900 + 20) * rX;
+                const textStartX = (1000 + 20) * rX;
                 const relativeX = inX - textStartX;
                 if (relativeX <= 0) {
                     this.securityAnswerCaretPos = 0;
@@ -453,10 +458,10 @@ export class NameInputMenu {
             }
         }
 
-        // Submit button (name state)
+        // Next button (name state)
         if (this.inputState === 'name') {
-            this.submitButton.update(inX, inY);
-            if (this.submitButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked && this.playerName.trim().length > 0) {
+            this.nextButton.update(inX, inY);
+            if (this.nextButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked && this.playerName.trim().length > 0) {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.checkPlayerName();
@@ -467,7 +472,7 @@ export class NameInputMenu {
         if (this.inputState === 'password') {
             // Move button down for password state
             const originalY = this.submitButton.y;
-            this.submitButton.y = 590;
+            this.submitButton.y = 570;
 
             this.submitButton.update(inX, inY);
             if (this.submitButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked && this.password.length >= 4) {
@@ -490,10 +495,10 @@ export class NameInputMenu {
             if (this.showForgotPassword && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
                 const rX = window.innerWidth / 2560;
                 const rY = window.innerHeight / 1440;
-                // Check if click is within the "Forgot Password?" text area (text drawn at y=680)
-                const linkX = 1080 * rX;
-                const linkY = 655 * rY;
-                const linkW = 200 * rX;
+                // Check if click is within the "Forgot Password?" text area (centered at x=1280, y=670)
+                const linkX = 1130 * rX;
+                const linkY = 645 * rY;
+                const linkW = 300 * rX;
                 const linkH = 35 * rY;
                 if (inX >= linkX && inX <= linkX + linkW && inY >= linkY && inY <= linkY + linkH) {
                     this.clicked = true;
@@ -529,7 +534,7 @@ export class NameInputMenu {
 
             // Move button down for security state
             const originalY = this.submitButton.y;
-            this.submitButton.y = 620;
+            this.submitButton.y = 610;
 
             // Submit button
             this.submitButton.update(inX, inY);
@@ -556,9 +561,9 @@ export class NameInputMenu {
         context.restore();
 
         // Calculate panel height based on state
-        let panelHeight = 320;
-        if (this.inputState === 'password') panelHeight = this.showForgotPassword ? 480 : 440;
-        if (this.inputState === 'security') panelHeight = 520;
+        let panelHeight = 380; // Name state needs room for input, button, and help text
+        if (this.inputState === 'password') panelHeight = this.showForgotPassword ? 500 : 460;
+        if (this.inputState === 'security') panelHeight = 540;
 
         // Input panel (centered: x=830 for 900 width on 2560 reference)
         context.save();
@@ -571,55 +576,55 @@ export class NameInputMenu {
         context.strokeRect(830 * rX, 280 * rY, 900 * rX, panelHeight * rY);
         context.restore();
 
-        // Title based on state
+        // Title based on state (centered at x=1280)
         if (this.inputState === 'name') {
-            this.super.drawGlowText(context, 1070, 350, "ENTER YOUR NAME", 50, '#ffffff', '#00ffff', 12);
-            this.super.drawGlowText(context, 1030, 390, "to submit your score", 28, '#888888', '#666666', 5);
+            this.super.drawGlowText(context, 1280, 350, "ENTER YOUR NAME", 50, '#ffffff', '#00ffff', 12, true);
+            this.super.drawGlowText(context, 1280, 390, "to submit your score", 28, '#888888', '#666666', 5, true);
         } else if (this.inputState === 'checkingName') {
-            this.super.drawGlowText(context, 1150, 380, "Checking...", 45, '#ffff00', '#ffaa00', 10);
+            this.super.drawGlowText(context, 1280, 380, "Checking...", 45, '#ffff00', '#ffaa00', 10, true);
         } else if (this.inputState === 'password') {
             if (this.isNewPlayer) {
-                this.super.drawGlowText(context, 1030, 340, "CREATE PASSWORD", 50, '#ffffff', '#00ffff', 12);
-                this.super.drawGlowText(context, 970, 380, "New account for: " + this.playerName, 28, '#00ff88', '#00ff00', 5);
+                this.super.drawGlowText(context, 1280, 340, "CREATE PASSWORD", 50, '#ffffff', '#00ffff', 12, true);
+                this.super.drawGlowText(context, 1280, 380, "New account for: " + this.playerName, 28, '#00ff88', '#00ff00', 5, true);
             } else {
-                this.super.drawGlowText(context, 1050, 340, "ENTER PASSWORD", 50, '#ffffff', '#00ffff', 12);
-                this.super.drawGlowText(context, 1030, 380, "Welcome back, " + this.playerName, 28, '#00ff88', '#00ff00', 5);
+                this.super.drawGlowText(context, 1280, 340, "ENTER PASSWORD", 50, '#ffffff', '#00ffff', 12, true);
+                this.super.drawGlowText(context, 1280, 380, "Welcome back, " + this.playerName, 28, '#00ff88', '#00ff00', 5, true);
             }
         } else if (this.inputState === 'security') {
-            this.super.drawGlowText(context, 1000, 340, "SECURITY QUESTION", 50, '#ffffff', '#00ffff', 12);
-            this.super.drawGlowText(context, 950, 380, "For password recovery", 28, '#888888', '#666666', 5);
+            this.super.drawGlowText(context, 1280, 340, "SECURITY QUESTION", 50, '#ffffff', '#00ffff', 12, true);
+            this.super.drawGlowText(context, 1280, 380, "For password recovery", 28, '#888888', '#666666', 5, true);
         } else if (this.inputState === 'submitting') {
-            this.super.drawGlowText(context, 1150, 380, "Submitting...", 45, '#ffff00', '#ffaa00', 10);
+            this.super.drawGlowText(context, 1280, 380, "Submitting...", 45, '#ffff00', '#ffaa00', 10, true);
         }
 
         // Name input state
         if (this.inputState === 'name') {
-            this.drawInputField(context, rX, rY, 900, 420, 560, 'name', this.playerName, this.maxNameLength, "Type your name...");
+            this.drawInputField(context, rX, rY, 1000, 420, 560, 'name', this.playerName, this.maxNameLength, "Type your name...");
 
             if (this.playerName.trim().length > 0) {
-                this.submitButton.draw(context);
+                this.nextButton.draw(context);
             } else {
                 context.save();
                 context.globalAlpha = 0.3;
-                this.submitButton.draw(context);
+                this.nextButton.draw(context);
                 context.restore();
             }
 
-            this.super.drawGlowText(context, 1000, 600, "Press ENTER to continue | ESC to skip", 22, '#666666', '#444444', 3);
+            this.super.drawGlowText(context, 1280, 620, "Press ENTER to continue | ESC to skip", 22, '#666666', '#444444', 3, true);
         }
 
         // Password input state
         if (this.inputState === 'password') {
-            this.super.drawGlowText(context, 910, 440, "Name: " + this.playerName, 32, '#888888', '#666666', 5);
-            this.drawInputField(context, rX, rY, 900, 470, 560, 'password', this.password, this.maxPasswordLength, "Enter password...");
+            this.super.drawGlowText(context, 1280, 420, "Name: " + this.playerName, 32, '#888888', '#666666', 5, true);
+            this.drawInputField(context, rX, rY, 1000, 450, 560, 'password', this.password, this.maxPasswordLength, "Enter password...");
             this.togglePasswordButton.draw(context);
 
             const reqColor = this.password.length >= 4 ? '#00ff88' : '#ff8888';
-            this.super.drawGlowText(context, 910, 560, "Min 4 characters", 22, reqColor, reqColor, 3);
+            this.super.drawGlowText(context, 1280, 540, "Min 4 characters", 22, reqColor, reqColor, 3, true);
 
             // Move button down for password state
             const originalY = this.submitButton.y;
-            this.submitButton.y = 590;
+            this.submitButton.y = 570;
 
             if (this.password.length >= 4) {
                 this.submitButton.draw(context);
@@ -635,7 +640,7 @@ export class NameInputMenu {
             // Show "Forgot Password?" link after failed login (below the button)
             if (this.showForgotPassword) {
                 const linkX = 1080 * rX;
-                const linkY = 655 * rY;
+                const linkY = 645 * rY;
                 const linkW = 200 * rX;
                 const linkH = 35 * rY;
                 const mouseX = game.input.mouseX;
@@ -644,32 +649,32 @@ export class NameInputMenu {
 
                 const linkColor = isHovered ? '#00ffff' : '#ffaa00';
                 const linkGlow = isHovered ? '#00ffff' : '#ff8800';
-                this.super.drawGlowText(context, 1080, 680, "Forgot Password?", 24, linkColor, linkGlow, isHovered ? 12 : 6);
+                this.super.drawGlowText(context, 1280, 670, "Forgot Password?", 24, linkColor, linkGlow, isHovered ? 12 : 6, true);
             }
 
-            this.super.drawGlowText(context, 970, 720, "Press ENTER to continue | ESC to cancel", 22, '#666666', '#444444', 3);
+            this.super.drawGlowText(context, 1280, 710, "Press ENTER to continue | ESC to cancel", 22, '#666666', '#444444', 3, true);
         }
 
         // Security question state
         if (this.inputState === 'security') {
             // Display selected question with navigation
             const question = SECURITY_QUESTIONS[this.selectedQuestionIndex];
-            this.super.drawGlowText(context, 970, 450, question, 28, '#ffaa00', '#ff8800', 8);
+            this.super.drawGlowText(context, 1280, 430, question, 28, '#ffaa00', '#ff8800', 8, true);
 
             // Question navigation buttons
             this.prevQuestionButton.draw(context);
             this.nextQuestionButton.draw(context);
 
             // Question counter
-            this.super.drawGlowText(context, 1250, 450, `${this.selectedQuestionIndex + 1}/${SECURITY_QUESTIONS.length}`, 22, '#666666', '#444444', 3);
+            this.super.drawGlowText(context, 1280, 460, `${this.selectedQuestionIndex + 1}/${SECURITY_QUESTIONS.length}`, 22, '#666666', '#444444', 3, true);
 
             // Answer input field
-            this.super.drawGlowText(context, 910, 510, "Your Answer:", 26, '#888888', '#666666', 5);
-            this.drawInputField(context, rX, rY, 900, 530, 560, 'securityAnswer', this.securityAnswer, this.maxAnswerLength, "Type your answer...");
+            this.super.drawGlowText(context, 1280, 500, "Your Answer:", 26, '#888888', '#666666', 5, true);
+            this.drawInputField(context, rX, rY, 1000, 520, 560, 'securityAnswer', this.securityAnswer, this.maxAnswerLength, "Type your answer...");
 
             // Move button down for security state
             const originalY = this.submitButton.y;
-            this.submitButton.y = 620;
+            this.submitButton.y = 610;
 
             // Submit button
             if (this.securityAnswer.trim().length >= 1) {
@@ -684,12 +689,12 @@ export class NameInputMenu {
             this.submitButton.y = originalY;
 
             // Instructions
-            this.super.drawGlowText(context, 930, 720, "Use arrows to change question | ENTER to submit", 22, '#666666', '#444444', 3);
+            this.super.drawGlowText(context, 1280, 710, "Use arrows to change question | ENTER to submit", 22, '#666666', '#444444', 3, true);
         }
 
         // Error message
         if (this.errorMessage) {
-            this.super.drawGlowText(context, 1050, 800, this.errorMessage, 28, '#ff4444', '#ff0000', 8);
+            this.super.drawGlowText(context, 1280, 780, this.errorMessage, 28, '#ff4444', '#ff0000', 8, true);
         }
     }
 
