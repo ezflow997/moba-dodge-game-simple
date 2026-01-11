@@ -469,11 +469,11 @@ export class Button {
 
         // Smooth hover transition
         if (this.isHovered) {
-            this.hoverProgress = Math.min(1, this.hoverProgress + 0.12);
-            this.glowIntensity = Math.min(20, this.glowIntensity + 2);
+            this.hoverProgress = Math.min(1, this.hoverProgress + 0.15);
+            this.glowIntensity = Math.min(20, this.glowIntensity + 3);
         } else {
-            this.hoverProgress = Math.max(0, this.hoverProgress - 0.08);
-            this.glowIntensity = Math.max(0, this.glowIntensity - 1.5);
+            this.hoverProgress = Math.max(0, this.hoverProgress - 0.25);
+            this.glowIntensity = Math.max(0, this.glowIntensity - 4);
         }
 
         // Update pulse

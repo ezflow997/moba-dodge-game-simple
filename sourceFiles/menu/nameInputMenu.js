@@ -533,14 +533,15 @@ export class NameInputMenu {
 
         if (value.length > 0) {
             const displayText = displayValue + (showCursor ? '|' : '');
-            this.super.drawGlowText(context, x + 20, y + 45, displayText, 40, '#00ff88', '#00ff00', 8);
+            this.super.drawGlowText(context, x + 20, y + 45, displayText, 36, '#00ff88', '#00ff00', 8);
         } else {
-            this.super.drawGlowText(context, x + 20, y + 45, showCursor ? '|' : '', 40, '#00ff88', '#00ff00', 8);
-            this.super.drawGlowText(context, x + 40, y + 45, placeholder, 35, '#555555', '#333333', 3);
+            this.super.drawGlowText(context, x + 20, y + 45, showCursor ? '|' : '', 36, '#00ff88', '#00ff00', 8);
+            // Placeholder text - smaller size for better fit
+            this.super.drawGlowText(context, x + 40, y + 42, placeholder, 28, '#555555', '#333333', 3);
         }
 
         // Character count
         const countText = `${value.length}/${maxLength}`;
-        this.super.drawGlowText(context, x + width - 100, y + 45, countText, 25, '#666666', '#444444', 3);
+        this.super.drawGlowText(context, x + width - 100, y + 45, countText, 22, '#666666', '#444444', 3);
     }
 }

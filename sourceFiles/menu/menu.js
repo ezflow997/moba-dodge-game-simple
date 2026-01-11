@@ -391,130 +391,132 @@ export class Menu{
         context.lineTo((panelX + panelW - 30) * rX, (panelY + 65) * rY);
         context.stroke();
 
-        const leftX = panelX + 40;
-        let y = panelY + 95;
-        const lineH = 32;
+        const leftX = (panelX + 40) * rX;
+        let y = (panelY + 95) * rY;
+        const lineH = 32 * rY;
+        const lineHSmall = 26 * rY;
+        const sectionGap = 38 * rY;
 
         // Objective section
         context.fillStyle = '#ffaa00';
         context.font = `bold ${22 * rX}px Arial`;
         context.textAlign = 'left';
-        context.fillText('OBJECTIVE', leftX * rX, y * rY);
+        context.fillText('OBJECTIVE', leftX, y);
         y += lineH;
 
         context.fillStyle = '#cccccc';
         context.font = `${17 * rX}px Arial`;
-        context.fillText('Survive as long as possible!', leftX * rX, y * rY);
-        y += lineH - 6;
-        context.fillText('Dodge enemies and projectiles.', leftX * rX, y * rY);
-        y += lineH - 6;
-        context.fillText('Shoot enemies to gain points.', leftX * rX, y * rY);
-        y += lineH + 6;
+        context.fillText('Survive as long as possible!', leftX, y);
+        y += lineHSmall;
+        context.fillText('Dodge enemies and projectiles.', leftX, y);
+        y += lineHSmall;
+        context.fillText('Shoot enemies to gain points.', leftX, y);
+        y += sectionGap;
 
         // Controls section - Mouse
         context.fillStyle = '#00ff88';
         context.font = `bold ${22 * rX}px Arial`;
-        context.fillText('MOUSE CONTROLS', leftX * rX, y * rY);
+        context.fillText('MOUSE CONTROLS', leftX, y);
         y += lineH;
 
         context.fillStyle = '#cccccc';
         context.font = `${17 * rX}px Arial`;
-        context.fillText('Right Click - Move to position', leftX * rX, y * rY);
-        y += lineH - 6;
-        context.fillText('Q - Shoot', leftX * rX, y * rY);
-        y += lineH - 6;
-        context.fillText('E - Dash (short invincibility)', leftX * rX, y * rY);
-        y += lineH - 6;
-        context.fillText('F - Ultimate (long dash)', leftX * rX, y * rY);
-        y += lineH - 6;
-        context.fillText('G - Stop moving', leftX * rX, y * rY);
-        y += lineH + 6;
+        context.fillText('Right Click - Move to position', leftX, y);
+        y += lineHSmall;
+        context.fillText('Q - Shoot', leftX, y);
+        y += lineHSmall;
+        context.fillText('E - Dash (short invincibility)', leftX, y);
+        y += lineHSmall;
+        context.fillText('F - Ultimate (long dash)', leftX, y);
+        y += lineHSmall;
+        context.fillText('G - Stop moving', leftX, y);
+        y += sectionGap;
 
         // Controls section - WASD
         context.fillStyle = '#ff8800';
         context.font = `bold ${22 * rX}px Arial`;
-        context.fillText('WASD CONTROLS', leftX * rX, y * rY);
+        context.fillText('WASD CONTROLS', leftX, y);
         y += lineH;
 
         context.fillStyle = '#cccccc';
         context.font = `${17 * rX}px Arial`;
-        context.fillText('WASD - Move directly', leftX * rX, y * rY);
-        y += lineH - 6;
-        context.fillText('Left Click - Shoot', leftX * rX, y * rY);
-        y += lineH - 6;
-        context.fillText('E - Dash toward mouse', leftX * rX, y * rY);
-        y += lineH - 6;
-        context.fillText('Q - Ultimate toward mouse', leftX * rX, y * rY);
-        y += lineH + 6;
+        context.fillText('WASD - Move directly', leftX, y);
+        y += lineHSmall;
+        context.fillText('Left Click - Shoot', leftX, y);
+        y += lineHSmall;
+        context.fillText('E - Dash toward mouse', leftX, y);
+        y += lineHSmall;
+        context.fillText('Q - Ultimate toward mouse', leftX, y);
+        y += sectionGap;
 
         // Shop section
         context.fillStyle = '#ffdd00';
         context.font = `bold ${22 * rX}px Arial`;
-        context.fillText('SHOP', leftX * rX, y * rY);
+        context.fillText('SHOP', leftX, y);
         y += lineH;
 
         context.fillStyle = '#cccccc';
         context.font = `${17 * rX}px Arial`;
-        context.fillText('Earn points by completing games.', leftX * rX, y * rY);
-        y += lineH - 6;
-        context.fillText('Higher difficulty = more points.', leftX * rX, y * rY);
-        y += lineH - 6;
-        context.fillText('Buy single-use or permanent items.', leftX * rX, y * rY);
-        y += lineH - 6;
-        context.fillText('Permanent unlocks have unlimited uses.', leftX * rX, y * rY);
-        y += lineH + 6;
+        context.fillText('Earn points by completing games.', leftX, y);
+        y += lineHSmall;
+        context.fillText('Higher difficulty = more points.', leftX, y);
+        y += lineHSmall;
+        context.fillText('Buy single-use or permanent items.', leftX, y);
+        y += lineHSmall;
+        context.fillText('Permanent unlocks have unlimited uses.', leftX, y);
+        y += sectionGap;
 
         // Loadout section
         context.fillStyle = '#00ddff';
         context.font = `bold ${22 * rX}px Arial`;
-        context.fillText('LOADOUT', leftX * rX, y * rY);
+        context.fillText('LOADOUT', leftX, y);
         y += lineH;
 
         context.fillStyle = '#cccccc';
         context.font = `${17 * rX}px Arial`;
-        context.fillText('Select owned items before starting.', leftX * rX, y * rY);
-        y += lineH - 6;
-        context.fillText('Start with weapons, shields, bonuses.', leftX * rX, y * rY);
-        y += lineH - 6;
-        context.fillText('Only one gun can be equipped.', leftX * rX, y * rY);
-        y += lineH - 6;
-        context.fillText('Only available in non-ranked games.', leftX * rX, y * rY);
-        y += lineH + 6;
+        context.fillText('Select owned items before starting.', leftX, y);
+        y += lineHSmall;
+        context.fillText('Start with weapons, shields, bonuses.', leftX, y);
+        y += lineHSmall;
+        context.fillText('Only one gun can be equipped.', leftX, y);
+        y += lineHSmall;
+        context.fillText('Only available in non-ranked games.', leftX, y);
+        y += sectionGap;
 
         // Ranked section
         context.fillStyle = '#ff5555';
         context.font = `bold ${22 * rX}px Arial`;
-        context.fillText('RANKED MODE', leftX * rX, y * rY);
+        context.fillText('RANKED MODE', leftX, y);
         y += lineH;
 
         context.fillStyle = '#cccccc';
         context.font = `${17 * rX}px Arial`;
-        context.fillText('Competitive mode - fixed HARD difficulty.', leftX * rX, y * rY);
-        y += lineH - 6;
-        context.fillText('No loadouts allowed - pure skill only.', leftX * rX, y * rY);
-        y += lineH - 6;
-        context.fillText('Compete for the highest score.', leftX * rX, y * rY);
-        y += lineH - 6;
-        context.fillText('Ranked games do not award shop points.', leftX * rX, y * rY);
-        y += lineH + 6;
+        context.fillText('Competitive mode - fixed HARD difficulty.', leftX, y);
+        y += lineHSmall;
+        context.fillText('No loadouts allowed - pure skill only.', leftX, y);
+        y += lineHSmall;
+        context.fillText('Compete for the highest score.', leftX, y);
+        y += lineHSmall;
+        context.fillText('Ranked games do not award shop points.', leftX, y);
+        y += sectionGap;
 
         // Tips section
         context.fillStyle = '#ff44ff';
         context.font = `bold ${22 * rX}px Arial`;
-        context.fillText('TIPS', leftX * rX, y * rY);
+        context.fillText('TIPS', leftX, y);
         y += lineH;
 
         context.fillStyle = '#cccccc';
         context.font = `${17 * rX}px Arial`;
-        context.fillText('Dashing costs points but saves lives!', leftX * rX, y * rY);
-        y += lineH - 6;
-        context.fillText('Kill streaks give bonus points.', leftX * rX, y * rY);
-        y += lineH - 6;
-        context.fillText('Collect powerups from boss drops.', leftX * rX, y * rY);
-        y += lineH - 6;
-        context.fillText('TAB switches weapon slots.', leftX * rX, y * rY);
-        y += lineH - 6;
-        context.fillText('ESC opens settings menu.', leftX * rX, y * rY);
+        context.fillText('Dashing costs points but saves lives!', leftX, y);
+        y += lineHSmall;
+        context.fillText('Kill streaks give bonus points.', leftX, y);
+        y += lineHSmall;
+        context.fillText('Collect powerups from boss drops.', leftX, y);
+        y += lineHSmall;
+        context.fillText('TAB switches weapon slots.', leftX, y);
+        y += lineHSmall;
+        context.fillText('ESC opens settings menu.', leftX, y);
 
         context.restore();
     }
