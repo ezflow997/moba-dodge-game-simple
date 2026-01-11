@@ -347,17 +347,13 @@ export class SpecialBullet {
                             this.bossHitX = this.x;
                             this.bossHitY = this.y;
                             this.hitBoss = true;
-                            console.log(`[HOMING] Missile ${this.targetPreference} HIT BOSS (health: ${enemy.health}/${enemy.maxHealth})`);
                             if (enemy.health <= 0) {
                                 enemy.isAlive = false;
                             }
-                        } else {
-                            console.log(`[HOMING] Missile ${this.targetPreference} hit boss but boss is invulnerable`);
                         }
                     } else {
                         // Mark regular enemy as hit so it gets killed
                         enemy.bulletCollision = true;
-                        console.log(`[HOMING] Missile ${this.targetPreference} HIT target`);
                     }
 
                     this.enemyCollision = true;
