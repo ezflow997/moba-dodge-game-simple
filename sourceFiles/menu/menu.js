@@ -495,6 +495,8 @@ export class Menu{
         context.fillText('Compete for the highest score.', leftX, y);
         y += lineHSmall;
         context.fillText('Ranked games do not award shop points.', leftX, y);
+        y += lineHSmall;
+        context.fillText('Season winners get animated names on leaderboards!', leftX, y);
         y += sectionGap;
 
         // Tips section

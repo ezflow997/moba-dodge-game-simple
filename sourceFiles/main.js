@@ -1226,8 +1226,18 @@ window.addEventListener('load', function () {
 				requestAnimationFrame(drawMenu);
 			}
 			else{
+				// Preserve loadout data before set_difficulty (which clears it)
+				const savedLoadoutRewards = game.pendingLoadoutRewards;
+				const savedUsedIds = game.usedLoadoutRewardIds;
+				const savedWeapon = game.pendingLoadoutWeapon;
+
 				game.game_time = window.performance.now();
 				game.set_difficulty();
+
+				// Restore loadout data after reset
+				game.pendingLoadoutRewards = savedLoadoutRewards;
+				game.usedLoadoutRewardIds = savedUsedIds;
+				game.pendingLoadoutWeapon = savedWeapon;
 
 				// Notify Poki that gameplay is starting
 				poki.gameplayStart();
