@@ -98,8 +98,10 @@ export class PauseMenu {
         this.keybindRightButton = new Button(btnX, 280 + btnSpace * 6, btnW, btnH, "Right: D", fontSize, 0, 0, false, true, 'white', 'white');
         // Pause button position varies by control scheme (set dynamically)
         this.keybindPauseButton = new Button(btnX, 280 + btnSpace * 4, btnW, btnH, "Pause: Escape", fontSize, 0, 0, false, true, 'white', 'white');
+        // Console button - only shown when dev mode is enabled (position set dynamically)
+        this.keybindConsoleButton = new Button(btnX, 280 + btnSpace * 5, btnW, btnH, "Console: `", fontSize, 0, 0, false, true, 'white', 'white');
         this.keybindBackButton = new Button(btnX, 280 + btnSpace * 5, btnW, btnH, "Back", fontSize, 0, 0, false, true, 'white', 'white');
-        this.waitingForKey = null; // 'q', 'e', 'f', 'move', 'up', 'down', 'left', 'right', or 'pause'
+        this.waitingForKey = null; // 'q', 'e', 'f', 'move', 'up', 'down', 'left', 'right', 'pause', or 'console'
 
         // Load custom keys from localStorage or use defaults
         const savedCustomKeys = localStorage.getItem('customKeys');
@@ -130,6 +132,9 @@ export class PauseMenu {
 
         // Pause key - load from localStorage or use default (Escape)
         this.pauseKey = localStorage.getItem('pauseKey') || 'Escape';
+
+        // Console key - load from localStorage or use default (backtick) - only used in dev mode
+        this.consoleKey = localStorage.getItem('consoleKey') || '`';
 
         // Update keybind button text based on loaded control scheme
         this.updateKeybindButtons();
@@ -380,6 +385,29 @@ export class PauseMenu {
                 // Valid key, assign it
                 this.pauseKey = pressedKey;
                 localStorage.setItem('pauseKey', this.pauseKey);
+                this.waitingForKey = null;
+                this.updateKeybindButtons();
+                if (window.gameSound) window.gameSound.playMenuClick();
+                return;
+            }
+
+            // Console key (only keyboard keys allowed)
+            if (this.waitingForKey === 'console') {
+                // Reject mouse buttons for console key
+                if (typeof pressedKey === 'number') {
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    this.keybindConsoleButton.text = "Console: Keyboard only!";
+                    setTimeout(() => {
+                        if (this.waitingForKey === 'console') {
+                            this.keybindConsoleButton.text = "Console: Press any key...";
+                        }
+                    }, 500);
+                    return;
+                }
+
+                // Valid key, assign it
+                this.consoleKey = pressedKey;
+                localStorage.setItem('consoleKey', this.consoleKey);
                 this.waitingForKey = null;
                 this.updateKeybindButtons();
                 if (window.gameSound) window.gameSound.playMenuClick();
@@ -775,6 +803,9 @@ export class PauseMenu {
                 this.keybindFButton.text = "Ult: Press any key...";
             }
 
+            // Check if dev mode is enabled for console keybind
+            const devModeEnabled = game.devMode && game.devMode.isEnabled();
+
             // Mouse mode: Move button
             if (this.controlScheme === 'mouse') {
                 this.keybindMoveButton.y = 280 + btnSpace * 3;
@@ -786,9 +817,15 @@ export class PauseMenu {
                     this.keybindWaitStart = performance.now();
                     this.keybindMoveButton.text = "Move: Press any key...";
                 }
-                // Pause and Back buttons for mouse mode
+                // Pause button for mouse mode
                 this.keybindPauseButton.y = 280 + btnSpace * 4;
-                this.keybindBackButton.y = 280 + btnSpace * 5;
+                // Console and Back buttons for mouse mode (console only if dev mode)
+                if (devModeEnabled) {
+                    this.keybindConsoleButton.y = 280 + btnSpace * 5;
+                    this.keybindBackButton.y = 280 + btnSpace * 6;
+                } else {
+                    this.keybindBackButton.y = 280 + btnSpace * 5;
+                }
             }
             // WASD mode: Direction buttons
             else {
@@ -831,9 +868,15 @@ export class PauseMenu {
                     this.keybindWaitStart = performance.now();
                     this.keybindRightButton.text = "Right: Press any key...";
                 }
-                // Pause and Back buttons for WASD mode
+                // Pause button for WASD mode
                 this.keybindPauseButton.y = 280 + btnSpace * 7;
-                this.keybindBackButton.y = 280 + btnSpace * 8;
+                // Console and Back buttons for WASD mode (console only if dev mode)
+                if (devModeEnabled) {
+                    this.keybindConsoleButton.y = 280 + btnSpace * 8;
+                    this.keybindBackButton.y = 280 + btnSpace * 9;
+                } else {
+                    this.keybindBackButton.y = 280 + btnSpace * 8;
+                }
             }
 
             this.keybindPauseButton.update(inX, inY);
@@ -843,6 +886,18 @@ export class PauseMenu {
                 this.waitingForKey = 'pause';
                 this.keybindWaitStart = performance.now();
                 this.keybindPauseButton.text = "Pause: Press any key...";
+            }
+
+            // Console button (only when dev mode is enabled)
+            if (devModeEnabled) {
+                this.keybindConsoleButton.update(inX, inY);
+                if (this.keybindConsoleButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked && !this.waitingForKey) {
+                    this.clicked = true;
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    this.waitingForKey = 'console';
+                    this.keybindWaitStart = performance.now();
+                    this.keybindConsoleButton.text = "Console: Press any key...";
+                }
             }
 
             this.keybindBackButton.update(inX, inY);
@@ -1125,6 +1180,12 @@ export class PauseMenu {
         let pauseKeyText = formatKey(this.pauseKey);
         if (pauseKeyText === ' ') pauseKeyText = 'Space';
         this.keybindPauseButton.text = `Pause: ${pauseKeyText}`;
+
+        // Console key (only shown in dev mode)
+        let consoleKeyText = formatKey(this.consoleKey);
+        if (consoleKeyText === '`') consoleKeyText = 'Backtick (`)';
+        if (consoleKeyText === ' ') consoleKeyText = 'Space';
+        this.keybindConsoleButton.text = `Console: ${consoleKeyText}`;
     }
 
     draw(context, game, inMainMenu = false) {
@@ -1291,12 +1352,21 @@ export class PauseMenu {
             // Draw Pause button (dynamically positioned in update())
             this.keybindPauseButton.draw(context);
 
-            // Calculate message Y position based on control scheme
-            const messageY = this.controlScheme === 'mouse' ? 700 : 955;
+            // Draw Console button (only when dev mode is enabled, dynamically positioned in update())
+            const devModeEnabled = game.devMode && game.devMode.isEnabled();
+            if (devModeEnabled) {
+                this.keybindConsoleButton.draw(context);
+            }
+
+            // Calculate message Y position based on control scheme and dev mode
+            let messageY = this.controlScheme === 'mouse' ? 700 : 955;
+            if (devModeEnabled) {
+                messageY += 85; // Extra space for console button
+            }
 
             // Draw waiting message or back button (not both to avoid overlap)
             if (this.waitingForKey) {
-                if (this.waitingForKey === 'pause') {
+                if (this.waitingForKey === 'pause' || this.waitingForKey === 'console') {
                     this.super.drawGlowText(context, 1280, messageY, "Press any keyboard key...", 32, '#ffff00', '#ffaa00', 8, true);
                     this.super.drawGlowText(context, 1280, messageY + 40, "(Mouse buttons not allowed)", 24, '#ff8888', '#ff4444', 6, true);
                 } else if (this.controlScheme === 'mouse' && this.waitingForKey !== 'move' && this.waitingForKey !== 'q') {

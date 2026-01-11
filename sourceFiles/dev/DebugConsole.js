@@ -62,9 +62,10 @@ export class DebugConsole {
         // Listen for typing when console is visible
         this.keydownHandler = (e) => {
             if (!this.visible) return;
-            
-            // Prevent tilde from being added to input
-            if (e.key === '`' || e.key === '~') {
+
+            // Prevent console key from being added to input
+            const consoleKey = localStorage.getItem('consoleKey') || '`';
+            if (e.key === consoleKey || (consoleKey === '`' && e.key === '~')) {
                 e.preventDefault();
                 return;
             }
@@ -167,16 +168,22 @@ export class DebugConsole {
         // Skip if dev mode not enabled
         if (!game.devMode || !game.devMode.isEnabled()) return;
 
-        // Check for tilde key in input buttons
-        const tildePressed = game.input.buttons.indexOf('`') > -1 || game.input.buttons.indexOf('~') > -1;
+        // Get the configured console key from localStorage (default to backtick)
+        const consoleKey = localStorage.getItem('consoleKey') || '`';
+
+        // Check for console key in input buttons (also check ~ as fallback for backtick)
+        let keyPressed = game.input.buttons.indexOf(consoleKey) > -1;
+        if (consoleKey === '`') {
+            keyPressed = keyPressed || game.input.buttons.indexOf('~') > -1;
+        }
 
         // Detect rising edge (key just pressed) - only toggle if dev mode is already enabled
-        if (tildePressed && !this.tildePressed) {
+        if (keyPressed && !this.tildePressed) {
             this.tildeJustPressed = true;
             this.toggle();
         }
 
-        this.tildePressed = tildePressed;
+        this.tildePressed = keyPressed;
         
         // Animation
         if (this.animating) {
