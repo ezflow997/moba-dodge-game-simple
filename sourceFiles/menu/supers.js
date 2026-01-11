@@ -717,3 +717,434 @@ function drawButtonEnhanced(ctx, btnX, btnY, btnW, btnH, hovered, text, textSize
 
     ctx.restore();
 }
+
+/**
+ * RetryWarningPopup - Shows warning when retrying with quantity-based loadout items
+ */
+export class RetryWarningPopup {
+    constructor() {
+        this.isVisible = false;
+        this.items = []; // Items that will be consumed { id, name, rarity, quantity, isPermanent, isDepleted, isRemoved }
+        this.depletedItems = []; // Items that were depleted during gameplay
+        this.scrollOffset = 0;
+        this.maxScrollOffset = 0;
+
+        // Buttons
+        this.retryButton = new Button(0, 0, 200, 50, 'Retry', 20, 0, 0, false, true, '#00ff88', '#00ff88');
+        this.cancelButton = new Button(0, 0, 200, 50, 'Cancel', 20, 0, 0, false, true, '#ff6666', '#ff6666');
+
+        // Item remove buttons (dynamically created)
+        this.removeButtons = [];
+
+        // Animation
+        this.fadeProgress = 0;
+    }
+
+    /**
+     * Show the popup with loadout info
+     * @param {Array} loadoutRewardsWithOwnership - Array of { reward, isPermanent, quantity }
+     * @param {Object} weaponInfo - { reward, isPermanent, quantity, usesRemaining }
+     * @param {Object} inventory - Current inventory { rewardId: { quantity, permanentUnlock } }
+     */
+    show(loadoutRewardsWithOwnership, weaponInfo, inventory) {
+        this.isVisible = true;
+        this.fadeProgress = 0;
+        this.scrollOffset = 0;
+        this.items = [];
+        this.depletedItems = [];
+        this.removeButtons = [];
+
+        // Process each loadout item
+        for (const item of loadoutRewardsWithOwnership) {
+            if (!item.isPermanent) {
+                const invData = inventory[item.reward.id] || { quantity: 0 };
+                const willBeDepleted = invData.quantity <= 1;
+
+                this.items.push({
+                    id: item.reward.id,
+                    name: item.reward.name,
+                    rarity: item.reward.rarity,
+                    quantity: invData.quantity,
+                    isPermanent: false,
+                    isDepleted: false, // Will set if weapon uses were exhausted
+                    willBeDepleted: willBeDepleted,
+                    isRemoved: false,
+                    isWeapon: item.reward.category === 'gun'
+                });
+            }
+        }
+
+        // Check weapon specifically for depletion during gameplay
+        if (weaponInfo && !weaponInfo.isPermanent) {
+            const weaponItem = this.items.find(i => i.id === weaponInfo.reward.id);
+            if (weaponItem) {
+                // If no uses remaining, weapon was depleted
+                if (weaponInfo.usesRemaining <= 0) {
+                    weaponItem.isDepleted = true;
+                }
+            }
+        }
+
+        // Create remove buttons for each item
+        for (let i = 0; i < this.items.length; i++) {
+            this.removeButtons.push(new Button(0, 0, 80, 30, 'Remove', 12, 0, 0, false, true, '#ff8888', '#ff6666'));
+        }
+    }
+
+    hide() {
+        this.isVisible = false;
+    }
+
+    /**
+     * Get the items that should be kept in the loadout (not removed)
+     */
+    getKeptItemIds() {
+        return this.items.filter(i => !i.isRemoved).map(i => i.id);
+    }
+
+    /**
+     * Get the items that were removed by the user
+     */
+    getRemovedItemIds() {
+        return this.items.filter(i => i.isRemoved).map(i => i.id);
+    }
+
+    /**
+     * Check if any non-permanent items exist in loadout
+     */
+    hasQuantityItems() {
+        return this.items.length > 0;
+    }
+
+    update(game) {
+        if (!this.isVisible) return null;
+
+        const rX = window.innerWidth / 2560;
+        const rY = window.innerHeight / 1440;
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+        const inX = game.input.inX;
+        const inY = game.input.inY;
+
+        // Fade in animation
+        if (this.fadeProgress < 1) {
+            this.fadeProgress = Math.min(1, this.fadeProgress + 0.08);
+        }
+
+        // Panel dimensions
+        const panelW = 700 * rX;
+        const panelH = 550 * rY;
+        const panelX = centerX - panelW / 2;
+        const panelY = centerY - panelH / 2;
+
+        // Update buttons
+        const btnY = panelY + panelH - 80 * rY;
+        const btnSpacing = 220 * rX;
+
+        this.retryButton.x = (centerX - btnSpacing / 2 - 100 * rX) / rX;
+        this.retryButton.y = btnY / rY;
+        this.retryButton.update(inX, inY);
+
+        this.cancelButton.x = (centerX + btnSpacing / 2 - 100 * rX) / rX;
+        this.cancelButton.y = btnY / rY;
+        this.cancelButton.update(inX, inY);
+
+        // Update item remove buttons
+        const itemStartY = panelY + 190 * rY;
+        const itemHeight = 60 * rY;
+        const itemsAreaHeight = panelH - 290 * rY;
+        const maxVisibleItems = Math.floor(itemsAreaHeight / itemHeight);
+
+        this.maxScrollOffset = Math.max(0, (this.items.length - maxVisibleItems) * itemHeight);
+
+        for (let i = 0; i < this.items.length; i++) {
+            const itemY = itemStartY + i * itemHeight - this.scrollOffset;
+
+            // Only update if visible
+            if (itemY >= itemStartY - itemHeight && itemY < itemStartY + itemsAreaHeight) {
+                const btnX = panelX + panelW - 110 * rX;
+                this.removeButtons[i].x = btnX / rX;
+                this.removeButtons[i].y = itemY / rY + 15;
+                this.removeButtons[i].text = this.items[i].isRemoved ? 'Restore' : 'Remove';
+                this.removeButtons[i].text_color = this.items[i].isRemoved ? '#88ff88' : '#ff8888';
+                this.removeButtons[i].border_color = this.items[i].isRemoved ? '#66cc66' : '#ff6666';
+                this.removeButtons[i].update(inX, inY);
+            }
+        }
+
+        // Handle clicks
+        const clicked = game.input.buttons.indexOf(0) > -1;
+        if (clicked) {
+            game.input.buttons = game.input.buttons.filter(b => b !== 0);
+
+            if (this.retryButton.isHovered) {
+                if (window.gameSound) window.gameSound.playMenuClick();
+                return 'retry';
+            }
+
+            if (this.cancelButton.isHovered) {
+                if (window.gameSound) window.gameSound.playMenuClick();
+                return 'cancel';
+            }
+
+            // Check remove button clicks
+            for (let i = 0; i < this.removeButtons.length; i++) {
+                const itemY = itemStartY + i * itemHeight - this.scrollOffset;
+                if (itemY >= itemStartY - itemHeight && itemY < itemStartY + itemsAreaHeight) {
+                    if (this.removeButtons[i].isHovered) {
+                        if (window.gameSound) window.gameSound.playMenuClick();
+                        this.items[i].isRemoved = !this.items[i].isRemoved;
+                    }
+                }
+            }
+        }
+
+        // Handle scroll
+        if (game.input.wheelDelta) {
+            this.scrollOffset = Math.max(0, Math.min(this.maxScrollOffset,
+                this.scrollOffset - game.input.wheelDelta * 30));
+            game.input.wheelDelta = 0;
+        }
+
+        return null;
+    }
+
+    draw(ctx) {
+        if (!this.isVisible) return;
+
+        const rX = window.innerWidth / 2560;
+        const rY = window.innerHeight / 1440;
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+        const time = performance.now() / 1000;
+
+        ctx.save();
+        ctx.globalAlpha = this.fadeProgress;
+
+        // Darkened background overlay
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+        ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+
+        // Panel dimensions
+        const panelW = 700 * rX;
+        const panelH = 550 * rY;
+        const panelX = centerX - panelW / 2;
+        const panelY = centerY - panelH / 2;
+        const radius = 15 * rX;
+
+        // Panel background gradient
+        const panelGradient = ctx.createLinearGradient(panelX, panelY, panelX, panelY + panelH);
+        panelGradient.addColorStop(0, 'rgba(40, 30, 50, 0.98)');
+        panelGradient.addColorStop(0.5, 'rgba(30, 25, 45, 0.98)');
+        panelGradient.addColorStop(1, 'rgba(25, 20, 40, 0.98)');
+
+        // Draw panel
+        this.drawRoundedRect(ctx, panelX, panelY, panelW, panelH, radius);
+        ctx.fillStyle = panelGradient;
+        ctx.fill();
+
+        // Glowing border (warning color - orange/yellow)
+        const borderPulse = 0.7 + Math.sin(time * 3) * 0.3;
+        ctx.shadowColor = '#ffaa00';
+        ctx.shadowBlur = 20 * rX * borderPulse;
+        ctx.strokeStyle = `rgba(255, 170, 0, ${borderPulse})`;
+        ctx.lineWidth = 3 * rX;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Warning icon (triangle with exclamation)
+        this.drawWarningIcon(ctx, centerX, panelY + 50 * rY, 30 * rX, time);
+
+        // Title
+        ctx.font = `bold ${32 * rX}px 'Segoe UI', Arial, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.shadowColor = '#ffaa00';
+        ctx.shadowBlur = 10 * rX;
+        ctx.fillStyle = '#ffcc00';
+        ctx.fillText('Loadout Warning', centerX, panelY + 100 * rY);
+        ctx.shadowBlur = 0;
+
+        // Subtitle
+        ctx.font = `${16 * rX}px 'Segoe UI', Arial, sans-serif`;
+        ctx.fillStyle = '#cccccc';
+        ctx.fillText('These items will be consumed when you return to the menu:', centerX, panelY + 135 * rY);
+        ctx.fillStyle = '#999999';
+        ctx.font = `${14 * rX}px 'Segoe UI', Arial, sans-serif`;
+        ctx.fillText('(Remove items now to keep them for later)', centerX, panelY + 158 * rY);
+
+        // Items list area
+        const itemStartY = panelY + 190 * rY;
+        const itemHeight = 60 * rY;
+        const itemsAreaHeight = panelH - 290 * rY;
+
+        // Clip items to visible area
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(panelX + 20 * rX, itemStartY - 5 * rY, panelW - 40 * rX, itemsAreaHeight + 10 * rY);
+        ctx.clip();
+
+        // Draw items
+        for (let i = 0; i < this.items.length; i++) {
+            const item = this.items[i];
+            const itemY = itemStartY + i * itemHeight - this.scrollOffset;
+
+            // Only draw if visible
+            if (itemY >= itemStartY - itemHeight && itemY < itemStartY + itemsAreaHeight + itemHeight) {
+                this.drawItemRow(ctx, panelX + 30 * rX, itemY, panelW - 60 * rX, itemHeight - 10 * rY, item, i, rX, rY);
+            }
+        }
+
+        ctx.restore();
+
+        // Scroll indicators
+        if (this.scrollOffset > 0) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.font = `${20 * rX}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.fillText('▲', centerX, itemStartY - 10 * rY);
+        }
+        if (this.scrollOffset < this.maxScrollOffset) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.font = `${20 * rX}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.fillText('▼', centerX, itemStartY + itemsAreaHeight + 15 * rY);
+        }
+
+        // Draw buttons
+        this.retryButton.draw(ctx);
+        this.cancelButton.draw(ctx);
+
+        // Draw remove buttons
+        for (let i = 0; i < this.removeButtons.length; i++) {
+            const itemY = itemStartY + i * itemHeight - this.scrollOffset;
+            if (itemY >= itemStartY - itemHeight && itemY < itemStartY + itemsAreaHeight) {
+                this.removeButtons[i].draw(ctx);
+            }
+        }
+
+        // Bottom hint
+        ctx.font = `${14 * rX}px 'Segoe UI', Arial, sans-serif`;
+        ctx.fillStyle = '#888888';
+        ctx.textAlign = 'center';
+        ctx.fillText('Remove items to keep them for future games', centerX, panelY + panelH - 25 * rY);
+
+        ctx.restore();
+    }
+
+    drawItemRow(ctx, x, y, w, h, item, index, rX, rY) {
+        const radius = 8 * rX;
+
+        // Background - different for removed items
+        const bgGradient = ctx.createLinearGradient(x, y, x, y + h);
+        if (item.isRemoved) {
+            bgGradient.addColorStop(0, 'rgba(40, 40, 40, 0.5)');
+            bgGradient.addColorStop(1, 'rgba(30, 30, 30, 0.5)');
+        } else if (item.isDepleted) {
+            bgGradient.addColorStop(0, 'rgba(80, 30, 30, 0.7)');
+            bgGradient.addColorStop(1, 'rgba(60, 20, 20, 0.7)');
+        } else if (item.willBeDepleted) {
+            bgGradient.addColorStop(0, 'rgba(80, 60, 20, 0.7)');
+            bgGradient.addColorStop(1, 'rgba(60, 40, 10, 0.7)');
+        } else {
+            bgGradient.addColorStop(0, 'rgba(30, 40, 60, 0.7)');
+            bgGradient.addColorStop(1, 'rgba(20, 30, 50, 0.7)');
+        }
+
+        this.drawRoundedRect(ctx, x, y, w, h, radius);
+        ctx.fillStyle = bgGradient;
+        ctx.fill();
+
+        // Border with rarity color
+        const rarityColor = item.rarity?.color || '#ffffff';
+        ctx.strokeStyle = item.isRemoved ? 'rgba(100, 100, 100, 0.5)' : rarityColor;
+        ctx.lineWidth = 2 * rX;
+        ctx.stroke();
+
+        // Item name
+        ctx.font = `${item.isRemoved ? 'normal' : 'bold'} ${18 * rX}px 'Segoe UI', Arial, sans-serif`;
+        ctx.textAlign = 'left';
+        ctx.fillStyle = item.isRemoved ? '#666666' : rarityColor;
+        if (item.isRemoved) {
+            // Strike-through effect
+            ctx.fillText(item.name, x + 15 * rX, y + h / 2 + 6 * rY);
+            ctx.strokeStyle = '#666666';
+            ctx.lineWidth = 1 * rX;
+            ctx.beginPath();
+            ctx.moveTo(x + 15 * rX, y + h / 2);
+            const textWidth = ctx.measureText(item.name).width;
+            ctx.lineTo(x + 15 * rX + textWidth, y + h / 2);
+            ctx.stroke();
+        } else {
+            ctx.fillText(item.name, x + 15 * rX, y + h / 2 + 6 * rY);
+        }
+
+        // Quantity indicator
+        ctx.font = `${14 * rX}px 'Segoe UI', Arial, sans-serif`;
+        const quantityX = x + 250 * rX;
+
+        if (item.isRemoved) {
+            ctx.fillStyle = '#88ff88';
+            ctx.fillText('(Kept - will not be consumed)', quantityX, y + h / 2 + 5 * rY);
+        } else if (item.isDepleted && item.willBeDepleted) {
+            ctx.fillStyle = '#ff6666';
+            ctx.fillText('Uses exhausted! Last one - remove to save', quantityX, y + h / 2 + 5 * rY);
+        } else if (item.isDepleted) {
+            ctx.fillStyle = '#ffaa00';
+            ctx.fillText(`Uses exhausted (${item.quantity} in inventory)`, quantityX, y + h / 2 + 5 * rY);
+        } else if (item.willBeDepleted) {
+            ctx.fillStyle = '#ffaa00';
+            ctx.fillText(`Last one! (${item.quantity} remaining)`, quantityX, y + h / 2 + 5 * rY);
+        } else {
+            ctx.fillStyle = '#aaaaaa';
+            ctx.fillText(`${item.quantity} remaining in inventory`, quantityX, y + h / 2 + 5 * rY);
+        }
+    }
+
+    drawRoundedRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+    }
+
+    drawWarningIcon(ctx, x, y, size, time) {
+        const pulse = 1 + Math.sin(time * 4) * 0.1;
+        const s = size * pulse;
+
+        ctx.save();
+        ctx.translate(x, y);
+
+        // Glow
+        ctx.shadowColor = '#ffaa00';
+        ctx.shadowBlur = 15;
+
+        // Triangle
+        ctx.fillStyle = '#ffcc00';
+        ctx.strokeStyle = '#ff8800';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, -s);
+        ctx.lineTo(s * 0.866, s * 0.5);
+        ctx.lineTo(-s * 0.866, s * 0.5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Exclamation mark
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#000000';
+        ctx.font = `bold ${s * 1.2}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('!', 0, s * 0.1);
+
+        ctx.restore();
+    }
+}

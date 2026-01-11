@@ -6,7 +6,7 @@ import { Bullets } from "./controller/bullets.js";
 import { Enemies } from "./controller/enemies.js";
 import { Display } from "./gameText/display.js";
 import { Menu } from "./menu/menu.js";
-import { superFunctions } from "./menu/supers.js";
+import { superFunctions, RetryWarningPopup } from "./menu/supers.js";
 import { EffectsManager } from "./effects/effects.js";
 import { SoundManager } from "./audio/soundManager.js";
 import { PauseMenu } from "./menu/pauseMenu.js";
@@ -77,6 +77,7 @@ window.addEventListener('load', function () {
 				this.accountMenu = new AccountMenu();
 				this.shopMenu = new ShopMenu();
 				this.loadoutMenu = new LoadoutMenu();
+				this.retryWarningPopup = new RetryWarningPopup();
 				this.playerName = localStorage.getItem('playerName') || '';
 				this.playerPassword = localStorage.getItem('playerPassword') || '';
 				this.sessionAccountCreated = sessionStorage.getItem('sessionAccountCreated') === 'true'; // Track if account was created this session
@@ -722,28 +723,117 @@ window.addEventListener('load', function () {
 						// Play click sound
 						if (window.gameSound) window.gameSound.playMenuClick();
 
-						// Clear game over state and restart immediately
-						game.showMessage = '';
-						game.retryButtonBounds = null;
-						game.pendingScore = null;
-						game.pendingRankedScore = null;
-						game.isRankedGame = false;
+						// Check if there are quantity-based items in loadout that need warning
+						const hasQuantityItems = game.pendingLoadoutRewards && game.pendingLoadoutRewards.length > 0 &&
+							game.pendingLoadoutRewards.some(r => {
+								const invData = game.loadoutMenu.inventory[r.id];
+								return invData && !invData.permanentUnlock;
+							});
 
-						// Reset dev mode session for new game
-						if (game.devMode) {
-							game.devMode.resetSession();
+						if (hasQuantityItems) {
+							// Build loadout info for warning popup
+							const loadoutWithOwnership = game.pendingLoadoutRewards.map(reward => {
+								const invData = game.loadoutMenu.inventory[reward.id] || {};
+								return {
+									reward: reward,
+									isPermanent: invData.permanentUnlock || false,
+									quantity: invData.quantity || 0
+								};
+							});
+
+							// Get weapon info with uses remaining
+							let weaponInfo = null;
+							if (game.pendingLoadoutWeapon && !game.pendingLoadoutWeapon.isPermanent) {
+								weaponInfo = {
+									reward: game.pendingLoadoutWeapon.reward,
+									isPermanent: false,
+									quantity: game.pendingLoadoutWeapon.quantity,
+									usesRemaining: game.rewardManager.loadoutWeaponUsesRemaining
+								};
+							}
+
+							// Show warning popup
+							game.retryWarningPopup.show(loadoutWithOwnership, weaponInfo, game.loadoutMenu.inventory);
+							game.input.buttons = game.input.buttons.filter(b => b !== 0); // Consume click
+						} else {
+							// No quantity items - proceed directly with retry
+							game.showMessage = '';
+							game.retryButtonBounds = null;
+							game.pendingScore = null;
+							game.pendingRankedScore = null;
+							game.isRankedGame = false;
+
+							if (game.devMode) {
+								game.devMode.resetSession();
+							}
+
+							game.gameOver = false;
+							game.game_time = window.performance.now();
+							game.set_difficulty();
+							poki.gameplayStart();
+
+							if (window.gameSound) {
+								window.gameSound.playGameMusic();
+							}
+
+							requestAnimationFrame(animate);
+							return;
+						}
+					}
+
+					// Handle retry warning popup if visible
+					if (game.retryWarningPopup.isVisible) {
+						const popupResult = game.retryWarningPopup.update(game);
+						game.retryWarningPopup.draw(ctx);
+
+						if (popupResult === 'retry') {
+							// Get removed item IDs and update the loadout
+							const removedIds = game.retryWarningPopup.getRemovedItemIds();
+
+							if (removedIds.length > 0) {
+								// Filter out removed items from pendingLoadoutRewards
+								game.pendingLoadoutRewards = game.pendingLoadoutRewards.filter(r => !removedIds.includes(r.id));
+
+								// Update usedLoadoutRewardIds
+								game.usedLoadoutRewardIds = game.usedLoadoutRewardIds.filter(id => !removedIds.includes(id));
+
+								// Clear weapon if it was removed
+								if (game.pendingLoadoutWeapon && removedIds.includes(game.pendingLoadoutWeapon.reward.id)) {
+									game.pendingLoadoutWeapon = null;
+								}
+
+								console.log('[LOADOUT] Removed items from loadout:', removedIds);
+							}
+
+							// Hide popup and proceed with retry
+							game.retryWarningPopup.hide();
+							game.showMessage = '';
+							game.retryButtonBounds = null;
+							game.pendingScore = null;
+							game.pendingRankedScore = null;
+							game.isRankedGame = false;
+
+							if (game.devMode) {
+								game.devMode.resetSession();
+							}
+
+							game.gameOver = false;
+							game.game_time = window.performance.now();
+							game.set_difficulty();
+							poki.gameplayStart();
+
+							if (window.gameSound) {
+								window.gameSound.playGameMusic();
+							}
+
+							requestAnimationFrame(animate);
+							return;
+						} else if (popupResult === 'cancel') {
+							// Hide popup and stay on game over screen
+							game.retryWarningPopup.hide();
 						}
 
-						// Start the game
-						game.gameOver = false;
-						game.game_time = window.performance.now();
-						game.set_difficulty();
-						poki.gameplayStart();
-
-						if (window.gameSound) {
-							window.gameSound.playGameMusic();
-						}
-
+						// Don't process other clicks while popup is visible
 						requestAnimationFrame(animate);
 						return;
 					}

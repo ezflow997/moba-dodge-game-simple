@@ -1313,10 +1313,15 @@ export class PauseMenu {
         }
         // Keybinds submenu
         else if (this.showKeybinds) {
-            // Calculate panel height based on control scheme
-            // Mouse mode: Shoot, Dash, Ult, Move, Pause, Back = 6 buttons (550 height)
-            // WASD mode: Shoot, Dash, Ult, Up, Down, Left, Right, Pause, Back = 9 buttons (805 height)
-            const panelHeight = this.controlScheme === 'mouse' ? 605 : 860;
+            // Calculate panel height based on control scheme and dev mode
+            // Mouse mode: Shoot, Dash, Ult, Move, Pause, Back = 6 buttons (605 height)
+            // WASD mode: Shoot, Dash, Ult, Up, Down, Left, Right, Pause, Back = 9 buttons (860 height)
+            // Dev mode adds Console button (+85 height)
+            const devModeEnabled = game.devMode && game.devMode.isEnabled();
+            let panelHeight = this.controlScheme === 'mouse' ? 605 : 860;
+            if (devModeEnabled) {
+                panelHeight += 85;
+            }
 
             // Draw keybinds background - centered like other panels
             context.save();
@@ -1353,7 +1358,6 @@ export class PauseMenu {
             this.keybindPauseButton.draw(context);
 
             // Draw Console button (only when dev mode is enabled, dynamically positioned in update())
-            const devModeEnabled = game.devMode && game.devMode.isEnabled();
             if (devModeEnabled) {
                 this.keybindConsoleButton.draw(context);
             }
