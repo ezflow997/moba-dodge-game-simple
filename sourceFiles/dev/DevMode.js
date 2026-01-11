@@ -57,6 +57,11 @@ export class DevMode {
         this.allAccounts = [];
         this.allAccountsLoading = false;
 
+        // Account search
+        this.accountSearchQuery = '';
+        this.accountSearchFocused = false;
+        this.maxSearchLength = 20;
+
         // Tab state: 'accounts' or 'online'
         this.activeTab = 'accounts';
 
@@ -66,6 +71,25 @@ export class DevMode {
         this.itemHeight = 28;
         this.visibleItems = 18; // Increased for larger panel
 
+        // Account selection for delete
+        this.selectedAccountIndex = -1;
+        this.deleteConfirmMode = false;
+        this.deleteInProgress = false;
+
+        // Security question mode
+        this.securityMode = false;
+        this.securityQuestions = [
+            "What is your favorite color?",
+            "What is your pet's name?",
+            "What city were you born in?",
+            "What is your favorite food?",
+            "What is your lucky number?"
+        ];
+        this.selectedSecurityQuestionIndex = 0;
+        this.securityAnswerInput = '';
+        this.securityInProgress = false;
+        this.maxAnswerLength = 30;
+
         // Button dimensions for hit detection
         this.devMenuButton = {
             x: 0, // Will be calculated based on screen width
@@ -73,6 +97,22 @@ export class DevMode {
             width: 40,
             height: 40
         };
+
+        // Set up keyboard listener for security input and search
+        this.keyHandler = (e) => {
+            if (this.securityMode && this.devMenuOpen) {
+                if (this.handleSecurityKeyInput(e.key)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            } else if (this.accountSearchFocused && this.devMenuOpen && this.activeTab === 'accounts') {
+                if (this.handleSearchKeyInput(e.key)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            }
+        };
+        document.addEventListener('keydown', this.keyHandler);
     }
     
     /**
@@ -467,6 +507,10 @@ export class DevMode {
             this.scrollOffset = 0;
             this.fetchAllAccounts();
             this.fetchOnlinePlayers();
+        } else {
+            // Reset search when closing
+            this.accountSearchQuery = '';
+            this.accountSearchFocused = false;
         }
     }
 
@@ -477,7 +521,200 @@ export class DevMode {
         if (this.activeTab !== tab) {
             this.activeTab = tab;
             this.scrollOffset = 0; // Reset scroll when switching tabs
+            this.selectedAccountIndex = -1; // Reset selection when switching tabs
+            this.deleteConfirmMode = false;
+            this.securityMode = false;
+            this.securityAnswerInput = '';
+            // Reset search when switching tabs
+            this.accountSearchQuery = '';
+            this.accountSearchFocused = false;
         }
+    }
+
+    /**
+     * Delete selected account
+     */
+    async deleteSelectedAccount() {
+        if (this.selectedAccountIndex < 0 || this.deleteInProgress) return;
+
+        const filteredAccounts = this.getFilteredAccounts();
+        const account = filteredAccounts[this.selectedAccountIndex];
+        if (!account) return;
+
+        this.deleteInProgress = true;
+
+        const isLocalhost = window.location.hostname === 'localhost' ||
+                           window.location.hostname === '127.0.0.1' ||
+                           window.location.hostname === '';
+        const apiBase = isLocalhost
+            ? 'https://moba-dodge-simple.vercel.app/api'
+            : '/api';
+
+        try {
+            const response = await fetch(`${apiBase}/delete-account`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ playerName: account.name })
+            });
+
+            if (response.ok) {
+                console.log(`[DevMode] Deleted account: ${account.name}`);
+                // Remove from original list (find by name since index may differ due to filtering)
+                const originalIndex = this.allAccounts.findIndex(a => a.name === account.name);
+                if (originalIndex >= 0) {
+                    this.allAccounts.splice(originalIndex, 1);
+                }
+                this.selectedAccountIndex = -1;
+                this.deleteConfirmMode = false;
+                // Update count
+                if (this.uniquePlayerCount) this.uniquePlayerCount--;
+            } else {
+                const error = await response.json();
+                console.error('[DevMode] Delete failed:', error);
+            }
+        } catch (error) {
+            console.error('[DevMode] Delete error:', error);
+        } finally {
+            this.deleteInProgress = false;
+        }
+    }
+
+    /**
+     * Set security question for selected account
+     */
+    async setSecurityQuestion() {
+        if (this.selectedAccountIndex < 0 || this.securityInProgress) return;
+        if (this.securityAnswerInput.trim().length < 1) return;
+
+        const filteredAccounts = this.getFilteredAccounts();
+        const account = filteredAccounts[this.selectedAccountIndex];
+        if (!account) return;
+
+        this.securityInProgress = true;
+
+        const isLocalhost = window.location.hostname === 'localhost' ||
+                           window.location.hostname === '127.0.0.1' ||
+                           window.location.hostname === '';
+        const apiBase = isLocalhost
+            ? 'https://moba-dodge-simple.vercel.app/api'
+            : '/api';
+
+        try {
+            const response = await fetch(`${apiBase}/admin-set-security`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    playerName: account.name,
+                    securityQuestion: this.securityQuestions[this.selectedSecurityQuestionIndex],
+                    securityAnswer: this.securityAnswerInput.trim()
+                })
+            });
+
+            if (response.ok) {
+                console.log(`[DevMode] Set security question for: ${account.name}`);
+                this.securityMode = false;
+                this.securityAnswerInput = '';
+            } else {
+                const error = await response.json();
+                console.error('[DevMode] Set security failed:', error);
+            }
+        } catch (error) {
+            console.error('[DevMode] Set security error:', error);
+        } finally {
+            this.securityInProgress = false;
+        }
+    }
+
+    /**
+     * Handle keyboard input for security answer
+     */
+    handleSecurityKeyInput(key) {
+        if (!this.securityMode) return false;
+
+        if (key === 'Backspace') {
+            this.securityAnswerInput = this.securityAnswerInput.slice(0, -1);
+            return true;
+        }
+
+        if (key === 'Escape') {
+            this.securityMode = false;
+            this.securityAnswerInput = '';
+            return true;
+        }
+
+        if (key === 'Enter' && this.securityAnswerInput.trim().length >= 1) {
+            this.setSecurityQuestion();
+            return true;
+        }
+
+        if (key === 'ArrowLeft' || key === 'ArrowUp') {
+            this.selectedSecurityQuestionIndex = (this.selectedSecurityQuestionIndex - 1 + this.securityQuestions.length) % this.securityQuestions.length;
+            return true;
+        }
+
+        if (key === 'ArrowRight' || key === 'ArrowDown') {
+            this.selectedSecurityQuestionIndex = (this.selectedSecurityQuestionIndex + 1) % this.securityQuestions.length;
+            return true;
+        }
+
+        // Regular character input
+        if (key.length === 1 && this.securityAnswerInput.length < this.maxAnswerLength) {
+            if (/^[a-zA-Z0-9 _\-]$/.test(key)) {
+                this.securityAnswerInput += key;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Handle keyboard input for account search
+     */
+    handleSearchKeyInput(key) {
+        if (!this.accountSearchFocused) return false;
+
+        if (key === 'Backspace') {
+            this.accountSearchQuery = this.accountSearchQuery.slice(0, -1);
+            this.scrollOffset = 0; // Reset scroll when search changes
+            this.selectedAccountIndex = -1; // Reset selection
+            return true;
+        }
+
+        if (key === 'Escape') {
+            this.accountSearchFocused = false;
+            return true;
+        }
+
+        if (key === 'Enter') {
+            this.accountSearchFocused = false;
+            return true;
+        }
+
+        // Regular character input
+        if (key.length === 1 && this.accountSearchQuery.length < this.maxSearchLength) {
+            if (/^[a-zA-Z0-9 _\-]$/.test(key)) {
+                this.accountSearchQuery += key;
+                this.scrollOffset = 0; // Reset scroll when search changes
+                this.selectedAccountIndex = -1; // Reset selection
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Get filtered accounts based on search query
+     */
+    getFilteredAccounts() {
+        if (!this.accountSearchQuery.trim()) {
+            return this.allAccounts;
+        }
+        const query = this.accountSearchQuery.toLowerCase();
+        return this.allAccounts.filter(account =>
+            account.name && account.name.toLowerCase().includes(query)
+        );
     }
 
     /**
@@ -486,7 +723,7 @@ export class DevMode {
     handleScroll(delta) {
         if (!this.devMenuOpen) return;
 
-        const currentList = this.activeTab === 'accounts' ? this.allAccounts : this.onlinePlayers;
+        const currentList = this.activeTab === 'accounts' ? this.getFilteredAccounts() : this.onlinePlayers;
         this.maxScrollOffset = Math.max(0, currentList.length - this.visibleItems);
 
         this.scrollOffset += delta > 0 ? 1 : -1;
@@ -544,12 +781,160 @@ export class DevMode {
                     return true;
                 }
 
-                // Click is inside panel but not on a tab - don't close
+                // Check security mode clicks
+                if (this.securityMode && this.activeTab === 'accounts' && this.selectedAccountIndex >= 0) {
+                    const modalW = 500 * rX;
+                    const modalH = 280 * rY;
+                    const modalX = (window.innerWidth - modalW) / 2;
+                    const modalY = (window.innerHeight - modalH) / 2;
+
+                    // Question navigation arrows
+                    const arrowY = modalY + 80 * rY;
+                    const arrowSize = 30 * rX;
+                    const leftArrowX = modalX + 20 * rX;
+                    const rightArrowX = modalX + modalW - 50 * rX;
+
+                    if (mouseY >= arrowY && mouseY <= arrowY + arrowSize) {
+                        if (mouseX >= leftArrowX && mouseX <= leftArrowX + arrowSize) {
+                            this.selectedSecurityQuestionIndex = (this.selectedSecurityQuestionIndex - 1 + this.securityQuestions.length) % this.securityQuestions.length;
+                            return true;
+                        }
+                        if (mouseX >= rightArrowX && mouseX <= rightArrowX + arrowSize) {
+                            this.selectedSecurityQuestionIndex = (this.selectedSecurityQuestionIndex + 1) % this.securityQuestions.length;
+                            return true;
+                        }
+                    }
+
+                    // Save and Cancel buttons
+                    const btnY = modalY + modalH - 60 * rY;
+                    const btnH = 40 * rY;
+                    const btnW = 120 * rX;
+                    const saveX = modalX + modalW / 2 - btnW - 15 * rX;
+                    const cancelX = modalX + modalW / 2 + 15 * rX;
+
+                    if (mouseY >= btnY && mouseY <= btnY + btnH) {
+                        if (mouseX >= saveX && mouseX <= saveX + btnW && this.securityAnswerInput.trim().length >= 1) {
+                            this.setSecurityQuestion();
+                            return true;
+                        }
+                        if (mouseX >= cancelX && mouseX <= cancelX + btnW) {
+                            this.securityMode = false;
+                            this.securityAnswerInput = '';
+                            return true;
+                        }
+                    }
+
+                    // Click inside modal - consume
+                    if (mouseX >= modalX && mouseX <= modalX + modalW &&
+                        mouseY >= modalY && mouseY <= modalY + modalH) {
+                        return true;
+                    }
+                }
+
+                // Check delete/security button clicks (only in accounts tab)
+                if (this.activeTab === 'accounts' && this.selectedAccountIndex >= 0 && !this.securityMode) {
+                    const btnY = panelY + panelH - 60 * rY;
+                    const btnH = 40 * rY;
+                    const btnW = 120 * rX;
+
+                    if (this.deleteConfirmMode) {
+                        // Confirm and Cancel buttons
+                        const confirmX = panelX + panelW / 2 - btnW - 10 * rX;
+                        const cancelX = panelX + panelW / 2 + 10 * rX;
+
+                        if (mouseY >= btnY && mouseY <= btnY + btnH) {
+                            if (mouseX >= confirmX && mouseX <= confirmX + btnW) {
+                                // Confirm delete
+                                this.deleteSelectedAccount();
+                                return true;
+                            }
+                            if (mouseX >= cancelX && mouseX <= cancelX + btnW) {
+                                // Cancel
+                                this.deleteConfirmMode = false;
+                                return true;
+                            }
+                        }
+                    } else {
+                        // Delete and Security buttons side by side
+                        const deleteX = panelX + panelW / 2 - btnW - 10 * rX;
+                        const securityX = panelX + panelW / 2 + 10 * rX;
+
+                        if (mouseY >= btnY && mouseY <= btnY + btnH) {
+                            if (mouseX >= deleteX && mouseX <= deleteX + btnW) {
+                                this.deleteConfirmMode = true;
+                                return true;
+                            }
+                            if (mouseX >= securityX && mouseX <= securityX + btnW) {
+                                this.securityMode = true;
+                                this.securityAnswerInput = '';
+                                this.selectedSecurityQuestionIndex = 0;
+                                return true;
+                            }
+                        }
+                    }
+                }
+
+                // Check search box click (only in accounts tab)
+                if (this.activeTab === 'accounts') {
+                    const contentY = tabY + tabH + 15 * rY;
+                    const contentX = panelX + 20 * rX;
+                    const contentW = panelW - 40 * rX;
+                    const searchBoxH = 30 * rY;
+
+                    if (mouseX >= contentX && mouseX <= contentX + contentW &&
+                        mouseY >= contentY && mouseY <= contentY + searchBoxH) {
+                        this.accountSearchFocused = true;
+                        return true;
+                    } else {
+                        // Click elsewhere unfocuses search
+                        this.accountSearchFocused = false;
+                    }
+                }
+
+                // Check account list clicks (only in accounts tab)
+                if (this.activeTab === 'accounts') {
+                    const filteredAccounts = this.getFilteredAccounts();
+                    if (filteredAccounts.length > 0) {
+                        const contentY = tabY + tabH + 15 * rY;
+                        const contentX = panelX + 20 * rX;
+                        const contentW = panelW - 40 * rX;
+                        const lineHeight = 32 * rY;
+                        // List starts below search box
+                        const listStartY = contentY + 45 * rY;
+
+                        const visibleStart = this.scrollOffset;
+                        const visibleEnd = Math.min(visibleStart + this.visibleItems, filteredAccounts.length);
+
+                        for (let i = visibleStart; i < visibleEnd; i++) {
+                            const rowY = listStartY + (i - visibleStart) * lineHeight - 8 * rY;
+                            const rowH = lineHeight - 4 * rY;
+
+                            if (mouseX >= contentX && mouseX <= contentX + contentW &&
+                                mouseY >= rowY && mouseY <= rowY + rowH) {
+                                if (this.selectedAccountIndex === i) {
+                                    // Deselect if clicking same row
+                                    this.selectedAccountIndex = -1;
+                                    this.deleteConfirmMode = false;
+                                } else {
+                                    this.selectedAccountIndex = i;
+                                    this.deleteConfirmMode = false;
+                                }
+                                return true;
+                            }
+                        }
+                    }
+                }
+
+                // Click is inside panel but not on interactive element - don't close
                 return true;
             }
 
             // Click outside panel - close it
             this.devMenuOpen = false;
+            this.selectedAccountIndex = -1;
+            this.deleteConfirmMode = false;
+            this.securityMode = false;
+            this.securityAnswerInput = '';
             return true;
         }
 
@@ -662,8 +1047,12 @@ export class DevMode {
         context.fillStyle = this.activeTab === 'accounts' ? '#00ff00' : '#666666';
         context.textAlign = 'center';
         context.shadowBlur = this.activeTab === 'accounts' ? 5 * rX : 0;
-        const accountsCount = this.allAccounts.length || this.uniquePlayerCount || 0;
-        context.fillText(`All Accounts (${accountsCount})`, panelX + tabW / 2, tabY + 26 * rY);
+        const totalAccounts = this.allAccounts.length || this.uniquePlayerCount || 0;
+        const filteredAccounts = this.getFilteredAccounts();
+        const accountsLabel = this.accountSearchQuery
+            ? `Accounts (${filteredAccounts.length}/${totalAccounts})`
+            : `All Accounts (${totalAccounts})`;
+        context.fillText(accountsLabel, panelX + tabW / 2, tabY + 26 * rY);
 
         // Online tab
         context.fillStyle = this.activeTab === 'online' ? 'rgba(0, 255, 0, 0.3)' : 'rgba(0, 50, 0, 0.5)';
@@ -681,8 +1070,42 @@ export class DevMode {
         const contentX = panelX + 20 * rX;
         const contentW = panelW - 40 * rX;
 
+        // Draw search box (only in accounts tab)
+        let listStartY = contentY + 10 * rY;
+        if (this.activeTab === 'accounts') {
+            const searchBoxH = 30 * rY;
+            const searchBoxY = contentY;
+
+            // Search box background
+            context.fillStyle = this.accountSearchFocused ? 'rgba(0, 100, 0, 0.5)' : 'rgba(0, 50, 0, 0.5)';
+            context.fillRect(contentX, searchBoxY, contentW, searchBoxH);
+            context.strokeStyle = this.accountSearchFocused ? '#00ff00' : '#006600';
+            context.lineWidth = 2 * rX;
+            context.strokeRect(contentX, searchBoxY, contentW, searchBoxH);
+
+            // Search icon/label
+            context.fillStyle = '#888888';
+            context.font = `${14 * rX}px monospace`;
+            context.textAlign = 'left';
+            context.fillText('Search:', contentX + 10 * rX, searchBoxY + 20 * rY);
+
+            // Search query text
+            context.fillStyle = '#ffffff';
+            const displayQuery = this.accountSearchQuery + (this.accountSearchFocused ? '|' : '');
+            context.fillText(displayQuery, contentX + 80 * rX, searchBoxY + 20 * rY);
+
+            // Hint text if empty
+            if (!this.accountSearchQuery && !this.accountSearchFocused) {
+                context.fillStyle = '#555555';
+                context.fillText('Click to search accounts...', contentX + 80 * rX, searchBoxY + 20 * rY);
+            }
+
+            // Adjust list start position to be below search box
+            listStartY = contentY + 45 * rY;
+        }
+
         // Draw list based on active tab
-        const currentList = this.activeTab === 'accounts' ? this.allAccounts : this.onlinePlayers;
+        const currentList = this.activeTab === 'accounts' ? this.getFilteredAccounts() : this.onlinePlayers;
         const isLoading = this.activeTab === 'accounts' ? this.allAccountsLoading : this.onlinePlayersLoading;
 
         // Update max scroll
@@ -693,7 +1116,6 @@ export class DevMode {
         context.shadowBlur = 0;
 
         const lineHeight = 32 * rY;
-        const listStartY = contentY + 10 * rY;
 
         if (isLoading && currentList.length === 0) {
             context.fillStyle = '#888888';
@@ -717,15 +1139,22 @@ export class DevMode {
             for (let i = visibleStart; i < visibleEnd; i++) {
                 const item = currentList[i];
                 const y = listStartY + (i - visibleStart) * lineHeight;
+                const isSelected = this.activeTab === 'accounts' && i === this.selectedAccountIndex;
 
-                // Row background (alternating)
-                if ((i - visibleStart) % 2 === 0) {
+                // Row background (alternating or selected)
+                if (isSelected) {
+                    context.fillStyle = 'rgba(255, 100, 100, 0.3)';
+                    context.fillRect(contentX, y - 8 * rY, contentW, lineHeight - 4 * rY);
+                    context.strokeStyle = '#ff4444';
+                    context.lineWidth = 2 * rX;
+                    context.strokeRect(contentX, y - 8 * rY, contentW, lineHeight - 4 * rY);
+                } else if ((i - visibleStart) % 2 === 0) {
                     context.fillStyle = 'rgba(0, 255, 0, 0.05)';
                     context.fillRect(contentX, y - 8 * rY, contentW, lineHeight - 4 * rY);
                 }
 
                 // Index number
-                context.fillStyle = '#555555';
+                context.fillStyle = isSelected ? '#ff8888' : '#555555';
                 context.textAlign = 'right';
                 context.fillText(`${i + 1}.`, contentX + 35 * rX, y + 12 * rY);
 
@@ -739,7 +1168,7 @@ export class DevMode {
                 }
 
                 // Player name
-                context.fillStyle = '#ffffff';
+                context.fillStyle = isSelected ? '#ffffff' : '#ffffff';
                 context.textAlign = 'left';
                 const nameX = this.activeTab === 'online' ? contentX + 65 * rX : contentX + 45 * rX;
                 const displayName = item.name.length > 25 ? item.name.substring(0, 25) + '...' : item.name;
@@ -777,11 +1206,216 @@ export class DevMode {
             }
         }
 
-        // Close hint
-        context.fillStyle = '#555555';
-        context.font = `${14 * rX}px monospace`;
-        context.textAlign = 'center';
-        context.fillText('Click outside to close', panelX + panelW / 2, panelY + panelH + 25 * rY);
+        // Action buttons (only in accounts tab when account is selected)
+        if (this.activeTab === 'accounts' && this.selectedAccountIndex >= 0 && !this.securityMode) {
+            const btnY = panelY + panelH - 60 * rY;
+            const btnH = 40 * rY;
+            const btnW = 120 * rX;
+
+            if (this.deleteConfirmMode) {
+                // Show confirm and cancel buttons
+                const confirmX = panelX + panelW / 2 - btnW - 10 * rX;
+                const cancelX = panelX + panelW / 2 + 10 * rX;
+
+                // Selected account name
+                const selectedAccount = this.getFilteredAccounts()[this.selectedAccountIndex];
+                context.font = `${14 * rX}px monospace`;
+                context.fillStyle = '#ff8888';
+                context.textAlign = 'center';
+                context.fillText(`Delete "${selectedAccount?.name}"?`, panelX + panelW / 2, btnY - 15 * rY);
+
+                // Confirm button (red)
+                context.fillStyle = this.deleteInProgress ? 'rgba(100, 50, 50, 0.8)' : 'rgba(150, 50, 50, 0.8)';
+                context.beginPath();
+                context.roundRect(confirmX, btnY, btnW, btnH, 8 * rX);
+                context.fill();
+                context.strokeStyle = '#ff4444';
+                context.lineWidth = 2 * rX;
+                context.stroke();
+
+                context.font = `bold ${14 * rX}px monospace`;
+                context.fillStyle = this.deleteInProgress ? '#888888' : '#ffffff';
+                context.textAlign = 'center';
+                context.fillText(this.deleteInProgress ? 'Deleting...' : 'CONFIRM', confirmX + btnW / 2, btnY + 26 * rY);
+
+                // Cancel button (gray)
+                context.fillStyle = 'rgba(80, 80, 80, 0.8)';
+                context.beginPath();
+                context.roundRect(cancelX, btnY, btnW, btnH, 8 * rX);
+                context.fill();
+                context.strokeStyle = '#888888';
+                context.stroke();
+
+                context.fillStyle = '#ffffff';
+                context.fillText('Cancel', cancelX + btnW / 2, btnY + 26 * rY);
+            } else {
+                // Show Delete and Security buttons side by side
+                const deleteX = panelX + panelW / 2 - btnW - 10 * rX;
+                const securityX = panelX + panelW / 2 + 10 * rX;
+
+                // Delete button (red)
+                context.fillStyle = 'rgba(150, 50, 50, 0.8)';
+                context.beginPath();
+                context.roundRect(deleteX, btnY, btnW, btnH, 8 * rX);
+                context.fill();
+                context.strokeStyle = '#ff4444';
+                context.lineWidth = 2 * rX;
+                context.stroke();
+
+                context.font = `bold ${14 * rX}px monospace`;
+                context.fillStyle = '#ffffff';
+                context.textAlign = 'center';
+                context.fillText('DELETE', deleteX + btnW / 2, btnY + 26 * rY);
+
+                // Security button (blue)
+                context.fillStyle = 'rgba(50, 100, 150, 0.8)';
+                context.beginPath();
+                context.roundRect(securityX, btnY, btnW, btnH, 8 * rX);
+                context.fill();
+                context.strokeStyle = '#4488ff';
+                context.stroke();
+
+                context.fillStyle = '#ffffff';
+                context.fillText('SECURITY', securityX + btnW / 2, btnY + 26 * rY);
+
+                // Hint text
+                context.font = `${11 * rX}px monospace`;
+                context.fillStyle = '#888888';
+                context.fillText('Select account to delete or set security question', panelX + panelW / 2, btnY + 55 * rY);
+            }
+        } else if (this.activeTab === 'accounts' && !this.securityMode) {
+            // Show hint to select an account
+            context.font = `${14 * rX}px monospace`;
+            context.fillStyle = '#666666';
+            context.textAlign = 'center';
+            context.fillText('Click an account to select it', panelX + panelW / 2, panelY + panelH - 30 * rY);
+        }
+
+        // Security question modal
+        if (this.securityMode && this.selectedAccountIndex >= 0) {
+            const selectedAccount = this.getFilteredAccounts()[this.selectedAccountIndex];
+            const modalW = 500 * rX;
+            const modalH = 310 * rY;
+            const modalX = (window.innerWidth - modalW) / 2;
+            const modalY = (window.innerHeight - modalH) / 2;
+
+            // Modal background
+            context.fillStyle = 'rgba(0, 20, 40, 0.98)';
+            context.beginPath();
+            context.roundRect(modalX, modalY, modalW, modalH, 12 * rX);
+            context.fill();
+            context.strokeStyle = '#4488ff';
+            context.lineWidth = 3 * rX;
+            context.stroke();
+
+            // Title
+            context.font = `bold ${20 * rX}px monospace`;
+            context.fillStyle = '#4488ff';
+            context.textAlign = 'center';
+            context.fillText('SET SECURITY QUESTION', modalX + modalW / 2, modalY + 35 * rY);
+
+            // Account name
+            context.font = `${14 * rX}px monospace`;
+            context.fillStyle = '#aaaaaa';
+            context.fillText(`Account: ${selectedAccount?.name}`, modalX + modalW / 2, modalY + 55 * rY);
+
+            // Question with navigation arrows
+            const arrowY = modalY + 75 * rY;
+            const arrowSize = 30 * rX;
+
+            // Left arrow
+            context.fillStyle = '#4488ff';
+            context.font = `bold ${24 * rX}px monospace`;
+            context.textAlign = 'center';
+            context.fillText('<', modalX + 35 * rX, arrowY + 22 * rY);
+
+            // Question text
+            context.font = `${14 * rX}px monospace`;
+            context.fillStyle = '#ffaa00';
+            const question = this.securityQuestions[this.selectedSecurityQuestionIndex];
+            context.fillText(question, modalX + modalW / 2, arrowY + 20 * rY);
+
+            // Right arrow
+            context.font = `bold ${24 * rX}px monospace`;
+            context.fillStyle = '#4488ff';
+            context.fillText('>', modalX + modalW - 35 * rX, arrowY + 22 * rY);
+
+            // Question counter
+            context.font = `${12 * rX}px monospace`;
+            context.fillStyle = '#666666';
+            context.fillText(`${this.selectedSecurityQuestionIndex + 1}/${this.securityQuestions.length}`, modalX + modalW / 2, arrowY + 45 * rY);
+
+            // Answer input field
+            const inputX = modalX + 40 * rX;
+            const inputY = modalY + 140 * rY;
+            const inputW = modalW - 80 * rX;
+            const inputH = 40 * rY;
+
+            context.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            context.fillRect(inputX, inputY, inputW, inputH);
+            context.strokeStyle = '#4488ff';
+            context.lineWidth = 2 * rX;
+            context.strokeRect(inputX, inputY, inputW, inputH);
+
+            // Answer text
+            context.font = `${16 * rX}px monospace`;
+            context.fillStyle = this.securityAnswerInput.length > 0 ? '#00ff88' : '#555555';
+            context.textAlign = 'left';
+            const displayText = this.securityAnswerInput.length > 0 ? this.securityAnswerInput : 'Type your answer...';
+            context.fillText(displayText, inputX + 10 * rX, inputY + 26 * rY);
+
+            // Character count
+            context.font = `${12 * rX}px monospace`;
+            context.fillStyle = '#666666';
+            context.textAlign = 'right';
+            context.fillText(`${this.securityAnswerInput.length}/${this.maxAnswerLength}`, inputX + inputW - 10 * rX, inputY + 26 * rY);
+
+            // Buttons
+            const btnY = modalY + modalH - 80 * rY;
+            const btnH = 40 * rY;
+            const btnW = 120 * rX;
+            const saveX = modalX + modalW / 2 - btnW - 15 * rX;
+            const cancelX = modalX + modalW / 2 + 15 * rX;
+
+            // Save button (green when valid)
+            const canSave = this.securityAnswerInput.trim().length >= 1;
+            context.fillStyle = canSave ? 'rgba(50, 150, 50, 0.8)' : 'rgba(50, 80, 50, 0.5)';
+            context.beginPath();
+            context.roundRect(saveX, btnY, btnW, btnH, 8 * rX);
+            context.fill();
+            context.strokeStyle = canSave ? '#44ff44' : '#446644';
+            context.lineWidth = 2 * rX;
+            context.stroke();
+
+            context.font = `bold ${14 * rX}px monospace`;
+            context.fillStyle = canSave ? '#ffffff' : '#666666';
+            context.textAlign = 'center';
+            context.fillText(this.securityInProgress ? 'Saving...' : 'SAVE', saveX + btnW / 2, btnY + 26 * rY);
+
+            // Cancel button
+            context.fillStyle = 'rgba(80, 80, 80, 0.8)';
+            context.beginPath();
+            context.roundRect(cancelX, btnY, btnW, btnH, 8 * rX);
+            context.fill();
+            context.strokeStyle = '#888888';
+            context.stroke();
+
+            context.fillStyle = '#ffffff';
+            context.fillText('Cancel', cancelX + btnW / 2, btnY + 26 * rY);
+
+            // Instructions
+            context.font = `${11 * rX}px monospace`;
+            context.fillStyle = '#666666';
+            context.fillText('Use arrows to change question | Type answer | Enter to save', modalX + modalW / 2, modalY + modalH - 10 * rY);
+        }
+
+        // Close hint (only show when not in security mode)
+        if (!this.securityMode) {
+            context.fillStyle = '#555555';
+            context.font = `${14 * rX}px monospace`;
+            context.textAlign = 'center';
+            context.fillText('Click outside to close', panelX + panelW / 2, panelY + panelH + 25 * rY);
+        }
 
         context.restore();
     }
