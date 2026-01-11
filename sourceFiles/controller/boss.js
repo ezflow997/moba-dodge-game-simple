@@ -130,6 +130,13 @@ export class Boss {
                 if (game.devMode && game.devMode.isEnabled() && game.devMode.godMode) {
                     // God mode - destroy projectile but don't kill player
                     proj.destroy = true;
+                } else if (game.rewardManager && game.rewardManager.canSurviveHit(true)) {
+                    // Shield or extra life blocked the projectile
+                    proj.destroy = true;
+                    if (game.effects) {
+                        game.effects.spawnBurst(proj.x, proj.y, 'shieldBlock');
+                        game.world.shake(5, 10);
+                    }
                 } else {
                     game.gameOver = true;
                     proj.destroy = true;
@@ -151,6 +158,9 @@ export class Boss {
 
         const projectile = new BossProjectile(spawnX, spawnY, player.x, player.y, 12, 15);
         this.projectiles.push(projectile);
+
+        // Play shooter boss unique sound
+        if (window.gameSound) window.gameSound.playShooterBossShoot();
 
         if (this.phase >= 3) {
             const spreadAngle = 0.3;

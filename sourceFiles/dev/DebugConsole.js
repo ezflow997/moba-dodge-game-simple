@@ -135,18 +135,18 @@ export class DebugConsole {
      * Update console state
      */
     update(game) {
-        // Handle tilde key press for toggle (only when dev mode is enabled)
+        // Skip if dev mode not enabled
         if (!game.devMode || !game.devMode.isEnabled()) return;
-        
+
         // Check for tilde key in input buttons
         const tildePressed = game.input.buttons.indexOf('`') > -1 || game.input.buttons.indexOf('~') > -1;
-        
-        // Detect rising edge (key just pressed)
+
+        // Detect rising edge (key just pressed) - only toggle if dev mode is already enabled
         if (tildePressed && !this.tildePressed) {
             this.tildeJustPressed = true;
             this.toggle();
         }
-        
+
         this.tildePressed = tildePressed;
         
         // Animation

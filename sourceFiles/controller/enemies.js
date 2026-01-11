@@ -2,6 +2,7 @@ import { Enemy } from "./enemy.js";
 import { Boss } from "./boss.js";
 import { ChargeBoss } from "./chargeBoss.js";
 import { VortexBoss } from "./vortexBoss.js";
+import { PhantomBoss } from "./phantomBoss.js";
 
 export class Enemies {
     constructor(){
@@ -396,17 +397,18 @@ export class Enemies {
         // Clear existing enemies when boss spawns
         this.enemiesList = [];
 
-        // Randomly choose boss type (50/50 chance)
+        // Randomly choose boss type (25% chance each)
         const rand = Math.random();
         let bossType;
-        if (rand < 0.33) {
+        if (rand < 0.25) {
             bossType = 'shooter';
-        } else if (rand < 0.66) {
+        } else if (rand < 0.5) {
             bossType = 'charger';
-        } else {
+        } else if (rand < 0.75) {
             bossType = 'vortex';
+        } else {
+            bossType = 'phantom';
         }
-        //bossType = 'vortex';
 
         // Create boss at right side of screen
         const spawnX = game.width + 150;
@@ -424,11 +426,17 @@ export class Enemies {
             if (game.effects) {
                 game.effects.addScreenFlash('#aa00ff', 500, 0.3);
             }
-        } else {
+        } else if (bossType === 'vortex') {
             this.boss = new VortexBoss(spawnX, spawnY);
             // Magenta flash for vortex boss
             if (game.effects) {
                 game.effects.addScreenFlash('#ff00ff', 500, 0.3);
+            }
+        } else {
+            this.boss = new PhantomBoss(spawnX, spawnY);
+            // Green flash for phantom boss
+            if (game.effects) {
+                game.effects.addScreenFlash('#00ff66', 500, 0.3);
             }
         }
         

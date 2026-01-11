@@ -39,6 +39,40 @@ export class DevMode {
         this.fps = 0;
         this.lastFPSUpdate = 0;
         this.frameCount = 0;
+
+        // Player count tracking
+        this.uniquePlayerCount = null;
+        this.playerCountLoading = false;
+        this.playerCountError = false;
+        this.lastPlayerCountFetch = 0;
+        this.playerCountFetchInterval = 60000; // Refresh every 60 seconds
+
+        // Dev menu state (player stats panel)
+        this.devMenuOpen = false;
+        this.onlinePlayers = [];
+        this.onlinePlayersLoading = false;
+        this.lastOnlinePlayersFetch = 0;
+
+        // All accounts list
+        this.allAccounts = [];
+        this.allAccountsLoading = false;
+
+        // Tab state: 'accounts' or 'online'
+        this.activeTab = 'accounts';
+
+        // Scroll state for lists
+        this.scrollOffset = 0;
+        this.maxScrollOffset = 0;
+        this.itemHeight = 28;
+        this.visibleItems = 12;
+
+        // Button dimensions for hit detection
+        this.devMenuButton = {
+            x: 0, // Will be calculated based on screen width
+            y: 10,
+            width: 40,
+            height: 40
+        };
     }
     
     /**
@@ -180,7 +214,7 @@ export class DevMode {
             context.fillText('[FREE CAM]', 10, currentY);
             currentY += lineHeight;
         }
-        
+
         context.restore();
     }
     
@@ -347,4 +381,344 @@ export class DevMode {
         
         context.restore();
     }
+
+    /**
+     * Fetch unique player count from API (basic count only)
+     */
+    async fetchPlayerCount() {
+        // This is now only used for background refresh, not for display
+    }
+
+    /**
+     * Fetch all accounts list from API
+     */
+    async fetchAllAccounts() {
+        if (this.allAccountsLoading) return;
+
+        this.allAccountsLoading = true;
+
+        const isLocalhost = window.location.hostname === 'localhost' ||
+                           window.location.hostname === '127.0.0.1' ||
+                           window.location.hostname === '';
+        const apiBase = isLocalhost
+            ? 'https://moba-dodge-simple.vercel.app/api'
+            : '/api';
+
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+            const response = await fetch(`${apiBase}/player-count?list=true`, { signal: controller.signal });
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+                const data = await response.json();
+                this.uniquePlayerCount = data.registeredPlayers;
+                this.allAccounts = data.accounts || [];
+            }
+        } catch (error) {
+            console.error('Failed to fetch all accounts:', error);
+        } finally {
+            this.allAccountsLoading = false;
+        }
+    }
+
+    /**
+     * Fetch online players list from API
+     */
+    async fetchOnlinePlayers() {
+        if (this.onlinePlayersLoading) return;
+
+        this.onlinePlayersLoading = true;
+
+        const isLocalhost = window.location.hostname === 'localhost' ||
+                           window.location.hostname === '127.0.0.1' ||
+                           window.location.hostname === '';
+        const apiBase = isLocalhost
+            ? 'https://moba-dodge-simple.vercel.app/api'
+            : '/api';
+
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+            const response = await fetch(`${apiBase}/presence?list=true`, { signal: controller.signal });
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+                const data = await response.json();
+                this.onlinePlayers = data.players || [];
+            }
+        } catch (error) {
+            console.error('Failed to fetch online players:', error);
+        } finally {
+            this.onlinePlayersLoading = false;
+            this.lastOnlinePlayersFetch = performance.now();
+        }
+    }
+
+    /**
+     * Toggle dev menu open/closed
+     */
+    toggleDevMenu() {
+        this.devMenuOpen = !this.devMenuOpen;
+        if (this.devMenuOpen) {
+            // Reset scroll and fetch fresh data when opening
+            this.scrollOffset = 0;
+            this.fetchAllAccounts();
+            this.fetchOnlinePlayers();
+        }
+    }
+
+    /**
+     * Switch active tab
+     */
+    setActiveTab(tab) {
+        if (this.activeTab !== tab) {
+            this.activeTab = tab;
+            this.scrollOffset = 0; // Reset scroll when switching tabs
+        }
+    }
+
+    /**
+     * Handle scroll for the list
+     */
+    handleScroll(delta) {
+        if (!this.devMenuOpen) return;
+
+        const currentList = this.activeTab === 'accounts' ? this.allAccounts : this.onlinePlayers;
+        this.maxScrollOffset = Math.max(0, currentList.length - this.visibleItems);
+
+        this.scrollOffset += delta > 0 ? 1 : -1;
+        this.scrollOffset = Math.max(0, Math.min(this.scrollOffset, this.maxScrollOffset));
+    }
+
+    /**
+     * Handle click for dev menu button
+     * @returns {boolean} True if click was handled
+     */
+    handleClick(mouseX, mouseY) {
+        if (!this.enabled) return false;
+
+        const rX = window.innerWidth / 2560;
+        const rY = window.innerHeight / 1440;
+
+        // Update button position based on screen width
+        this.devMenuButton.x = window.innerWidth - 55;
+
+        const btn = this.devMenuButton;
+        const scaledX = btn.x;
+        const scaledY = btn.y * rX;
+        const scaledW = btn.width * rX;
+        const scaledH = btn.height * rX;
+
+        if (mouseX >= scaledX && mouseX <= scaledX + scaledW &&
+            mouseY >= scaledY && mouseY <= scaledY + scaledH) {
+            this.toggleDevMenu();
+            return true;
+        }
+
+        // If menu is open, handle panel interactions
+        if (this.devMenuOpen) {
+            // Panel dimensions (centered)
+            const panelW = 500 * rX;
+            const panelH = 550 * rY;
+            const panelX = (window.innerWidth - panelW) / 2;
+            const panelY = (window.innerHeight - panelH) / 2;
+
+            // Check if click is inside panel
+            if (mouseX >= panelX && mouseX <= panelX + panelW &&
+                mouseY >= panelY && mouseY <= panelY + panelH) {
+
+                // Check tab clicks
+                const tabY = panelY + 50 * rY;
+                const tabH = 40 * rY;
+                const tabW = panelW / 2;
+
+                if (mouseY >= tabY && mouseY <= tabY + tabH) {
+                    if (mouseX < panelX + tabW) {
+                        this.setActiveTab('accounts');
+                    } else {
+                        this.setActiveTab('online');
+                    }
+                    return true;
+                }
+
+                // Click is inside panel but not on a tab - don't close
+                return true;
+            }
+
+            // Click outside panel - close it
+            this.devMenuOpen = false;
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Draw the dev menu button (top right)
+     */
+    drawDevMenuButton(context) {
+        if (!this.enabled) return;
+
+        const rX = window.innerWidth / 2560;
+        const x = window.innerWidth - 55;
+        const y = 10 * rX;
+        const size = 40 * rX;
+
+        // Update button position for hit detection
+        this.devMenuButton.x = x;
+
+        context.save();
+
+        // Button background
+        context.fillStyle = this.devMenuOpen ? 'rgba(0, 255, 0, 0.3)' : 'rgba(0, 100, 0, 0.5)';
+        context.strokeStyle = '#00ff00';
+        context.lineWidth = 2 * rX;
+        context.shadowColor = '#00ff00';
+        context.shadowBlur = 8 * rX;
+
+        context.beginPath();
+        context.roundRect(x, y, size, size, 8 * rX);
+        context.fill();
+        context.stroke();
+
+        // Icon (users/people icon using simple shapes)
+        context.fillStyle = '#00ff00';
+        context.shadowBlur = 4 * rX;
+
+        const centerX = x + size / 2;
+        const centerY = y + size / 2;
+        const iconScale = rX * 0.8;
+
+        // Draw simple person icon (head + body)
+        // Head
+        context.beginPath();
+        context.arc(centerX, centerY - 8 * iconScale, 6 * iconScale, 0, Math.PI * 2);
+        context.fill();
+
+        // Body
+        context.beginPath();
+        context.arc(centerX, centerY + 8 * iconScale, 10 * iconScale, Math.PI, 0);
+        context.fill();
+
+        context.restore();
+    }
+
+    /**
+     * Draw the dev menu panel
+     */
+    drawDevMenuPanel(context) {
+        if (!this.enabled || !this.devMenuOpen) return;
+
+        const rX = window.innerWidth / 2560;
+        const panelX = window.innerWidth - 320 * rX;
+        const panelY = 60 * rX;
+        const panelW = 300 * rX;
+        const panelH = 400 * rX;
+
+        context.save();
+
+        // Panel background
+        context.fillStyle = 'rgba(0, 20, 0, 0.95)';
+        context.strokeStyle = '#00ff00';
+        context.lineWidth = 2 * rX;
+        context.shadowColor = '#00ff00';
+        context.shadowBlur = 15 * rX;
+
+        context.beginPath();
+        context.roundRect(panelX, panelY, panelW, panelH, 10 * rX);
+        context.fill();
+        context.stroke();
+
+        // Title
+        context.font = `bold ${20 * rX}px monospace`;
+        context.fillStyle = '#00ff00';
+        context.textAlign = 'center';
+        context.shadowBlur = 5 * rX;
+        context.fillText('DEV STATS', panelX + panelW / 2, panelY + 30 * rX);
+
+        // Divider line
+        context.strokeStyle = 'rgba(0, 255, 0, 0.5)';
+        context.lineWidth = 1;
+        context.beginPath();
+        context.moveTo(panelX + 20 * rX, panelY + 45 * rX);
+        context.lineTo(panelX + panelW - 20 * rX, panelY + 45 * rX);
+        context.stroke();
+
+        // Accounts count
+        context.font = `${16 * rX}px monospace`;
+        context.textAlign = 'left';
+        context.fillStyle = '#00ffff';
+        let currentY = panelY + 70 * rX;
+
+        const accountsText = this.playerCountLoading && this.uniquePlayerCount === null
+            ? 'Accounts: Loading...'
+            : this.playerCountError && this.uniquePlayerCount === null
+                ? 'Accounts: [Error]'
+                : `Accounts: ${this.uniquePlayerCount ?? '--'}`;
+        context.fillText(accountsText, panelX + 20 * rX, currentY);
+        currentY += 25 * rX;
+
+        // Online players count
+        context.fillStyle = '#ffff00';
+        context.fillText(`Online: ${this.onlinePlayers.length}`, panelX + 20 * rX, currentY);
+        currentY += 35 * rX;
+
+        // Online players header
+        context.fillStyle = '#888888';
+        context.font = `${14 * rX}px monospace`;
+        context.fillText('ONLINE PLAYERS:', panelX + 20 * rX, currentY);
+        currentY += 20 * rX;
+
+        // Divider
+        context.strokeStyle = 'rgba(0, 255, 0, 0.3)';
+        context.beginPath();
+        context.moveTo(panelX + 20 * rX, currentY - 5 * rX);
+        context.lineTo(panelX + panelW - 20 * rX, currentY - 5 * rX);
+        context.stroke();
+
+        // Online players list
+        context.font = `${14 * rX}px monospace`;
+        const maxVisiblePlayers = 10;
+        const lineHeight = 22 * rX;
+
+        if (this.onlinePlayersLoading && this.onlinePlayers.length === 0) {
+            context.fillStyle = '#666666';
+            context.fillText('Loading...', panelX + 25 * rX, currentY + lineHeight);
+        } else if (this.onlinePlayers.length === 0) {
+            context.fillStyle = '#666666';
+            context.fillText('No players online', panelX + 25 * rX, currentY + lineHeight);
+        } else {
+            const playersToShow = this.onlinePlayers.slice(0, maxVisiblePlayers);
+            for (let i = 0; i < playersToShow.length; i++) {
+                const player = playersToShow[i];
+                const y = currentY + (i + 1) * lineHeight;
+
+                // Online indicator dot
+                context.fillStyle = '#00ff00';
+                context.beginPath();
+                context.arc(panelX + 25 * rX, y - 4 * rX, 4 * rX, 0, Math.PI * 2);
+                context.fill();
+
+                // Player name
+                context.fillStyle = '#ffffff';
+                const displayName = player.name.length > 18
+                    ? player.name.substring(0, 18) + '...'
+                    : player.name;
+                context.fillText(displayName, panelX + 40 * rX, y);
+            }
+
+            // Show "+X more" if there are more players
+            if (this.onlinePlayers.length > maxVisiblePlayers) {
+                const moreCount = this.onlinePlayers.length - maxVisiblePlayers;
+                context.fillStyle = '#888888';
+                context.fillText(`+${moreCount} more...`, panelX + 25 * rX, currentY + (maxVisiblePlayers + 1) * lineHeight);
+            }
+        }
+
+        context.restore();
+    }
+
 }

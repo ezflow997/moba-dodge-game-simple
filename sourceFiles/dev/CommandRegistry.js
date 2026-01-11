@@ -39,7 +39,7 @@ export class CommandRegistry {
         this.register('testroom', this.cmdTestRoom.bind(this), 'Load isolated test room', ['test']);
         this.register('spawn', this.cmdSpawn.bind(this), 'Spawn specific enemy <type>');
         this.register('spawnpickup', this.cmdSpawnPickup.bind(this), 'Spawn specific pickup <type>');
-        this.register('boss', this.cmdBoss.bind(this), 'Spawn a boss [type: shooter, charger, vortex]', ['spawnboss']);
+        this.register('boss', this.cmdBoss.bind(this), 'Spawn a boss [type: shooter, charger, vortex, phantom]', ['spawnboss']);
         this.register('clear', this.cmdClear.bind(this), 'Remove all enemies and projectiles', ['clearenemies']);
         this.register('clearprojectiles', this.cmdClearProjectiles.bind(this), 'Remove only projectiles');
         
@@ -193,7 +193,7 @@ export class CommandRegistry {
 
             // Provide boss type suggestions
             if (command === 'boss' || command === 'spawnboss') {
-                const bossTypes = ['shooter', 'charger', 'vortex'];
+                const bossTypes = ['shooter', 'charger', 'vortex', 'phantom'];
                 if (argPartial.length === 0) {
                     return bossTypes;
                 }
@@ -424,7 +424,7 @@ export class CommandRegistry {
         this.game.enemies.enemiesList = [];
         this.game.projectiles.projectilesList = [];
 
-        const bossTypes = ['shooter', 'charger', 'vortex'];
+        const bossTypes = ['shooter', 'charger', 'vortex', 'phantom'];
 
         // Check if a specific boss type was requested
         if (args.length > 0) {
@@ -451,6 +451,10 @@ export class CommandRegistry {
                     const { VortexBoss } = await import('../controller/vortexBoss.js');
                     this.game.enemies.boss = new VortexBoss(spawnX, spawnY);
                     if (this.game.effects) this.game.effects.addScreenFlash('#ff00ff', 500, 0.3);
+                } else if (requestedType === 'phantom') {
+                    const { PhantomBoss } = await import('../controller/phantomBoss.js');
+                    this.game.enemies.boss = new PhantomBoss(spawnX, spawnY);
+                    if (this.game.effects) this.game.effects.addScreenFlash('#00ff66', 500, 0.3);
                 }
 
                 this.game.enemies.bossActive = true;
