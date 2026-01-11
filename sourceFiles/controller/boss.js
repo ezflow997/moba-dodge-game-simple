@@ -156,17 +156,36 @@ export class Boss {
         const spawnX = this.x + Math.cos(angle) * this.size;
         const spawnY = this.y + Math.sin(angle) * this.size;
 
-        const projectile = new BossProjectile(spawnX, spawnY, player.x, player.y, 12, 15);
-        this.projectiles.push(projectile);
-
         // Play shooter boss unique sound
         if (window.gameSound) window.gameSound.playShooterBossShoot();
 
-        if (this.phase >= 3) {
-            const spreadAngle = 0.3;
-            const leftProj = new BossProjectile(spawnX, spawnY, player.x + Math.cos(angle + spreadAngle) * 500, player.y + Math.sin(angle + spreadAngle) * 500, 10, 12);
+        if (this.phase === 1) {
+            // Phase 1: Single shot at player
+            const projectile = new BossProjectile(spawnX, spawnY, player.x, player.y, 12, 15);
+            this.projectiles.push(projectile);
+        } else if (this.phase === 2) {
+            // Phase 2: Two shots in a small spread
+            const spreadAngle = 0.15;
+            const leftProj = new BossProjectile(spawnX, spawnY,
+                this.x + Math.cos(angle + spreadAngle) * 500,
+                this.y + Math.sin(angle + spreadAngle) * 500, 12, 15);
             this.projectiles.push(leftProj);
-            const rightProj = new BossProjectile(spawnX, spawnY, player.x + Math.cos(angle - spreadAngle) * 500, player.y + Math.sin(angle - spreadAngle) * 500, 10, 12);
+            const rightProj = new BossProjectile(spawnX, spawnY,
+                this.x + Math.cos(angle - spreadAngle) * 500,
+                this.y + Math.sin(angle - spreadAngle) * 500, 12, 15);
+            this.projectiles.push(rightProj);
+        } else {
+            // Phase 3: Three shots in a wider spread
+            const projectile = new BossProjectile(spawnX, spawnY, player.x, player.y, 12, 15);
+            this.projectiles.push(projectile);
+            const spreadAngle = 0.3;
+            const leftProj = new BossProjectile(spawnX, spawnY,
+                this.x + Math.cos(angle + spreadAngle) * 500,
+                this.y + Math.sin(angle + spreadAngle) * 500, 10, 12);
+            this.projectiles.push(leftProj);
+            const rightProj = new BossProjectile(spawnX, spawnY,
+                this.x + Math.cos(angle - spreadAngle) * 500,
+                this.y + Math.sin(angle - spreadAngle) * 500, 10, 12);
             this.projectiles.push(rightProj);
         }
     }
