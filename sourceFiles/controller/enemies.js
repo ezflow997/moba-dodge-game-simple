@@ -121,7 +121,7 @@ export class Enemies {
 
                         // Check if using a multi-hit weapon (ricochet, piercing, rapidfire)
                         const activeGun = game.rewardManager ? game.rewardManager.activeGun : null;
-                        const isMultiHitGun = activeGun && (activeGun.gunType === 'ricochet' || activeGun.gunType === 'piercing' || activeGun.gunType === 'rapidfire' || activeGun.gunType === 'shotgun');
+                        const isMultiHitGun = activeGun && (activeGun.gunType === 'ricochet' || activeGun.gunType === 'piercing' || activeGun.gunType === 'rapidfire' || activeGun.gunType === 'shotgun' || activeGun.gunType === 'twin' || activeGun.gunType === 'nova');
 
                         // Only clear bullets for single-hit weapons
                         if (!isMultiHitGun) {
@@ -168,7 +168,7 @@ export class Enemies {
 
                     // Check if using a multi-hit weapon
                     const activeGun = game.rewardManager ? game.rewardManager.activeGun : null;
-                    const isMultiHitGun = activeGun && (activeGun.gunType === 'ricochet' || activeGun.gunType === 'piercing' || activeGun.gunType === 'rapidfire' || activeGun.gunType === 'shotgun');
+                    const isMultiHitGun = activeGun && (activeGun.gunType === 'ricochet' || activeGun.gunType === 'piercing' || activeGun.gunType === 'rapidfire' || activeGun.gunType === 'shotgun' || activeGun.gunType === 'twin' || activeGun.gunType === 'nova');
 
                     // Only clear bullets for single-hit weapons
                     if (!isMultiHitGun) {
@@ -288,7 +288,7 @@ export class Enemies {
 
                         // Check if using a multi-hit weapon (ricochet, piercing, rapidfire)
                         const activeGun = game.rewardManager ? game.rewardManager.activeGun : null;
-                        const isMultiHitGun = activeGun && (activeGun.gunType === 'ricochet' || activeGun.gunType === 'piercing' || activeGun.gunType === 'rapidfire' || activeGun.gunType === 'shotgun');
+                        const isMultiHitGun = activeGun && (activeGun.gunType === 'ricochet' || activeGun.gunType === 'piercing' || activeGun.gunType === 'rapidfire' || activeGun.gunType === 'shotgun' || activeGun.gunType === 'twin' || activeGun.gunType === 'nova');
 
                         // Only clear all bullets for single-hit weapons
                         if (!isMultiHitGun) {
