@@ -49,7 +49,7 @@ export class VortexBoss {
         // Attack patterns
         this.homingMissiles = [];
         this.lastHomingShot = performance.now();
-        this.homingCooldown = 3500;
+        this.homingCooldown = 4500;
 
         this.spiralProjectiles = [];
         this.lastSpiral = performance.now();
@@ -70,7 +70,7 @@ export class VortexBoss {
         this.orbitalRings = [];
         
         for (let ring = 0; ring < ringCount; ring++) {
-            const projectilesInRing = 4 + (ring * 2);
+            const projectilesInRing = 3 + ring;
             const radius = (ring + 1) * 80;
             const clockwise = ring % 2 === 0;
             const speed = (0.02 + ring * 0.01) * (clockwise ? 1 : -1);
@@ -126,13 +126,13 @@ export class VortexBoss {
         if (this.health <= this.phaseThresholds[3] && this.phase < 3) {
             this.phase = 3;
             this.createOrbitalRing(3);
-            this.homingCooldown = 2500;
+            this.homingCooldown = 3500;
             this.color = '#cc00ff';
             this.glowColor = '#ff00ff';
         } else if (this.health <= this.phaseThresholds[2] && this.phase < 2) {
             this.phase = 2;
             this.createOrbitalRing(2);
-            this.homingCooldown = 3000;
+            this.homingCooldown = 4000;
             this.color = '#9900ff';
             this.glowColor = '#ff00ff';
         }
@@ -312,15 +312,15 @@ export class VortexBoss {
             y: this.y,
             vx: 0,
             vy: 0,
-            speed: 10 * rX,
+            speed: 7 * rX,
             size: 10 * rX,
-            turnSpeed: 0.18,
+            turnSpeed: 0.12,
             pulsePhase: 0,
             trail: [],
             maxTrailLength: 10,
             destroy: false,
             createdAt: performance.now(),
-            lifetime: 5000,
+            lifetime: 4000,
             update: function(targetX, targetY) {
                 const dx = targetX - this.x;
                 const dy = targetY - this.y;
