@@ -24,6 +24,7 @@ export class CommandRegistry {
         // Combat cheats
         this.register('god', this.cmdGodMode.bind(this), 'Toggle invincibility', ['godmode']);
         this.register('instantcd', this.cmdInstantCD.bind(this), 'Toggle instant ability cooldowns', ['nocd']);
+        this.register('infdurability', this.cmdInfiniteDurability.bind(this), 'Toggle infinite weapon durability', ['infammo', 'infiniteammo']);
         this.register('damage', this.cmdDamage.bind(this), 'Set damage multiplier <amount>');
         this.register('heal', this.cmdHeal.bind(this), 'Restore health to maximum', ['maxhp']);
         this.register('maxmana', this.cmdMaxMana.bind(this), 'Restore mana/energy to maximum');
@@ -231,7 +232,12 @@ export class CommandRegistry {
         }
         return { success: true, message: `Instant cooldowns ${this.devMode.instantCooldowns ? 'enabled' : 'disabled'}` };
     }
-    
+
+    cmdInfiniteDurability(args) {
+        this.devMode.infiniteDurability = !this.devMode.infiniteDurability;
+        return { success: true, message: `Infinite weapon durability ${this.devMode.infiniteDurability ? 'enabled' : 'disabled'}` };
+    }
+
     cmdDamage(args) {
         if (args.length === 0) {
             return { success: false, message: 'Usage: damage <multiplier>' };

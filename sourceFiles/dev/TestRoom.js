@@ -269,7 +269,9 @@ export class TestRoom {
     setupDummies() {
         const rX = window.innerWidth / 2560;
         const centerX = this.game.width / 2;
-        const topY = 200 * rX;
+        // Ensure dummies (including HP bars above them) are always below the text
+        // Text ends at y=100, HP bar is ~80px above dummy center, so minimum ~200px
+        const topY = Math.max(200, 200 * rX);
         const spacing = 250 * rX;
 
         // Create dummies with different HP values

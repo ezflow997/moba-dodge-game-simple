@@ -120,11 +120,11 @@ export class Bullets {
             const inTestRoom = game.testRoom && game.testRoom.active;
             player.qCoolDownElapsed = inTestRoom ? player.qCoolDown + 1 : (msNow - player.qPressedNow) * timescale;
 
-            // In test room, immediately allow next shot by resetting all states
+            // In test room, set qTriggered and bulletsDeSpawned to allow next shot immediately
+            // Bullets will continue updating via the independent bullets section
             if (inTestRoom && this.bulletsCreated) {
-                this.bulletsDeSpawned = true;
-                player.qPressed = false;
                 player.qTriggered = true;
+                this.bulletsDeSpawned = true;
             }
 
             if(this.bulletsCreated == true){
@@ -364,7 +364,7 @@ export class Bullets {
                 }
 
                 // Create bullets based on active gun type
-                this.createBullets(player, activeGun, rewardManager);
+                this.createBullets(player, activeGun, rewardManager, game);
 
                 this.bulletsCreated = true;
                 // Play weapon-specific sound
@@ -388,9 +388,12 @@ export class Bullets {
 
         // Update independent bullets (rapidfire, ricochet, etc.) after qPressed resets
         // They keep flying after cooldown completes - only run when qPressed is false to avoid double-updating
+        // Also update in test room so bullets continue animating after instant cooldown reset
         const independentUpdateTypes = ['rapidfire', 'ricochet', 'homing', 'piercing', 'shotgun', 'twin', 'nova'];
+        const inTestRoomForUpdate = game.testRoom && game.testRoom.active;
         const needsIndependentUpdate = (activeGun && independentUpdateTypes.includes(activeGun.gunType)) ||
-            this.bulletsList.some(b => b && b.isIndependentBullet);
+            this.bulletsList.some(b => b && b.isIndependentBullet) ||
+            inTestRoomForUpdate;
 
         if (!player.qPressed && needsIndependentUpdate && this.bulletsList.length > 0) {
             for (let i = this.bulletsList.length - 1; i >= 0; i--) {
@@ -480,7 +483,7 @@ export class Bullets {
     }
 
     // Create bullets based on gun type
-    createBullets(player, activeGun, rewardManager) {
+    createBullets(player, activeGun, rewardManager, game) {
         // Apply size and range modifiers from reward manager
         let sizeMultiplier = rewardManager ? rewardManager.bulletSizeMod : 1;
         let rangeMultiplier = rewardManager ? rewardManager.rangeMod : 1;
@@ -508,7 +511,7 @@ export class Bullets {
 
         // Notify reward manager that gun was fired
         if (rewardManager) {
-            rewardManager.onGunFired();
+            rewardManager.onGunFired(game);
         }
 
         // Apply gun-specific range modifier
@@ -782,16 +785,18 @@ export class Bullets {
             this.bulletsList.push(b);
         }
     }
-    draw(context){
+    draw(context, game){
         // Draw chain lightning bolts
         for (const bolt of this.chainBolts) {
             bolt.draw(context);
         }
 
         // Check if we have independent bullets that should always be drawn
+        // Also always draw bullets in test room
         const independentDrawTypes = ['rapidfire', 'shotgun', 'ricochet', 'piercing', 'homing', 'nova', 'twin'];
+        const inTestRoom = game && game.testRoom && game.testRoom.active;
         const hasIndependentBullets = this.bulletsList.length > 0 &&
-            this.bulletsList.some(b => b && independentDrawTypes.includes(b.gunType));
+            (inTestRoom || this.bulletsList.some(b => b && independentDrawTypes.includes(b.gunType)));
 
         if(this.bulletsSpawned == true || hasIndependentBullets){
             // Draw all bullets (rapid fire bullets always get drawn)

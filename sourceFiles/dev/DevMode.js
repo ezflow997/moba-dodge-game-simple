@@ -9,6 +9,7 @@ export class DevMode {
         // Cheat states
         this.godMode = false;
         this.instantCooldowns = false;
+        this.infiniteDurability = false;
         this.noclip = false;
         this.damageMultiplier = 1.0;
         this.speedMultiplier = 1.0;
@@ -146,6 +147,7 @@ export class DevMode {
     resetAllCheats() {
         this.godMode = false;
         this.instantCooldowns = false;
+        this.infiniteDurability = false;
         this.noclip = false;
         this.damageMultiplier = 1.0;
         this.speedMultiplier = 1.0;
@@ -226,7 +228,14 @@ export class DevMode {
             context.fillText('[INSTANT CD]', 10, currentY);
             currentY += lineHeight;
         }
-        
+
+        if (this.infiniteDurability) {
+            context.fillStyle = '#ff8800';
+            context.shadowColor = '#ff8800';
+            context.fillText('[INF DURABILITY]', 10, currentY);
+            currentY += lineHeight;
+        }
+
         if (this.noclip) {
             context.fillStyle = '#ff00ff';
             context.shadowColor = '#ff00ff';

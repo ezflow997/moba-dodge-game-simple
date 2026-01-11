@@ -380,7 +380,7 @@ window.addEventListener('load', function () {
 				const useRegularBullets = this.challenge_level == 0 || activeGun != null;
 
 				if(useRegularBullets){
-					this.bullets.draw(context);
+					this.bullets.draw(context, this);
 				} else {
 					this.voidBolts.draw(context);
 				}

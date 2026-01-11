@@ -32,6 +32,7 @@ export class Player {
         this.qTriggered_Recast = true;
         this.qPresses_Recast = 0;
         this.qRecastReady = false;
+        this.qButtonHeld = false; // Track if button held from previous shot (for test room)
 
         this.eCoolDown = 6100;
         this.ePressed = false;
@@ -88,6 +89,7 @@ export class Player {
         this.qRecastReady = false;
 
         this.qRecastNow = window.performance.now();
+        this.qButtonHeld = false;
 
         this.ePressed = false;
         this.eCoolDownElapsed = 0;
@@ -129,6 +131,7 @@ export class Player {
         }
         if(input.buttons.indexOf(shootKey) == -1){
             input.q_key = 0;
+            this.qButtonHeld = false; // Track button release for test room
         }
 
         // Check if we have a rapid fire gun equipped
@@ -146,9 +149,11 @@ export class Player {
             if(useRegularBullets){
                 // Normal mode or equipped gun - regular bullets
                 // For rapid fire guns, allow continuous shooting when held (skip q_key check)
-                const canShoot = this.qPressed == false && this.qTriggered == true && (isRapidFire || inTestRoom || input.q_key <= 30);
+                // In test room, require button release between shots (prevent rapid fire when held)
+                const canShoot = this.qPressed == false && this.qTriggered == true && (!inTestRoom || !this.qButtonHeld) && (isRapidFire || inTestRoom || input.q_key <= 30);
                 if(canShoot){
                     if (!isRapidFire && !inTestRoom) input.q_key += 30;
+                    if (inTestRoom) this.qButtonHeld = true; // Mark button as held for test room
                     this.qPresses += 1;
                     this.qPressed = true;
                     this.qPressedNow = window.performance.now();
@@ -158,8 +163,10 @@ export class Player {
             } else {
                 // Vel'koz mode without gun - void bolts
                 // Use q_key <= 30 check to prevent double-firing when cooldown resets while button held
-                if(this.qPressed == false && this.qTriggered == true && (inTestRoom || input.q_key <= 30)){
+                // In test room, require button release between shots (prevent rapid fire when held)
+                if(this.qPressed == false && this.qTriggered == true && (!inTestRoom || !this.qButtonHeld) && (inTestRoom || input.q_key <= 30)){
                     if (!inTestRoom) input.q_key += 30; // Prevent immediate re-fire (skip in test room)
+                    if (inTestRoom) this.qButtonHeld = true; // Mark button as held for test room
                     this.qPresses += 1;
                     this.qPressed = true;
                     this.qPressedNow = window.performance.now();

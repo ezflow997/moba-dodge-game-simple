@@ -185,7 +185,12 @@ export class RewardManager {
     }
 
     // Called when gun is fired (decrease durability)
-    onGunFired() {
+    onGunFired(game) {
+        // Skip durability decrease if infinite durability is enabled
+        if (game && game.devMode && game.devMode.infiniteDurability) {
+            return;
+        }
+
         // Only decrease durability if using upgrade slot (slot 1)
         if (this.currentSlot === 1 && this.weaponSlots[1].gun) {
             this.weaponSlots[1].durability--;
