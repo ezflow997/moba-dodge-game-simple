@@ -343,8 +343,22 @@ export class RewardManager {
                             existing.duration += bonusDuration;
 
                             const bonusSeconds = Math.round(bonusDuration / 1000);
-                            this.addNotification(`${reward.name} → +${bonusSeconds}s duration!`, reward.rarity.color);
-                            return; // Don't apply new effect, just extended duration
+
+                            // For survivability rewards, also add lives/shields even when extending duration
+                            if (reward.category === CATEGORY.SURVIVABILITY) {
+                                if (reward.lives) {
+                                    this.extraLives += reward.lives;
+                                    this.addNotification(`${reward.name} → +${reward.lives} life, +${bonusSeconds}s!`, reward.rarity.color);
+                                } else if (reward.blockCount) {
+                                    this.shieldCharges += reward.blockCount;
+                                    this.addNotification(`${reward.name} → +${reward.blockCount} shield, +${bonusSeconds}s!`, reward.rarity.color);
+                                } else {
+                                    this.addNotification(`${reward.name} → +${bonusSeconds}s duration!`, reward.rarity.color);
+                                }
+                            } else {
+                                this.addNotification(`${reward.name} → +${bonusSeconds}s duration!`, reward.rarity.color);
+                            }
+                            return; // Don't apply other effects, just extended duration + added lives/shields
                         } else {
                             // New reward is higher tier - remove old effect and apply new
                             this.removeRewardEffects(existing.reward);
