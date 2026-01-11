@@ -116,7 +116,9 @@ export class Bullets {
             let msNow = window.performance.now();
             // Apply time scale from dev mode if available
             const timescale = game.devMode ? game.devMode.timescale : 1.0;
-            player.qCoolDownElapsed = (msNow - player.qPressedNow) * timescale;
+            // In test room, instantly complete cooldown
+            const inTestRoom = game.testRoom && game.testRoom.active;
+            player.qCoolDownElapsed = inTestRoom ? player.qCoolDown + 1 : (msNow - player.qPressedNow) * timescale;
 
             if(this.bulletsCreated == true){
                 // Check if this is an independent bullet type that shouldn't block cooldown
@@ -201,6 +203,27 @@ export class Bullets {
                                 }
                             }
 
+                            // Handle homing missile boss hits - trigger effects
+                            if (bullet.hitBoss && bullet.gunType === 'homing') {
+                                if (game.effects) {
+                                    game.effects.spawnBurst(bullet.bossHitX, bullet.bossHitY, 'bossHit');
+                                    game.world.shake(8, 10);
+                                }
+                                if (window.gameSound) window.gameSound.playBossHit();
+                                // Refund cooldown and allow shooting again
+                                player.qCoolDownElapsed = 0;
+                                player.qPressed = false;
+                                player.qTriggered = true;
+                                game.input.q_key += 60;
+                                enemies.hitStreak += 1;
+                                if (enemies.hitStreak > enemies.best_streak) {
+                                    enemies.best_streak = enemies.hitStreak;
+                                }
+                                game.rewardManager.addScore(game, enemies.enemyScoreValue * enemies.hitStreak);
+                                game.rewardManager.onGunHit();
+                                bullet.hitBoss = false; // Clear flag so we don't trigger again
+                            }
+
                             // Now handle destroy/collision states
                             if(bullet.destroy == true || bullet.enemyCollision == true){
                                 if(bullet.enemyCollision == true){
@@ -254,6 +277,26 @@ export class Bullets {
                             if (!bullet.destroy && !bullet.enemyCollision) {
                                 bullet.update(homingTargets);
                                 bullet.checkCollision(enemies.enemiesList, this.onChain.bind(this));
+                            }
+
+                            // Handle homing missile boss hits - trigger effects
+                            if (bullet.hitBoss && bullet.gunType === 'homing') {
+                                if (game.effects) {
+                                    game.effects.spawnBurst(bullet.bossHitX, bullet.bossHitY, 'bossHit');
+                                    game.world.shake(8, 10);
+                                }
+                                if (window.gameSound) window.gameSound.playBossHit();
+                                player.qCoolDownElapsed = 0;
+                                player.qPressed = false;
+                                player.qTriggered = true;
+                                game.input.q_key += 60;
+                                enemies.hitStreak += 1;
+                                if (enemies.hitStreak > enemies.best_streak) {
+                                    enemies.best_streak = enemies.hitStreak;
+                                }
+                                game.rewardManager.addScore(game, enemies.enemyScoreValue * enemies.hitStreak);
+                                game.rewardManager.onGunHit();
+                                bullet.hitBoss = false;
                             }
 
                             // Now handle collision states
@@ -380,6 +423,26 @@ export class Bullets {
                 if (!bullet.destroy && !bullet.enemyCollision) {
                     bullet.update(homingTargets);
                     bullet.checkCollision(enemies.enemiesList, this.onChain.bind(this));
+                }
+
+                // Handle homing missile boss hits - trigger effects
+                if (bullet.hitBoss && bullet.gunType === 'homing') {
+                    if (game.effects) {
+                        game.effects.spawnBurst(bullet.bossHitX, bullet.bossHitY, 'bossHit');
+                        game.world.shake(8, 10);
+                    }
+                    if (window.gameSound) window.gameSound.playBossHit();
+                    player.qCoolDownElapsed = 0;
+                    player.qPressed = false;
+                    player.qTriggered = true;
+                    game.input.q_key += 60;
+                    enemies.hitStreak += 1;
+                    if (enemies.hitStreak > enemies.best_streak) {
+                        enemies.best_streak = enemies.hitStreak;
+                    }
+                    game.rewardManager.addScore(game, enemies.enemyScoreValue * enemies.hitStreak);
+                    game.rewardManager.onGunHit();
+                    bullet.hitBoss = false;
                 }
 
                 // Handle destroy/collision

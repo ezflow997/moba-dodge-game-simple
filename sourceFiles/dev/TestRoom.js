@@ -721,8 +721,17 @@ export class TestRoom {
                         this.triggerChainLightning(dummy, bullet);
                     }
 
+                    // Handle ricochet bounce
+                    if (bullet.gunType === 'ricochet' && bullet.bouncesRemaining > 0) {
+                        if (bullet.bounceOffEnemy) {
+                            bullet.bounceOffEnemy(dummy);
+                        }
+                        if (!bullet.piercedDummies) {
+                            bullet.piercedDummies = new Set();
+                        }
+                        bullet.piercedDummies.add(dummy);
                     // Check if bullet should pierce through
-                    if (bullet.pierceCount && bullet.pierceCount > 0) {
+                    } else if (bullet.pierceCount && bullet.pierceCount > 0) {
                         bullet.pierceCount--;
                         if (!bullet.piercedDummies) {
                             bullet.piercedDummies = new Set();
@@ -781,7 +790,16 @@ export class TestRoom {
                     this.triggerChainLightning(dummy, bullet);
                 }
 
-                if (bullet.pierceCount && bullet.pierceCount > 0) {
+                // Handle ricochet bounce
+                if (bullet.gunType === 'ricochet' && bullet.bouncesRemaining > 0) {
+                    if (bullet.bounceOffEnemy) {
+                        bullet.bounceOffEnemy(dummy);
+                    }
+                    if (!bullet.piercedDummies) {
+                        bullet.piercedDummies = new Set();
+                    }
+                    bullet.piercedDummies.add(dummy);
+                } else if (bullet.pierceCount && bullet.pierceCount > 0) {
                     bullet.pierceCount--;
                     if (!bullet.piercedDummies) {
                         bullet.piercedDummies = new Set();

@@ -40,6 +40,7 @@ export class Player {
         this.eTriggered = true;
         this.ePresses = 0;
         this.ePenalty = -250;
+        this.eButtonHeld = false; // Track if button held from previous dash (for test room)
 
         this.fCoolDown = 24000;
         this.fCoolDownElapsed = 0;
@@ -48,6 +49,7 @@ export class Player {
         this.fTriggered = true;
         this.fPresses = 0;
         this.fPenalty = -750;
+        this.fButtonHeld = false; // Track if button held from previous ult (for test room)
 
         this.pulsePhase = 0;
         this.rotationAngle = 0;
@@ -91,11 +93,13 @@ export class Player {
         this.eCoolDownElapsed = 0;
         this.eTriggered = true;
         this.ePresses = 0;
+        this.eButtonHeld = false;
 
         this.fCoolDownElapsed = 0;
         this.fPressed = false;
         this.fTriggered = true;
         this.fPresses = 0;
+        this.fButtonHeld = false;
     }
     update(input, game){
         if(window.innerWidth != this.prevWindowWidth || window.innerHeight != this.prevWindowHeight){
@@ -251,6 +255,14 @@ export class Player {
         // Check if in test room for no cooldowns
         const inTestRoomDash = game.testRoom && game.testRoom.active;
 
+        // Track button release for test room (prevent rapid fire when held)
+        if (input.buttons.indexOf(dashKey) == -1) {
+            this.eButtonHeld = false;
+        }
+        if (input.buttons.indexOf(ultKey) == -1) {
+            this.fButtonHeld = false;
+        }
+
         if(this.ePressed == true){
             let msNow = window.performance.now();
             // Apply time scale from dev mode if available
@@ -265,10 +277,13 @@ export class Player {
                 this.eTriggered = true;
             }
         }
-        if(input.buttons.indexOf(dashKey) > -1 && this.ePressed == false && this.fTriggered == true){
+        // In test room, require button release before next dash
+        const canDash = this.ePressed == false && this.fTriggered == true && (!inTestRoomDash || !this.eButtonHeld);
+        if(input.buttons.indexOf(dashKey) > -1 && canDash){
             this.ePressed = true;
             this.ePressedNow = window.performance.now();
             this.eTriggered = false;
+            this.eButtonHeld = true; // Mark button as held for test room
             // Apply dash distance modifier from rewards
             const dashMod = game.rewardManager ? game.rewardManager.dashDistanceMod : 1.0;
             this.speed = this.speed * (20 * dashMod * innerWidth/2560);
@@ -297,10 +312,13 @@ export class Player {
                 this.fTriggered = true;
             }
         }
-        if((input.buttons.indexOf(ultKey) > -1) && this.fPressed == false && this.eTriggered == true){
+        // In test room, require button release before next ult
+        const canUlt = this.fPressed == false && this.eTriggered == true && (!inTestRoomDash || !this.fButtonHeld);
+        if((input.buttons.indexOf(ultKey) > -1) && canUlt){
             this.fPressed = true;
             this.fPressedNow = window.performance.now();
             this.fTriggered = false;
+            this.fButtonHeld = true; // Mark button as held for test room
             // Apply dash distance modifier from rewards
             const dashMod = game.rewardManager ? game.rewardManager.dashDistanceMod : 1.0;
             this.speed = this.speed * (20 * dashMod * innerWidth/2560);

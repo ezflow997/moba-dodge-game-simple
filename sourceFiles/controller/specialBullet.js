@@ -345,10 +345,34 @@ export class SpecialBullet {
                 if (distC <= this.size + enemy.size) {
                     this.piercedEnemies.add(enemy);
 
-                    // Mark enemy as hit so it gets killed
-                    enemy.bulletCollision = true;
+                    // Check if target is a boss (has health property)
+                    const isBoss = enemy.health !== undefined && enemy.maxHealth !== undefined;
+
+                    if (isBoss) {
+                        // Directly damage the boss
+                        if (!enemy.invulnerable) {
+                            enemy.health -= 1;
+                            enemy.hitFlash = 1.0;
+                            enemy.invulnerable = true;
+                            enemy.invulnerableTime = performance.now();
+                            // Store hit position for effects
+                            this.bossHitX = this.x;
+                            this.bossHitY = this.y;
+                            this.hitBoss = true;
+                            console.log(`[HOMING] Missile ${this.targetPreference} HIT BOSS (health: ${enemy.health}/${enemy.maxHealth})`);
+                            if (enemy.health <= 0) {
+                                enemy.isAlive = false;
+                            }
+                        } else {
+                            console.log(`[HOMING] Missile ${this.targetPreference} hit boss but boss is invulnerable`);
+                        }
+                    } else {
+                        // Mark regular enemy as hit so it gets killed
+                        enemy.bulletCollision = true;
+                        console.log(`[HOMING] Missile ${this.targetPreference} HIT target`);
+                    }
+
                     this.enemyCollision = true;
-                    console.log(`[HOMING] Missile ${this.targetPreference} HIT target`);
                     return;
                 }
 
