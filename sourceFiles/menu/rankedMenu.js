@@ -966,22 +966,22 @@ export class RankedMenu {
 
     drawQueueHistory(context, centerX, panelY, rX, rY) {
         const panelW = 1150;
-        const startY = panelY + 180 * rY;
+        const startY = panelY + 230 * rY;
         const rowHeight = 65 * rY;
 
         // Title
         context.font = `bold ${24 * rX}px Arial`;
         context.textAlign = 'center';
         context.fillStyle = '#ffaa00';
-        context.fillText('Your Recent Queue Results', centerX, panelY + 150 * rY);
+        context.fillText('Your Recent Queue Results', centerX, panelY + 180 * rY);
 
         if (this.queueHistory.length === 0) {
             context.font = `${22 * rX}px Arial`;
             context.fillStyle = '#666666';
-            context.fillText('No queue history yet', centerX, panelY + 350 * rY);
+            context.fillText('No queue history yet', centerX, panelY + 380 * rY);
             context.fillStyle = '#888888';
             context.font = `${18 * rX}px Arial`;
-            context.fillText('Complete a ranked queue to see your history here', centerX, panelY + 390 * rY);
+            context.fillText('Complete a ranked queue to see your history here', centerX, panelY + 420 * rY);
             return;
         }
 
