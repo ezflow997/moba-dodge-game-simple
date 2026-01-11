@@ -557,6 +557,17 @@ window.addEventListener('load', function () {
 								console.log('[LOADOUT] Weapon uses consumed:', weaponUsesConsumed);
 							}
 
+							// Update local inventory to reflect consumed items
+							const consumedCounts = {};
+							for (const id of consumeList) {
+								consumedCounts[id] = (consumedCounts[id] || 0) + 1;
+							}
+							for (const [id, count] of Object.entries(consumedCounts)) {
+								if (this.loadoutMenu && this.loadoutMenu.inventory[id] && !this.loadoutMenu.inventory[id].permanentUnlock) {
+									this.loadoutMenu.inventory[id].quantity = Math.max(0, (this.loadoutMenu.inventory[id].quantity || 0) - count);
+								}
+							}
+
 							this.supabase.consumeItems(this.playerName, this.playerPassword, consumeList).then(consumeResult => {
 								console.log('[LOADOUT] Consumed items:', consumeResult);
 							}).catch(err => {
@@ -740,6 +751,18 @@ window.addEventListener('load', function () {
 									const weaponId = game.pendingLoadoutWeapon.reward.id;
 									for (let i = 1; i < weaponUsesConsumed; i++) {
 										consumeList.push(weaponId);
+									}
+								}
+
+								// Update local inventory to reflect consumed items
+								const consumedCounts = {};
+								for (const id of consumeList) {
+									consumedCounts[id] = (consumedCounts[id] || 0) + 1;
+								}
+								for (const [id, count] of Object.entries(consumedCounts)) {
+									if (game.loadoutMenu.inventory[id] && !game.loadoutMenu.inventory[id].permanentUnlock) {
+										game.loadoutMenu.inventory[id].quantity = Math.max(0, (game.loadoutMenu.inventory[id].quantity || 0) - count);
+										console.log('[LOADOUT RETRY] Updated local inventory:', id, 'new quantity:', game.loadoutMenu.inventory[id].quantity);
 									}
 								}
 
