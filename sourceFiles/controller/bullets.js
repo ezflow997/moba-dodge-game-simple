@@ -36,7 +36,6 @@ export class Bullets {
         this.prevWindowHeight = window.innerHeight;
     }
     reset(){
-        console.log(`[RESET] Clearing bulletsList (had ${this.bulletsList.length} bullets)`);
         this.bulletsList = [];
         this.chainBolts = [];
         this.bulletsMaxTravel = 780 * window.innerWidth / 2560;
@@ -48,11 +47,6 @@ export class Bullets {
         this.homingMissileCount = 0;
     }
     update(player, input, enemies, game){
-        // Debug: log bulletsList state at start of each frame
-        if (this.bulletsList.length > 0 && this.bulletsList.some(b => b && b.gunType === 'homing')) {
-            console.log(`[FRAME-START] bullets=${this.bulletsList.length}, bulletsCreated=${this.bulletsCreated}, bulletsSpawned=${this.bulletsSpawned}`);
-        }
-
         if(this.prevWindowWidth != window.innerWidth || this.prevWindowHeight != window.innerHeight){
             this.bulletsMaxTravel = this.bulletsMaxTravel * window.innerWidth / this.prevWindowWidth;
 
@@ -105,9 +99,7 @@ export class Bullets {
             // Add the active boss to homing targets
             if (enemies.boss) {
                 homingTargets.push(enemies.boss);
-                console.log(`[HOMING-TARGETS] Added boss at (${Math.round(enemies.boss.x)}, ${Math.round(enemies.boss.y)}), total targets: ${homingTargets.length}`);
             }
-            // Note: chargeBoss and vortexBoss don't exist as separate properties - all bosses use enemies.boss
         }
         // Store for use by createHomingBullets
         this.currentHomingTargets = homingTargets;
@@ -119,6 +111,11 @@ export class Bullets {
             // In test room, instantly complete cooldown
             const inTestRoom = game.testRoom && game.testRoom.active;
             player.qCoolDownElapsed = inTestRoom ? player.qCoolDown + 1 : (msNow - player.qPressedNow) * timescale;
+
+            // In test room, immediately allow next shot
+            if (inTestRoom && this.bulletsCreated) {
+                this.bulletsDeSpawned = true;
+            }
 
             if(this.bulletsCreated == true){
                 // Check if this is an independent bullet type that shouldn't block cooldown
@@ -139,7 +136,6 @@ export class Bullets {
 
                 // Standard completion check - bullets gone or hit target
                 if(this.bulletsList.length == 0 || this.bulletsHitTarget == true){
-                    console.log(`[STATE] Resetting bulletsCreated to false (bulletsList.length=${this.bulletsList.length}, bulletsHitTarget=${this.bulletsHitTarget})`);
                     this.bulletsCreated = false;
                     this.bulletsSpawned = false;
                     this.bulletsDeSpawned = true;
