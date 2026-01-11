@@ -787,7 +787,7 @@ export class RetryWarningPopup {
 
         // Create remove buttons for each item
         for (let i = 0; i < this.items.length; i++) {
-            this.removeButtons.push(new Button(0, 0, 80, 30, 'Remove', 12, 0, 0, false, true, '#ff8888', '#ff6666'));
+            this.removeButtons.push(new Button(0, 0, 100, 35, 'Remove', 16, 0, 0, false, true, '#ff8888', '#ff6666'));
         }
     }
 
@@ -823,8 +823,8 @@ export class RetryWarningPopup {
         const rY = window.innerHeight / 1440;
         const centerX = window.innerWidth / 2;
         const centerY = window.innerHeight / 2;
-        const inX = game.input.inX;
-        const inY = game.input.inY;
+        const inX = game.input.mouseX;
+        const inY = game.input.mouseY;
 
         // Fade in animation
         if (this.fadeProgress < 1) {
@@ -862,9 +862,9 @@ export class RetryWarningPopup {
 
             // Only update if visible
             if (itemY >= itemStartY - itemHeight && itemY < itemStartY + itemsAreaHeight) {
-                const btnX = panelX + panelW - 110 * rX;
+                const btnX = panelX + panelW - 130 * rX;
                 this.removeButtons[i].x = btnX / rX;
-                this.removeButtons[i].y = itemY / rY + 15;
+                this.removeButtons[i].y = itemY / rY + 12;
                 this.removeButtons[i].text = this.items[i].isRemoved ? 'Restore' : 'Remove';
                 this.removeButtons[i].text_color = this.items[i].isRemoved ? '#88ff88' : '#ff8888';
                 this.removeButtons[i].border_color = this.items[i].isRemoved ? '#66cc66' : '#ff6666';
@@ -1022,11 +1022,11 @@ export class RetryWarningPopup {
             }
         }
 
-        // Bottom hint
+        // Bottom hint (positioned below buttons)
         ctx.font = `${14 * rX}px 'Segoe UI', Arial, sans-serif`;
         ctx.fillStyle = '#888888';
         ctx.textAlign = 'center';
-        ctx.fillText('Remove items to keep them for future games', centerX, panelY + panelH - 25 * rY);
+        ctx.fillText('Remove items to keep them for future games', centerX, panelY + panelH - 15 * rY);
 
         ctx.restore();
     }
