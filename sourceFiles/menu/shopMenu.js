@@ -287,6 +287,22 @@ export class ShopMenu {
         const inY = game.input.mouseY;
         const clicking = game.input.buttons.indexOf(0) > -1;
 
+        // Click outside to close (using reference coordinates)
+        const rX = window.innerWidth / 2560;
+        const rY = window.innerHeight / 1440;
+        const panelLeft = (1280 - 700) * rX;
+        const panelRight = (1280 + 700) * rX;
+        const panelTop = (720 - 450) * rY;
+        const panelBottom = (720 + 450) * rY;
+
+        if (clicking && !this.clicked) {
+            if (inX < panelLeft || inX > panelRight || inY < panelTop || inY > panelBottom) {
+                this.clicked = true;
+                this.hide();
+                return true;
+            }
+        }
+
         if (!clicking) {
             this.clicked = false;
             this.isDraggingScrollbar = false;

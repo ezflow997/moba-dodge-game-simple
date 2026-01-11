@@ -201,24 +201,30 @@ export class Player {
 
         // WASD mode: direct movement
         if (controlScheme === 'wasd') {
+            // Get customizable movement keys
+            const upKey = game.pauseMenu ? game.pauseMenu.wasdKeys.up : 'w';
+            const downKey = game.pauseMenu ? game.pauseMenu.wasdKeys.down : 's';
+            const leftKey = game.pauseMenu ? game.pauseMenu.wasdKeys.left : 'a';
+            const rightKey = game.pauseMenu ? game.pauseMenu.wasdKeys.right : 'd';
+
             // Check if dashing (E or F pressed)
             const isDashing = this.ePressed || this.fPressed;
-            
+
             if (isDashing && (this.desiredX != this.x || this.desiredY != this.y)) {
                 // When dashing, move towards mouse position
                 var values = move.make(this.x, this.y, this.speed, this.desiredX, this.desiredY);
                 this.x = values[0];
                 this.y = values[1];
             } else {
-                // Normal WASD movement
+                // Normal directional movement (customizable keys)
                 const moveSpeed = this.speed;
                 let dx = 0;
                 let dy = 0;
-                
-                if (input.buttons.indexOf('w') > -1) dy -= moveSpeed;
-                if (input.buttons.indexOf('s') > -1) dy += moveSpeed;
-                if (input.buttons.indexOf('a') > -1) dx -= moveSpeed;
-                if (input.buttons.indexOf('d') > -1) dx += moveSpeed;
+
+                if (input.buttons.indexOf(upKey) > -1) dy -= moveSpeed;
+                if (input.buttons.indexOf(downKey) > -1) dy += moveSpeed;
+                if (input.buttons.indexOf(leftKey) > -1) dx -= moveSpeed;
+                if (input.buttons.indexOf(rightKey) > -1) dx += moveSpeed;
                 
                 // Normalize diagonal movement
                 if (dx !== 0 && dy !== 0) {
@@ -254,9 +260,13 @@ export class Player {
             this.desiredY = this.y;
         }
 
-        if(controlScheme === 'mouse' && input.buttons.indexOf(2) > -1){
-            this.desiredX = input.mouseX + this.size/2 - 10;
-            this.desiredY = input.mouseY + this.size/2 - 10;
+        // Mouse mode: move to clicked position (customizable move key, default right-click)
+        if(controlScheme === 'mouse'){
+            const moveKey = game.pauseMenu ? game.pauseMenu.customKeys.move : 2;
+            if(input.buttons.indexOf(moveKey) > -1){
+                this.desiredX = input.mouseX + this.size/2 - 10;
+                this.desiredY = input.mouseY + this.size/2 - 10;
+            }
         }
 
         // Check if in test room for no cooldowns

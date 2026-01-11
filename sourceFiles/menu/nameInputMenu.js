@@ -275,6 +275,27 @@ export class NameInputMenu {
 
         const inX = game.input.mouseX;
         const inY = game.input.mouseY;
+        const clicking = game.input.buttons.indexOf(0) > -1;
+
+        // Click outside to close (panel: x=580, y=280, w=900, h=520 max)
+        // Only check when not in a loading state
+        if (this.inputState !== 'checkingName' && this.inputState !== 'submitting') {
+            const rX = window.innerWidth / 2560;
+            const rY = window.innerHeight / 1440;
+            const panelLeft = 580 * rX;
+            const panelRight = (580 + 900) * rX;
+            const panelTop = 280 * rY;
+            const panelBottom = (280 + 520) * rY;
+
+            if (clicking && !this.clicked) {
+                if (inX < panelLeft || inX > panelRight || inY < panelTop || inY > panelBottom) {
+                    this.clicked = true;
+                    this.hide();
+                    if (this.onSubmit) this.onSubmit(null); // Signal cancelled
+                    return;
+                }
+            }
+        }
 
         // Update cursor blink
         this.cursorBlink = (this.cursorBlink + 1) % 60;

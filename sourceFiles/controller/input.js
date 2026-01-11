@@ -13,6 +13,7 @@ export class InputHandler {
         this.q_key = 0;
 
         this.escapePressed = false;
+        this.pauseKeyPressed = false; // Custom pause key
         this.tabPressed = false;
         this.lastKey = null; // For text input in menus
 
@@ -72,6 +73,13 @@ export class InputHandler {
             if(ev.key == 'q'){
                 this.q_key++;
             }
+
+            // Check for custom pause key
+            const pauseKey = localStorage.getItem('pauseKey') || 'Escape';
+            if (ev.key === pauseKey) {
+                this.pauseKeyPressed = true;
+            }
+
             if(this.keysList.indexOf(ev.key) == -1 &&
             this.buttons.indexOf(ev.key) == -1 &&
             this.typingInformation == false){
@@ -110,6 +118,13 @@ export class InputHandler {
             if(ev.key == 'q'){
                 this.q_key = 0;
             }
+
+            // Check for custom pause key release
+            const pauseKey = localStorage.getItem('pauseKey') || 'Escape';
+            if (ev.key === pauseKey) {
+                this.pauseKeyPressed = false;
+            }
+
             if(this.keysList.indexOf(ev.key) == -1 && this.buttons.indexOf(ev.key) > -1){
                 this.buttons.splice(this.buttons.indexOf(ev.key), 1);
             }

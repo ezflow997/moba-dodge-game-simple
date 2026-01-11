@@ -106,7 +106,7 @@ export class superFunctions {
             menu.super.drawText(context, 360, 460, ''+charsToText, 50, 'white'); 
         }
     }
-    drawMessageWindow(context, menu){
+    drawMessageWindow(context, menu, msPassed = 0){
         let rX = window.innerWidth/2560;
         let rY = window.innerHeight/1440;
         const centerX = window.innerWidth / 2;
@@ -114,6 +114,10 @@ export class superFunctions {
 
         // Animated time for effects
         const time = performance.now() / 1000;
+
+        // Delay before retry button appears (1.5 seconds for player reaction time)
+        const retryButtonDelay = 1500;
+        const showRetryButton = msPassed > retryButtonDelay;
 
         context.save();
 
@@ -235,12 +239,89 @@ export class superFunctions {
             context.fillText(menu.showMessageRow3, centerX, messageY);
         }
 
-        // "Click to continue" prompt with pulsing animation
-        context.shadowBlur = 0;
-        const promptAlpha = 0.5 + Math.sin(time * 3) * 0.3;
-        context.font = `${22 * rX}px Arial`;
-        context.fillStyle = `rgba(150, 150, 150, ${promptAlpha})`;
-        context.fillText('Click anywhere to continue', centerX, panelY + panelH - 35 * rY);
+        // Draw retry button after delay
+        if (showRetryButton) {
+            // Retry button dimensions
+            const btnW = 280 * rX;
+            const btnH = 60 * rY;
+            const btnX = centerX - btnW / 2;
+            const btnY = panelY + panelH - 100 * rY;
+            const btnRadius = 10 * rX;
+
+            // Fade in animation
+            const fadeInProgress = Math.min(1, (msPassed - retryButtonDelay) / 300);
+
+            // Store button bounds for click detection
+            menu.retryButtonBounds = { x: btnX, y: btnY, w: btnW, h: btnH };
+
+            // Check hover state (game object has input, menu object doesn't directly)
+            const mouseX = menu.input ? menu.input.inX : 0;
+            const mouseY = menu.input ? menu.input.inY : 0;
+            const isHovered = mouseX > btnX && mouseX < btnX + btnW &&
+                             mouseY > btnY && mouseY < btnY + btnH;
+
+            // Button glow and animation
+            const hoverPulse = isHovered ? (0.8 + Math.sin(time * 4) * 0.2) : 0.6;
+
+            context.save();
+            context.globalAlpha = fadeInProgress;
+
+            // Button shadow/glow
+            if (isHovered) {
+                context.shadowColor = '#00ff88';
+                context.shadowBlur = 20 * rX;
+            }
+
+            // Button background gradient
+            const btnGradient = context.createLinearGradient(btnX, btnY, btnX, btnY + btnH);
+            if (isHovered) {
+                btnGradient.addColorStop(0, 'rgba(0, 120, 80, 0.95)');
+                btnGradient.addColorStop(0.5, 'rgba(0, 100, 60, 0.95)');
+                btnGradient.addColorStop(1, 'rgba(0, 80, 50, 0.95)');
+            } else {
+                btnGradient.addColorStop(0, 'rgba(0, 80, 50, 0.9)');
+                btnGradient.addColorStop(0.5, 'rgba(0, 60, 40, 0.9)');
+                btnGradient.addColorStop(1, 'rgba(0, 50, 30, 0.9)');
+            }
+
+            // Draw button background
+            this.drawRoundedRectPath(context, btnX, btnY, btnW, btnH, btnRadius);
+            context.fillStyle = btnGradient;
+            context.fill();
+
+            // Button border
+            context.strokeStyle = isHovered ? 'rgba(0, 255, 136, 0.9)' : 'rgba(0, 200, 100, 0.7)';
+            context.lineWidth = (isHovered ? 3 : 2) * rX;
+            context.stroke();
+
+            // Button text
+            context.shadowColor = '#00ff88';
+            context.shadowBlur = isHovered ? 15 * rX : 8 * rX;
+            context.font = `bold ${32 * rX}px Arial`;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillStyle = isHovered ? '#ffffff' : '#00ff88';
+            context.fillText('RETRY', centerX, btnY + btnH / 2);
+
+            context.restore();
+
+            // "or click anywhere to continue" prompt below button
+            context.shadowBlur = 0;
+            const promptAlpha = (0.4 + Math.sin(time * 3) * 0.2) * fadeInProgress;
+            context.font = `${18 * rX}px Arial`;
+            context.fillStyle = `rgba(120, 120, 120, ${promptAlpha})`;
+            context.fillText('or click elsewhere to return to menu', centerX, panelY + panelH - 25 * rY);
+        } else {
+            // Show loading text while waiting for retry button
+            context.shadowBlur = 0;
+            const loadingAlpha = 0.4 + Math.sin(time * 5) * 0.2;
+            context.font = `${20 * rX}px Arial`;
+            context.fillStyle = `rgba(150, 150, 150, ${loadingAlpha})`;
+            context.fillText('...', centerX, panelY + panelH - 50 * rY);
+
+            // Clear button bounds while not shown
+            menu.retryButtonBounds = null;
+        }
 
         context.restore();
     }

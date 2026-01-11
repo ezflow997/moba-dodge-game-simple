@@ -2,7 +2,9 @@
 export class SoundManager {
     constructor() {
         this.audioContext = null;
-        this.enabled = true;
+        // Load enabled state from localStorage or default to true
+        const savedEnabled = localStorage.getItem('audioEnabled');
+        this.enabled = savedEnabled !== null ? savedEnabled === 'true' : true;
         this.initialized = false;
         this.musicInterval = null;
         this.isMusicPlaying = false;
@@ -635,6 +637,11 @@ export class SoundManager {
     }
 
     playMenuMusic() {
+        if (!this.enabled) {
+            this.pendingMusic = 'menu'; // Remember to play when re-enabled
+            return;
+        }
+
         if (!this.musicUnlocked) {
             this.pendingMusic = 'menu';
             return;
@@ -704,6 +711,11 @@ export class SoundManager {
     }
 
     playGameMusic() {
+        if (!this.enabled) {
+            this.pendingMusic = 'game'; // Remember to play when re-enabled
+            return;
+        }
+
         if (!this.musicUnlocked) {
             this.pendingMusic = 'game';
             return;
@@ -816,6 +828,13 @@ export class SoundManager {
             this.currentMenuTrack.play();
         } else if (this.currentMusic === 'game' && this.currentGameTrack) {
             this.currentGameTrack.play();
+        } else if (this.pendingMusic === 'menu') {
+            // If music was pending when disabled, start it now
+            this.pendingMusic = null;
+            this.playMenuMusic();
+        } else if (this.pendingMusic === 'game') {
+            this.pendingMusic = null;
+            this.playGameMusic();
         }
     }
 
@@ -1523,6 +1542,33 @@ export class SoundManager {
     // Toggle sound on/off
     toggle() {
         this.enabled = !this.enabled;
+        localStorage.setItem('audioEnabled', this.enabled.toString());
+
+        if (!this.enabled) {
+            // Pause all music when disabling audio
+            this.pauseMusic();
+        } else {
+            // Resume music when re-enabling audio
+            this.resumeMusic();
+        }
+
+        return this.enabled;
+    }
+
+    // Set enabled state directly (for menu use)
+    setEnabled(value) {
+        this.enabled = value;
+        localStorage.setItem('audioEnabled', this.enabled.toString());
+
+        if (!this.enabled) {
+            this.pauseMusic();
+        } else {
+            this.resumeMusic();
+        }
+    }
+
+    // Check if audio is enabled
+    isEnabled() {
         return this.enabled;
     }
 

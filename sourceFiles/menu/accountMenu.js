@@ -425,6 +425,23 @@ export class AccountMenu {
 
         const inX = game.input.mouseX;
         const inY = game.input.mouseY;
+        const clicking = game.input.buttons.indexOf(0) > -1;
+
+        // Click outside to close (panel: x=830, y=280, w=900, h=560 max)
+        const rX = window.innerWidth / 2560;
+        const rY = window.innerHeight / 1440;
+        const panelLeft = 830 * rX;
+        const panelRight = (830 + 900) * rX;
+        const panelTop = 280 * rY;
+        const panelBottom = (280 + 560) * rY;
+
+        if (clicking && !this.clicked) {
+            if (inX < panelLeft || inX > panelRight || inY < panelTop || inY > panelBottom) {
+                this.clicked = true;
+                this.hide();
+                return;
+            }
+        }
 
         this.cursorBlink = (this.cursorBlink + 1) % 60;
 

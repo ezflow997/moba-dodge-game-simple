@@ -108,6 +108,7 @@ window.addEventListener('load', function () {
 				this.showMessage = '';
 				this.showMessageRow2 = '';
 				this.showMessageNow = window.performance.now();
+				this.retryButtonBounds = null;
 
 				this.difficulties = ['EASY', 'MEDIUM', 'HARD', 'EXPERT', 'INSANE'];
 				this.difficultyPointMultipliers = { 'EASY': 0.5, 'MEDIUM': 1, 'HARD': 1.5, 'EXPERT': 2, 'INSANE': 3 };
@@ -288,10 +289,10 @@ window.addEventListener('load', function () {
 					}
 				}
 
-				// Check for pause toggle (skip if waiting for keybind - let pause menu handle ESC)
-				if(this.input.escapePressed && !this.pauseMenu.waitingForKey) {
+				// Check for pause toggle (skip if waiting for keybind - let pause menu handle it)
+				if(this.input.pauseKeyPressed && !this.pauseMenu.waitingForKey) {
 					this.pauseMenu.toggle();
-					this.input.escapePressed = false;
+					this.input.pauseKeyPressed = false;
 				}
 
 				// Handle dev menu button click and scroll
@@ -455,9 +456,9 @@ window.addEventListener('load', function () {
 					this.debugConsole.draw(context, this);
 				}
 			}
-			drawGameOverWindow(context){
+			drawGameOverWindow(context, msPassed = 0){
 				context.clearRect(-100, -100, this.width*2, this.height*2);
-				this.super.drawMessageWindow(context, this);
+				this.super.drawMessageWindow(context, this, msPassed);
 			}
 			setScores(score){
 				score.value = this.score;
@@ -480,6 +481,7 @@ window.addEventListener('load', function () {
 				this.showMessage = '';
 				this.showMessageRow2 = '';
 				this.showMessageNow = window.performance.now();
+				this.retryButtonBounds = null;
 
 				this.loggedIn = false;
 				this.player_data = {
@@ -607,9 +609,9 @@ window.addEventListener('load', function () {
 		function animate() {
 			// Canvas size is now handled by resize event listener
 
-			if(game.input.escapePressed && game.pauseMenu.isPaused && !game.pauseMenu.waitingForKey) {
+			if(game.input.pauseKeyPressed && game.pauseMenu.isPaused && !game.pauseMenu.waitingForKey) {
 				game.pauseMenu.toggle();
-				game.input.escapePressed = false;
+				game.input.pauseKeyPressed = false;
 			}
 
 			if(game.gameOver == false){
@@ -694,20 +696,63 @@ window.addEventListener('load', function () {
 					game.effects.reset();
 					game.world.reset();
 					game.rewardManager.reset();
-					game.drawGameOverWindow(ctx);
+					game.drawGameOverWindow(ctx, 0);
 				}
 
 				if(game.showMessage != 'None' && game.showMessage != '' && game.score == 0){
-					game.drawGameOverWindow(ctx);
-
 					let msNow = window.performance.now();
 					let msPassed = msNow - game.showMessageNow;
 
-					// Allow click to skip after minimum read time (500ms)
-					const minReadTime = 500;
+					game.drawGameOverWindow(ctx, msPassed);
+
+					// Check for retry button click
 					const clicked = game.input.buttons.indexOf(0) > -1;
-					if(msPassed > 5000 || (msPassed > minReadTime && clicked)){
+					const retryButtonDelay = 1500;
+					let clickedRetry = false;
+
+					if (clicked && msPassed > retryButtonDelay && game.retryButtonBounds) {
+						const bounds = game.retryButtonBounds;
+						const mouseX = game.input.inX;
+						const mouseY = game.input.inY;
+						clickedRetry = mouseX > bounds.x && mouseX < bounds.x + bounds.w &&
+						               mouseY > bounds.y && mouseY < bounds.y + bounds.h;
+					}
+
+					if (clickedRetry) {
+						// Play click sound
+						if (window.gameSound) window.gameSound.playMenuClick();
+
+						// Clear game over state and restart immediately
+						game.showMessage = '';
+						game.retryButtonBounds = null;
+						game.pendingScore = null;
+						game.pendingRankedScore = null;
+						game.isRankedGame = false;
+
+						// Reset dev mode session for new game
+						if (game.devMode) {
+							game.devMode.resetSession();
+						}
+
+						// Start the game
+						game.gameOver = false;
+						game.game_time = window.performance.now();
+						game.set_difficulty();
+						poki.gameplayStart();
+
+						if (window.gameSound) {
+							window.gameSound.playGameMusic();
+						}
+
+						requestAnimationFrame(animate);
+						return;
+					}
+
+					// Allow click elsewhere to skip after minimum read time (500ms)
+					const minReadTime = 500;
+					if(msPassed > 5000 || (msPassed > minReadTime && clicked && !clickedRetry)){
 						game.showMessage = 'None';
+						game.retryButtonBounds = null;
 
 						// Handle ranked score submission
 						if (game.pendingRankedScore) {
@@ -834,18 +879,18 @@ window.addEventListener('load', function () {
 			const nameInputJustClosed = game.nameInputMenu.closedAt && (performance.now() - game.nameInputMenu.closedAt < 200);
 			const accountMenuJustClosed = game.accountMenu.closedAt && (performance.now() - game.accountMenu.closedAt < 200);
 			const menuJustClosed = nameInputJustClosed || accountMenuJustClosed;
-			if(game.input.escapePressed && !game.pauseMenu.isPaused && !game.leaderboardMenu.isVisible && !game.rankedMenu.isVisible && !game.nameInputMenu.isVisible && !game.accountMenu.isVisible && !game.shopMenu.isVisible && !game.loadoutMenu.isVisible && !game.pauseMenu.waitingForKey && !menuJustClosed) {
+			if(game.input.pauseKeyPressed && !game.pauseMenu.isPaused && !game.leaderboardMenu.isVisible && !game.rankedMenu.isVisible && !game.nameInputMenu.isVisible && !game.accountMenu.isVisible && !game.shopMenu.isVisible && !game.loadoutMenu.isVisible && !game.pauseMenu.waitingForKey && !menuJustClosed) {
 				game.pauseMenu.toggle(true); // Pass true to indicate we're in main menu
-				game.input.escapePressed = false;
+				game.input.pauseKeyPressed = false;
 			}
 
 			// Update pause menu if active in main menu
 			if(game.pauseMenu.isPaused) {
 				game.pauseMenu.update(game);
-				// Check if escape was pressed to close pause menu (skip if waiting for keybind)
-				if(game.input.escapePressed && !game.pauseMenu.waitingForKey) {
+				// Check if pause key was pressed to close pause menu (skip if waiting for keybind)
+				if(game.input.pauseKeyPressed && !game.pauseMenu.waitingForKey) {
 					game.pauseMenu.toggle(true);
-					game.input.escapePressed = false;
+					game.input.pauseKeyPressed = false;
 				}
 			}
 

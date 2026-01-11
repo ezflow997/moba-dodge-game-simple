@@ -46,9 +46,16 @@ export class PauseMenu {
         this.quitButton = new Button(btnX, 280 + btnSpace * 7, btnW, btnH, "Quit to Menu", fontSize, 0, 0, false, true, 'white', 'white');
 
         // Audio submenu buttons
-        this.volumeButton = new Button(btnX, 280, btnW, btnH, "Volume", fontSize, 0, 0, false, true, 'white', 'white');
-        this.musicSelectionButton = new Button(btnX, 280 + btnSpace, btnW, btnH, "Music Selection", fontSize, 0, 0, false, true, 'white', 'white');
-        this.audioBackButton = new Button(btnX, 280 + btnSpace * 2, btnW, btnH, "Back", fontSize, 0, 0, false, true, 'white', 'white');
+        this.audioToggleButton = new Button(btnX, 280, btnW, btnH, "Audio: ON", fontSize, 0, 0, false, true, 'white', 'white');
+        this.volumeButton = new Button(btnX, 280 + btnSpace, btnW, btnH, "Volume", fontSize, 0, 0, false, true, 'white', 'white');
+        this.musicSelectionButton = new Button(btnX, 280 + btnSpace * 2, btnW, btnH, "Music Selection", fontSize, 0, 0, false, true, 'white', 'white');
+        this.audioBackButton = new Button(btnX, 280 + btnSpace * 3, btnW, btnH, "Back", fontSize, 0, 0, false, true, 'white', 'white');
+
+        // Initialize audio toggle button text based on saved state
+        const savedAudioEnabled = localStorage.getItem('audioEnabled');
+        if (savedAudioEnabled === 'false') {
+            this.audioToggleButton.text = "Audio: OFF";
+        }
 
         // Controls submenu buttons
         this.controlSchemeButton = new Button(btnX, 280, btnW, btnH, "Controls: Mouse", fontSize, 0, 0, false, true, 'white', 'white');
@@ -82,12 +89,23 @@ export class PauseMenu {
         this.keybindQButton = new Button(btnX, 280, btnW, btnH, "Shoot: Q", fontSize, 0, 0, false, true, 'white', 'white');
         this.keybindEButton = new Button(btnX, 280 + btnSpace, btnW, btnH, "Dash: E", fontSize, 0, 0, false, true, 'white', 'white');
         this.keybindFButton = new Button(btnX, 280 + btnSpace * 2, btnW, btnH, "Ultimate: F", fontSize, 0, 0, false, true, 'white', 'white');
-        this.keybindBackButton = new Button(btnX, 280 + btnSpace * 3, btnW, btnH, "Back", fontSize, 0, 0, false, true, 'white', 'white');
-        this.waitingForKey = null; // 'q', 'e', or 'f'
+        // Mouse mode: Move button (slot 3)
+        this.keybindMoveButton = new Button(btnX, 280 + btnSpace * 3, btnW, btnH, "Move: Right Click", fontSize, 0, 0, false, true, 'white', 'white');
+        // WASD mode: Movement direction buttons (slots 3-6)
+        this.keybindUpButton = new Button(btnX, 280 + btnSpace * 3, btnW, btnH, "Up: W", fontSize, 0, 0, false, true, 'white', 'white');
+        this.keybindDownButton = new Button(btnX, 280 + btnSpace * 4, btnW, btnH, "Down: S", fontSize, 0, 0, false, true, 'white', 'white');
+        this.keybindLeftButton = new Button(btnX, 280 + btnSpace * 5, btnW, btnH, "Left: A", fontSize, 0, 0, false, true, 'white', 'white');
+        this.keybindRightButton = new Button(btnX, 280 + btnSpace * 6, btnW, btnH, "Right: D", fontSize, 0, 0, false, true, 'white', 'white');
+        // Pause button position varies by control scheme (set dynamically)
+        this.keybindPauseButton = new Button(btnX, 280 + btnSpace * 4, btnW, btnH, "Pause: Escape", fontSize, 0, 0, false, true, 'white', 'white');
+        this.keybindBackButton = new Button(btnX, 280 + btnSpace * 5, btnW, btnH, "Back", fontSize, 0, 0, false, true, 'white', 'white');
+        this.waitingForKey = null; // 'q', 'e', 'f', 'move', 'up', 'down', 'left', 'right', or 'pause'
 
         // Load custom keys from localStorage or use defaults
         const savedCustomKeys = localStorage.getItem('customKeys');
-        this.customKeys = savedCustomKeys ? JSON.parse(savedCustomKeys) : { q: 'q', e: 'e', f: 'f' };
+        this.customKeys = savedCustomKeys ? JSON.parse(savedCustomKeys) : { q: 'q', e: 'e', f: 'f', move: 2 };
+        // Ensure move key exists for older saves
+        if (this.customKeys.move === undefined) this.customKeys.move = 2;
 
         // Control scheme: 'mouse' or 'wasd' - load from localStorage
         this.controlScheme = localStorage.getItem('controlScheme') || 'mouse';
@@ -98,8 +116,20 @@ export class PauseMenu {
         this.wasdKeys = savedWasdKeys ? JSON.parse(savedWasdKeys) : {
             shoot: 0,  // Left click (mouse button 0)
             dash: 'e',
-            ult: 'q'
+            ult: 'q',
+            up: 'w',
+            down: 's',
+            left: 'a',
+            right: 'd'
         };
+        // Ensure movement keys exist for older saves
+        if (this.wasdKeys.up === undefined) this.wasdKeys.up = 'w';
+        if (this.wasdKeys.down === undefined) this.wasdKeys.down = 's';
+        if (this.wasdKeys.left === undefined) this.wasdKeys.left = 'a';
+        if (this.wasdKeys.right === undefined) this.wasdKeys.right = 'd';
+
+        // Pause key - load from localStorage or use default (Escape)
+        this.pauseKey = localStorage.getItem('pauseKey') || 'Escape';
 
         // Update keybind button text based on loaded control scheme
         this.updateKeybindButtons();
@@ -263,26 +293,51 @@ export class PauseMenu {
                 this.capturedKey = null;
                 return;
             }
-            
+
             const pressedKey = this.capturedKey;
             this.capturedKey = null;
-            
+
+            // Handle pause key binding separately (only keyboard keys allowed)
+            if (this.waitingForKey === 'pause') {
+                // Reject mouse buttons for pause key
+                if (typeof pressedKey === 'number') {
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    this.keybindPauseButton.text = "Pause: Keyboard only!";
+                    setTimeout(() => {
+                        if (this.waitingForKey === 'pause') {
+                            this.keybindPauseButton.text = "Pause: Press any key...";
+                        }
+                    }, 500);
+                    return;
+                }
+
+                // Valid key, assign it
+                this.pauseKey = pressedKey;
+                localStorage.setItem('pauseKey', this.pauseKey);
+                this.waitingForKey = null;
+                this.updateKeybindButtons();
+                if (window.gameSound) window.gameSound.playMenuClick();
+                return;
+            }
+
             // Cancel if ESC is pressed - go back to Controls submenu
             if (pressedKey === 'Escape') {
                 this.waitingForKey = null;
                 this.showKeybinds = false;
                 this.updateKeybindButtons();
-                // Clear escapePressed so main.js doesn't also close the pause menu
+                // Clear key flags so main.js doesn't also close the pause menu
                 input.escapePressed = false;
+                input.pauseKeyPressed = false;
                 return;
             }
-            
-            // In mouse mode, ONLY allow keyboard keys (not mouse buttons)
-            if (this.controlScheme === 'mouse' && typeof pressedKey === 'number') {
-                // Reject mouse buttons in mouse mode
+
+            // In mouse mode, ONLY allow keyboard keys (not mouse buttons) for ability keys (q, e, f)
+            // BUT allow mouse buttons for the 'move' keybind
+            if (this.controlScheme === 'mouse' && typeof pressedKey === 'number' && this.waitingForKey !== 'move') {
+                // Reject mouse buttons in mouse mode for abilities
                 if (window.gameSound) window.gameSound.playMenuClick();
                 const currentSlot = this.waitingForKey;
-                
+
                 if (currentSlot === 'q') {
                     this.keybindQButton.text = "Shoot: Keyboard only!";
                 } else if (currentSlot === 'e') {
@@ -290,7 +345,7 @@ export class PauseMenu {
                 } else if (currentSlot === 'f') {
                     this.keybindFButton.text = "Ultimate: Keyboard only!";
                 }
-                
+
                 setTimeout(() => {
                     if (this.waitingForKey === currentSlot) {
                         if (currentSlot === 'q') {
@@ -304,29 +359,39 @@ export class PauseMenu {
                 }, 500);
                 return;
             }
-            
+
             // Check if key is already assigned to another slot
             let isAlreadyUsed = false;
             const currentKeys = this.controlScheme === 'mouse' ? this.customKeys : this.wasdKeys;
-            const slots = this.controlScheme === 'mouse' ? ['q', 'e', 'f'] : ['shoot', 'dash', 'ult'];
-            const currentSlotName = this.controlScheme === 'mouse' ? this.waitingForKey : 
-                (this.waitingForKey === 'q' ? 'shoot' : this.waitingForKey === 'e' ? 'dash' : 'ult');
-            
+            const slots = this.controlScheme === 'mouse'
+                ? ['q', 'e', 'f', 'move']
+                : ['shoot', 'dash', 'ult', 'up', 'down', 'left', 'right'];
+
+            // Map waitingForKey to actual slot name
+            let currentSlotName;
+            if (this.controlScheme === 'mouse') {
+                currentSlotName = this.waitingForKey; // 'q', 'e', 'f', or 'move' maps directly
+            } else {
+                // WASD mode mapping
+                const wasdSlotMap = { 'q': 'shoot', 'e': 'dash', 'f': 'ult', 'up': 'up', 'down': 'down', 'left': 'left', 'right': 'right' };
+                currentSlotName = wasdSlotMap[this.waitingForKey] || this.waitingForKey;
+            }
+
             for (let slot of slots) {
                 if (slot !== currentSlotName && currentKeys[slot] === pressedKey) {
                     isAlreadyUsed = true;
                     break;
                 }
             }
-            
+
             if (!isAlreadyUsed) {
                 // Valid key, assign it
                 if (this.controlScheme === 'mouse') {
                     this.customKeys[this.waitingForKey] = pressedKey;
                     localStorage.setItem('customKeys', JSON.stringify(this.customKeys));
                 } else {
-                    const wasdSlot = this.waitingForKey === 'q' ? 'shoot' :
-                                this.waitingForKey === 'e' ? 'dash' : 'ult';
+                    const wasdSlotMap = { 'q': 'shoot', 'e': 'dash', 'f': 'ult', 'up': 'up', 'down': 'down', 'left': 'left', 'right': 'right' };
+                    const wasdSlot = wasdSlotMap[this.waitingForKey] || this.waitingForKey;
                     this.wasdKeys[wasdSlot] = pressedKey;
                     localStorage.setItem('wasdKeys', JSON.stringify(this.wasdKeys));
                 }
@@ -337,31 +402,34 @@ export class PauseMenu {
                 // Key already in use, show error
                 if (window.gameSound) window.gameSound.playMenuClick();
                 const currentSlot = this.waitingForKey;
-                
-                if (currentSlot === 'q') {
-                    this.keybindQButton.text = "Shoot: Already in use!";
-                } else if (currentSlot === 'e') {
-                    this.keybindEButton.text = "Dash: Already in use!";
-                } else if (currentSlot === 'f') {
-                    this.keybindFButton.text = "Ultimate: Already in use!";
-                }
-                
-                setTimeout(() => {
-                    if (this.waitingForKey === currentSlot) {
-                        if (currentSlot === 'q') {
-                            this.keybindQButton.text = "Shoot: Press any key...";
-                        } else if (currentSlot === 'e') {
-                            this.keybindEButton.text = "Dash: Press any key...";
-                        } else if (currentSlot === 'f') {
-                            this.keybindFButton.text = "Ultimate: Press any key...";
+
+                // Show error on the appropriate button
+                const errorButtons = {
+                    'q': this.keybindQButton, 'e': this.keybindEButton, 'f': this.keybindFButton,
+                    'move': this.keybindMoveButton,
+                    'up': this.keybindUpButton, 'down': this.keybindDownButton,
+                    'left': this.keybindLeftButton, 'right': this.keybindRightButton
+                };
+                const errorLabels = {
+                    'q': 'Shoot', 'e': 'Dash', 'f': 'Ult',
+                    'move': 'Move',
+                    'up': 'Up', 'down': 'Down', 'left': 'Left', 'right': 'Right'
+                };
+
+                if (errorButtons[currentSlot]) {
+                    errorButtons[currentSlot].text = `${errorLabels[currentSlot]}: Already in use!`;
+                    setTimeout(() => {
+                        if (this.waitingForKey === currentSlot) {
+                            errorButtons[currentSlot].text = `${errorLabels[currentSlot]}: Press any key...`;
                         }
-                    }
-                }, 500);
+                    }, 500);
+                }
             }
         }
 
-        // Capture mouse button clicks for rebinding (ONLY in WASD mode)
-        if (this.waitingForKey && this.controlScheme === 'wasd' && input.buttons.length > 0) {
+        // Capture mouse button clicks for rebinding (in WASD mode or for 'move' keybind in mouse mode)
+        const allowMouseCapture = this.controlScheme === 'wasd' || this.waitingForKey === 'move';
+        if (this.waitingForKey && allowMouseCapture && input.buttons.length > 0) {
             // Check if enough time has passed
             const timeSinceStart = performance.now() - this.keybindWaitStart;
             if (timeSinceStart >= this.keybindWaitDelay) {
@@ -372,18 +440,6 @@ export class PauseMenu {
                         this.capturedKey = button;
                         break;
                     }
-                }
-            }
-        }
-
-        // ADD: Also capture mouse button clicks for rebinding
-        if (this.waitingForKey && input.buttons.length > 0) {
-            for (let i = 0; i < input.buttons.length; i++) {
-                const button = input.buttons[i];
-                // Check if it's a mouse button (number)
-                if (typeof button === 'number') {
-                    this.capturedKey = button;
-                    break;
                 }
             }
         }
@@ -530,6 +586,20 @@ export class PauseMenu {
         }
         // Audio submenu
         else if (this.showAudio && !this.showVolume && !this.showMusicSelection) {
+            // Audio On/Off toggle
+            this.audioToggleButton.update(inX, inY);
+            if (this.audioToggleButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) {
+                    window.gameSound.toggle();
+                    this.audioToggleButton.text = window.gameSound.isEnabled() ? "Audio: ON" : "Audio: OFF";
+                    // Play click sound only if audio is now enabled
+                    if (window.gameSound.isEnabled()) {
+                        window.gameSound.playMenuClick();
+                    }
+                }
+            }
+
             this.volumeButton.update(inX, inY);
             if (this.volumeButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
                 this.clicked = true;
@@ -576,14 +646,23 @@ export class PauseMenu {
                 // Load saved keybinds for the new mode, or use defaults
                 if (this.controlScheme === 'mouse') {
                     const savedCustomKeys = localStorage.getItem('customKeys');
-                    this.customKeys = savedCustomKeys ? JSON.parse(savedCustomKeys) : { q: 'q', e: 'e', f: 'f' };
+                    this.customKeys = savedCustomKeys ? JSON.parse(savedCustomKeys) : { q: 'q', e: 'e', f: 'f', move: 2 };
+                    if (this.customKeys.move === undefined) this.customKeys.move = 2;
                 } else {
                     const savedWasdKeys = localStorage.getItem('wasdKeys');
                     this.wasdKeys = savedWasdKeys ? JSON.parse(savedWasdKeys) : {
                         shoot: 0,  // Left click
                         dash: 'e',
-                        ult: 'q'
+                        ult: 'q',
+                        up: 'w',
+                        down: 's',
+                        left: 'a',
+                        right: 'd'
                     };
+                    if (this.wasdKeys.up === undefined) this.wasdKeys.up = 'w';
+                    if (this.wasdKeys.down === undefined) this.wasdKeys.down = 's';
+                    if (this.wasdKeys.left === undefined) this.wasdKeys.left = 'a';
+                    if (this.wasdKeys.right === undefined) this.wasdKeys.right = 'd';
                 }
 
                 this.updateKeybindButtons();
@@ -605,6 +684,8 @@ export class PauseMenu {
         }
         // Keybinds submenu
         else if (this.showKeybinds) {
+            const btnSpace = 85;
+
             this.keybindQButton.update(inX, inY);
             if (this.keybindQButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked && !this.waitingForKey) {
                 this.clicked = true;
@@ -630,6 +711,76 @@ export class PauseMenu {
                 this.waitingForKey = 'f';
                 this.keybindWaitStart = performance.now();
                 this.keybindFButton.text = "Ult: Press any key...";
+            }
+
+            // Mouse mode: Move button
+            if (this.controlScheme === 'mouse') {
+                this.keybindMoveButton.y = 280 + btnSpace * 3;
+                this.keybindMoveButton.update(inX, inY);
+                if (this.keybindMoveButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked && !this.waitingForKey) {
+                    this.clicked = true;
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    this.waitingForKey = 'move';
+                    this.keybindWaitStart = performance.now();
+                    this.keybindMoveButton.text = "Move: Press any key...";
+                }
+                // Pause and Back buttons for mouse mode
+                this.keybindPauseButton.y = 280 + btnSpace * 4;
+                this.keybindBackButton.y = 280 + btnSpace * 5;
+            }
+            // WASD mode: Direction buttons
+            else {
+                this.keybindUpButton.y = 280 + btnSpace * 3;
+                this.keybindUpButton.update(inX, inY);
+                if (this.keybindUpButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked && !this.waitingForKey) {
+                    this.clicked = true;
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    this.waitingForKey = 'up';
+                    this.keybindWaitStart = performance.now();
+                    this.keybindUpButton.text = "Up: Press any key...";
+                }
+
+                this.keybindDownButton.y = 280 + btnSpace * 4;
+                this.keybindDownButton.update(inX, inY);
+                if (this.keybindDownButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked && !this.waitingForKey) {
+                    this.clicked = true;
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    this.waitingForKey = 'down';
+                    this.keybindWaitStart = performance.now();
+                    this.keybindDownButton.text = "Down: Press any key...";
+                }
+
+                this.keybindLeftButton.y = 280 + btnSpace * 5;
+                this.keybindLeftButton.update(inX, inY);
+                if (this.keybindLeftButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked && !this.waitingForKey) {
+                    this.clicked = true;
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    this.waitingForKey = 'left';
+                    this.keybindWaitStart = performance.now();
+                    this.keybindLeftButton.text = "Left: Press any key...";
+                }
+
+                this.keybindRightButton.y = 280 + btnSpace * 6;
+                this.keybindRightButton.update(inX, inY);
+                if (this.keybindRightButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked && !this.waitingForKey) {
+                    this.clicked = true;
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    this.waitingForKey = 'right';
+                    this.keybindWaitStart = performance.now();
+                    this.keybindRightButton.text = "Right: Press any key...";
+                }
+                // Pause and Back buttons for WASD mode
+                this.keybindPauseButton.y = 280 + btnSpace * 7;
+                this.keybindBackButton.y = 280 + btnSpace * 8;
+            }
+
+            this.keybindPauseButton.update(inX, inY);
+            if (this.keybindPauseButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked && !this.waitingForKey) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.waitingForKey = 'pause';
+                this.keybindWaitStart = performance.now();
+                this.keybindPauseButton.text = "Pause: Press any key...";
             }
 
             this.keybindBackButton.update(inX, inY);
@@ -883,43 +1034,35 @@ export class PauseMenu {
             return String(key);
         };
         
+        // Helper to format with Space handling
+        const formatWithSpace = (key) => {
+            let formatted = formatKey(key);
+            if (formatted === ' ') formatted = 'Space';
+            return formatted;
+        };
+
         if (this.controlScheme === 'mouse') {
-            // Mouse mode: Q/E/F abilities
-            const qKey = typeof this.customKeys.q === 'string' ? this.customKeys.q : 'q';
-            const eKey = typeof this.customKeys.e === 'string' ? this.customKeys.e : 'e';
-            const fKey = typeof this.customKeys.f === 'string' ? this.customKeys.f : 'f';
-
-            let shootKey = `${formatKey(qKey)}`;
-            let dashKey = `${formatKey(eKey)}`;
-            let ultKey = `${formatKey(fKey)}`;
-            let textsArray = [shootKey, dashKey, ultKey];
-            for(let i = 0; i < textsArray.length; i++){
-                if(textsArray[i] == ' '){
-                    textsArray[i] = 'Space';
-                }
-                //console.log(''+ i + ' key is ' + textsArray[i]);
-            }
-            this.keybindQButton.text = `Shoot: ` + textsArray[0];
-            this.keybindEButton.text = `Dash: ` + textsArray[1];
-            this.keybindFButton.text = `Ultimate: ` + textsArray[2];
-
-        } 
-        else {
-            // WASD mode: Shoot/Dash/Ultimate
-            let shootKey = `${formatKey(this.wasdKeys.shoot)}`;
-            let dashKey = `${formatKey(this.wasdKeys.dash)}`;
-            let ultKey = `${formatKey(this.wasdKeys.ult)}`;
-            let textsArray = [shootKey, dashKey, ultKey];
-            for(let i = 0; i < textsArray.length; i++){
-                if(textsArray[i] == ' '){
-                    textsArray[i] = 'Space';
-                }
-                //console.log(''+ i + ' key is ' + textsArray[i]);
-            }
-            this.keybindQButton.text = `Shoot: ` + textsArray[0];
-            this.keybindEButton.text = `Dash: ` + textsArray[1];
-            this.keybindFButton.text = `Ultimate: ` + textsArray[2];
+            // Mouse mode: Q/E/F abilities + Move
+            this.keybindQButton.text = `Shoot: ${formatWithSpace(this.customKeys.q)}`;
+            this.keybindEButton.text = `Dash: ${formatWithSpace(this.customKeys.e)}`;
+            this.keybindFButton.text = `Ultimate: ${formatWithSpace(this.customKeys.f)}`;
+            this.keybindMoveButton.text = `Move: ${formatWithSpace(this.customKeys.move)}`;
         }
+        else {
+            // WASD mode: Shoot/Dash/Ultimate + Movement directions
+            this.keybindQButton.text = `Shoot: ${formatWithSpace(this.wasdKeys.shoot)}`;
+            this.keybindEButton.text = `Dash: ${formatWithSpace(this.wasdKeys.dash)}`;
+            this.keybindFButton.text = `Ultimate: ${formatWithSpace(this.wasdKeys.ult)}`;
+            this.keybindUpButton.text = `Up: ${formatWithSpace(this.wasdKeys.up)}`;
+            this.keybindDownButton.text = `Down: ${formatWithSpace(this.wasdKeys.down)}`;
+            this.keybindLeftButton.text = `Left: ${formatWithSpace(this.wasdKeys.left)}`;
+            this.keybindRightButton.text = `Right: ${formatWithSpace(this.wasdKeys.right)}`;
+        }
+
+        // Pause key (applies to both control schemes)
+        let pauseKeyText = formatKey(this.pauseKey);
+        if (pauseKeyText === ' ') pauseKeyText = 'Space';
+        this.keybindPauseButton.text = `Pause: ${pauseKeyText}`;
     }
 
     draw(context, game, inMainMenu = false) {
@@ -1004,21 +1147,22 @@ export class PauseMenu {
         }
         // Audio submenu
         else if (this.showAudio && !this.showVolume && !this.showMusicSelection) {
-            // Draw audio submenu background
+            // Draw audio submenu background (taller to fit 4 buttons)
             context.save();
             context.fillStyle = 'rgba(10, 20, 40, 0.95)';
-            context.fillRect(880 * rX, 200 * rY, 800 * rX, 380 * rY);
+            context.fillRect(880 * rX, 200 * rY, 800 * rX, 460 * rY);
             context.strokeStyle = '#00ffff';
             context.shadowColor = '#00ffff';
             context.shadowBlur = 15 * rX;
             context.lineWidth = 3 * rY;
-            context.strokeRect(880 * rX, 200 * rY, 800 * rX, 380 * rY);
+            context.strokeRect(880 * rX, 200 * rY, 800 * rX, 460 * rY);
             context.restore();
 
             // Draw title
             this.super.drawGlowText(context, 1280, 250, "AUDIO", 55, '#ffffff', '#00ffff', 15, true);
 
             // Draw buttons
+            this.audioToggleButton.draw(context);
             this.volumeButton.draw(context);
             this.musicSelectionButton.draw(context);
             this.audioBackButton.draw(context);
@@ -1046,34 +1190,60 @@ export class PauseMenu {
         }
         // Keybinds submenu
         else if (this.showKeybinds) {
+            // Calculate panel height based on control scheme
+            // Mouse mode: Shoot, Dash, Ult, Move, Pause, Back = 6 buttons (550 height)
+            // WASD mode: Shoot, Dash, Ult, Up, Down, Left, Right, Pause, Back = 9 buttons (805 height)
+            const panelHeight = this.controlScheme === 'mouse' ? 605 : 860;
+
             // Draw keybinds background - centered like other panels
             context.save();
             context.fillStyle = 'rgba(10, 20, 40, 0.95)';
-            context.fillRect(880 * rX, 200 * rY, 800 * rX, 465 * rY);
+            context.fillRect(880 * rX, 200 * rY, 800 * rX, panelHeight * rY);
             context.strokeStyle = '#00ffff';
             context.shadowColor = '#00ffff';
             context.shadowBlur = 15 * rX;
             context.lineWidth = 3 * rY;
-            context.strokeRect(880 * rX, 200 * rY, 800 * rX, 465 * rY);
+            context.strokeRect(880 * rX, 200 * rY, 800 * rX, panelHeight * rY);
             context.restore();
 
             // Draw title
             this.super.drawGlowText(context, 1280, 250, "KEYBINDS", 55, '#ffffff', '#00ffff', 15, true);
 
-            // Draw buttons
+            // Draw common buttons (Shoot, Dash, Ult)
             this.keybindQButton.draw(context);
             this.keybindEButton.draw(context);
             this.keybindFButton.draw(context);
 
+            // Draw mode-specific buttons
+            if (this.controlScheme === 'mouse') {
+                // Mouse mode: Move button
+                this.keybindMoveButton.draw(context);
+            } else {
+                // WASD mode: Direction buttons
+                this.keybindUpButton.draw(context);
+                this.keybindDownButton.draw(context);
+                this.keybindLeftButton.draw(context);
+                this.keybindRightButton.draw(context);
+            }
+
+            // Draw Pause button (dynamically positioned in update())
+            this.keybindPauseButton.draw(context);
+
+            // Calculate message Y position based on control scheme
+            const messageY = this.controlScheme === 'mouse' ? 700 : 955;
+
             // Draw waiting message or back button (not both to avoid overlap)
             if (this.waitingForKey) {
-                if (this.controlScheme === 'mouse') {
-                    this.super.drawGlowText(context, 1280, 560, "Press any keyboard key...", 32, '#ffff00', '#ffaa00', 8, true);
-                    this.super.drawGlowText(context, 1280, 600, "(Mouse buttons not allowed)", 24, '#ff8888', '#ff4444', 6, true);
-                    this.super.drawGlowText(context, 1280, 640, "Press ESC to go back", 22, '#aaaaaa', '#888888', 6, true);
+                if (this.waitingForKey === 'pause') {
+                    this.super.drawGlowText(context, 1280, messageY, "Press any keyboard key...", 32, '#ffff00', '#ffaa00', 8, true);
+                    this.super.drawGlowText(context, 1280, messageY + 40, "(Mouse buttons not allowed)", 24, '#ff8888', '#ff4444', 6, true);
+                } else if (this.controlScheme === 'mouse' && this.waitingForKey !== 'move') {
+                    this.super.drawGlowText(context, 1280, messageY, "Press any keyboard key...", 32, '#ffff00', '#ffaa00', 8, true);
+                    this.super.drawGlowText(context, 1280, messageY + 40, "(Mouse buttons not allowed)", 24, '#ff8888', '#ff4444', 6, true);
+                    this.super.drawGlowText(context, 1280, messageY + 80, "Press ESC to go back", 22, '#aaaaaa', '#888888', 6, true);
                 } else {
-                    this.super.drawGlowText(context, 1280, 560, "Press any key or mouse button...", 32, '#ffff00', '#ffaa00', 8, true);
-                    this.super.drawGlowText(context, 1280, 600, "Press ESC to go back", 24, '#aaaaaa', '#888888', 6, true);
+                    this.super.drawGlowText(context, 1280, messageY, "Press any key or mouse button...", 32, '#ffff00', '#ffaa00', 8, true);
+                    this.super.drawGlowText(context, 1280, messageY + 40, "Press ESC to go back", 24, '#aaaaaa', '#888888', 6, true);
                 }
             } else {
                 this.keybindBackButton.draw(context);

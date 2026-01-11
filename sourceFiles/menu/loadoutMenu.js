@@ -487,19 +487,34 @@ export class LoadoutMenu {
         const inY = game.input.mouseY;
         const clicking = game.input.buttons.indexOf(0) > -1;
 
-        if (!clicking) {
-            this.clicked = false;
-            this.isDraggingScrollbar = false;
-        }
-
         // Reference coordinates (2560x1440)
         const refCenterX = 1280;
+        const refPanelW = 1200;
         const refPanelH = 800;
         const refPanelTop = 720 - refPanelH / 2;
         const refPanelBottom = 720 + refPanelH / 2;
 
         const rX = window.innerWidth / 2560;
         const rY = window.innerHeight / 1440;
+
+        // Click outside to close (only if preset menu is not open)
+        if (!this.showPresetMenu && clicking && !this.clicked) {
+            const panelLeft = (refCenterX - refPanelW / 2) * rX;
+            const panelRight = (refCenterX + refPanelW / 2) * rX;
+            const panelTop = refPanelTop * rY;
+            const panelBottom = refPanelBottom * rY;
+
+            if (inX < panelLeft || inX > panelRight || inY < panelTop || inY > panelBottom) {
+                this.clicked = true;
+                this.hide();
+                return 'cancel';
+            }
+        }
+
+        if (!clicking) {
+            this.clicked = false;
+            this.isDraggingScrollbar = false;
+        }
 
         // Update buttons
         this.startButton.x = refCenterX - 230;

@@ -223,9 +223,28 @@ export class RankedMenu {
 
         // Panel dimensions in reference coordinates (2560x1440)
         const refCenterX = 1280;
+        const refPanelW = 1150;
         const refPanelH = 800;
         const refPanelBottom = 720 + refPanelH / 2;
         const buttonY = refPanelBottom - 60 - 70; // padding from bottom
+
+        // Click outside to close
+        const rX = window.innerWidth / 2560;
+        const rY = window.innerHeight / 1440;
+        const panelLeft = (refCenterX - refPanelW / 2) * rX;
+        const panelRight = (refCenterX + refPanelW / 2) * rX;
+        const panelTop = (720 - refPanelH / 2) * rY;
+        const panelBottom = (720 + refPanelH / 2) * rY;
+
+        const clicking = game.input.buttons.indexOf(0) > -1;
+
+        if (clicking && !this.clicked) {
+            if (inX < panelLeft || inX > panelRight || inY < panelTop || inY > panelBottom) {
+                this.clicked = true;
+                this.hide();
+                return true;
+            }
+        }
 
         const setButtonPos = (btn, x, y, w, h) => {
             btn.x = x;
@@ -234,7 +253,6 @@ export class RankedMenu {
             btn.h = h;
         };
 
-        const clicking = game.input.buttons.indexOf(0) > -1;
         if (!clicking) {
             this.clicked = false;
         }

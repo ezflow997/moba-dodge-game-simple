@@ -287,6 +287,24 @@ export class LeaderboardMenu {
 
         const inX = game.input.mouseX;
         const inY = game.input.mouseY;
+        const clicking = game.input.buttons.indexOf(0) > -1;
+
+        // Click outside to close (panel: x=680, y=100, w=1200, h=1080)
+        const rX = window.innerWidth / 2560;
+        const rY = window.innerHeight / 1440;
+        const panelLeft = 680 * rX;
+        const panelRight = (680 + 1200) * rX;
+        const panelTop = 100 * rY;
+        const panelBottom = (100 + 1080) * rY;
+
+        if (clicking && !this.clicked) {
+            if (inX < panelLeft || inX > panelRight || inY < panelTop || inY > panelBottom) {
+                this.clicked = true;
+                const wasRankedOnly = this.rankedOnly;
+                this.hide();
+                return wasRankedOnly ? 'return_to_ranked' : false;
+            }
+        }
 
         // Update cursor blink
         this.cursorBlink = (this.cursorBlink + 1) % 60;
@@ -295,9 +313,6 @@ export class LeaderboardMenu {
         if (this.clicked && game.input.buttons.indexOf(0) == -1) {
             this.clicked = false;
         }
-
-        const rX = window.innerWidth / 2560;
-        const rY = window.innerHeight / 1440;
 
         // Search field click detection (positioned at 730, 325, width 750, height 45)
         const searchX = 730 * rX;
