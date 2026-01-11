@@ -397,16 +397,14 @@ export class PauseMenu {
                 return;
             }
 
-            // In mouse mode, ONLY allow keyboard keys (not mouse buttons) for ability keys (q, e, f)
-            // BUT allow mouse buttons for the 'move' keybind
-            if (this.controlScheme === 'mouse' && typeof pressedKey === 'number' && this.waitingForKey !== 'move') {
-                // Reject mouse buttons in mouse mode for abilities
+            // In mouse mode, ONLY allow keyboard keys (not mouse buttons) for dash/ult (e, f)
+            // BUT allow mouse buttons for 'move' and 'shoot' (q) keybinds
+            if (this.controlScheme === 'mouse' && typeof pressedKey === 'number' && this.waitingForKey !== 'move' && this.waitingForKey !== 'q') {
+                // Reject mouse buttons in mouse mode for dash/ult
                 if (window.gameSound) window.gameSound.playMenuClick();
                 const currentSlot = this.waitingForKey;
 
-                if (currentSlot === 'q') {
-                    this.keybindQButton.text = "Shoot: Keyboard only!";
-                } else if (currentSlot === 'e') {
+                if (currentSlot === 'e') {
                     this.keybindEButton.text = "Dash: Keyboard only!";
                 } else if (currentSlot === 'f') {
                     this.keybindFButton.text = "Ultimate: Keyboard only!";
@@ -414,9 +412,7 @@ export class PauseMenu {
 
                 setTimeout(() => {
                     if (this.waitingForKey === currentSlot) {
-                        if (currentSlot === 'q') {
-                            this.keybindQButton.text = "Shoot: Press any key...";
-                        } else if (currentSlot === 'e') {
+                        if (currentSlot === 'e') {
                             this.keybindEButton.text = "Dash: Press any key...";
                         } else if (currentSlot === 'f') {
                             this.keybindFButton.text = "Ultimate: Press any key...";
@@ -493,8 +489,8 @@ export class PauseMenu {
             }
         }
 
-        // Capture mouse button clicks for rebinding (in WASD mode or for 'move' keybind in mouse mode)
-        const allowMouseCapture = this.controlScheme === 'wasd' || this.waitingForKey === 'move';
+        // Capture mouse button clicks for rebinding (in WASD mode or for 'move'/'shoot' keybind in mouse mode)
+        const allowMouseCapture = this.controlScheme === 'wasd' || this.waitingForKey === 'move' || this.waitingForKey === 'q';
         if (this.waitingForKey && allowMouseCapture && input.buttons.length > 0) {
             // Check if enough time has passed
             const timeSinceStart = performance.now() - this.keybindWaitStart;
@@ -1303,7 +1299,8 @@ export class PauseMenu {
                 if (this.waitingForKey === 'pause') {
                     this.super.drawGlowText(context, 1280, messageY, "Press any keyboard key...", 32, '#ffff00', '#ffaa00', 8, true);
                     this.super.drawGlowText(context, 1280, messageY + 40, "(Mouse buttons not allowed)", 24, '#ff8888', '#ff4444', 6, true);
-                } else if (this.controlScheme === 'mouse' && this.waitingForKey !== 'move') {
+                } else if (this.controlScheme === 'mouse' && this.waitingForKey !== 'move' && this.waitingForKey !== 'q') {
+                    // Dash and Ultimate only allow keyboard keys in mouse mode
                     this.super.drawGlowText(context, 1280, messageY, "Press any keyboard key...", 32, '#ffff00', '#ffaa00', 8, true);
                     this.super.drawGlowText(context, 1280, messageY + 40, "(Mouse buttons not allowed)", 24, '#ff8888', '#ff4444', 6, true);
                     this.super.drawGlowText(context, 1280, messageY + 80, "Press ESC to go back", 22, '#aaaaaa', '#888888', 6, true);
