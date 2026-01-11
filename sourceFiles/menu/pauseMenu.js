@@ -278,6 +278,72 @@ export class PauseMenu {
         const input = game.input;
         const inX = input.mouseX;
         const inY = input.mouseY;
+        const clicking = input.buttons.indexOf(0) > -1;
+
+        // Click outside to close (only when not waiting for keybind input)
+        if (!this.waitingForKey) {
+            const rX = window.innerWidth / 2560;
+            const rY = window.innerHeight / 1440;
+
+            // Calculate panel bounds based on current submenu
+            const panelX = 880;
+            const panelY = 200;
+            const panelW = 800;
+            let panelH = 800; // Default height
+
+            // Adjust height based on which submenu is open
+            if (this.showMusicSelection) {
+                panelH = 680;
+            } else if (this.showVolume) {
+                panelH = 460;
+            } else if (this.showUIScale) {
+                panelH = 380;
+            } else if (this.showKeybinds) {
+                panelH = this.controlScheme === 'mouse' ? 605 : 860;
+            } else if (this.showControls) {
+                panelH = 380;
+            } else if (this.showAudio) {
+                panelH = 460;
+            } else {
+                // Main menu - calculate based on visible buttons
+                const inTestRoom = game.testRoom && game.testRoom.active;
+                const devModeVisible = game.devMode && (this.devModeVisible || game.devMode.isEnabled());
+                const inMainMenu = game.showMessage === 'None' && game.gameOver;
+                let buttonCount = 5;
+                if (devModeVisible) buttonCount++;
+                if (inTestRoom) buttonCount++;
+                if (!inMainMenu) buttonCount++;
+                panelH = 110 + (buttonCount * 85);
+            }
+
+            const panelLeft = panelX * rX;
+            const panelRight = (panelX + panelW) * rX;
+            const panelTop = panelY * rY;
+            const panelBottom = (panelY + panelH) * rY;
+
+            if (clicking && !this.clicked) {
+                if (inX < panelLeft || inX > panelRight || inY < panelTop || inY > panelBottom) {
+                    this.clicked = true;
+                    // If in a submenu, go back to parent; otherwise close pause menu
+                    if (this.showMusicSelection) {
+                        this.showMusicSelection = false;
+                    } else if (this.showVolume) {
+                        this.showVolume = false;
+                    } else if (this.showUIScale) {
+                        this.showUIScale = false;
+                    } else if (this.showKeybinds) {
+                        this.showKeybinds = false;
+                    } else if (this.showControls) {
+                        this.showControls = false;
+                    } else if (this.showAudio) {
+                        this.showAudio = false;
+                    } else {
+                        this.toggle();
+                    }
+                    return;
+                }
+            }
+        }
 
         // Handle click state
         if (this.clicked && input.buttons.indexOf(0) == -1) {
