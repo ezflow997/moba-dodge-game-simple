@@ -38,6 +38,7 @@ export class LeaderboardMenu {
         this.searchActive = false;
         this.cursorBlink = 0;
         this.searchDebounceTimer = null;
+        this.searchCaretPos = 0;
 
         // Animation timer for champion effects
         this.animationTime = 0;
@@ -88,6 +89,7 @@ export class LeaderboardMenu {
         this.searchResults = [];
         this.currentResultIndex = 0;
         this.highlightedPlayer = null;
+        this.searchCaretPos = 0;
         this.devMode = game && game.devMode && game.devMode.isEnabled();
         document.addEventListener('keydown', this.keyHandler);
         await this.loadLeaderboard();
@@ -103,6 +105,7 @@ export class LeaderboardMenu {
         this.searchResults = [];
         this.currentResultIndex = 0;
         this.highlightedPlayer = null;
+        this.searchCaretPos = 0;
         this.devMode = game && game.devMode && game.devMode.isEnabled();
         document.addEventListener('keydown', this.keyHandler);
         await this.loadLeaderboard();
@@ -126,10 +129,51 @@ export class LeaderboardMenu {
         // This handler is only for search input when search is active
         if (!this.isVisible || !this.searchActive) return;
 
-        // Handle backspace
+        // Handle backspace - delete character before caret
         if (e.key === 'Backspace') {
-            this.searchQuery = this.searchQuery.slice(0, -1);
-            this.triggerSearchDebounce();
+            if (this.searchCaretPos > 0) {
+                this.searchQuery = this.searchQuery.slice(0, this.searchCaretPos - 1) + this.searchQuery.slice(this.searchCaretPos);
+                this.searchCaretPos--;
+                this.triggerSearchDebounce();
+            }
+            e.preventDefault();
+            return;
+        }
+
+        // Handle Delete key - delete character after caret
+        if (e.key === 'Delete') {
+            if (this.searchCaretPos < this.searchQuery.length) {
+                this.searchQuery = this.searchQuery.slice(0, this.searchCaretPos) + this.searchQuery.slice(this.searchCaretPos + 1);
+                this.triggerSearchDebounce();
+            }
+            e.preventDefault();
+            return;
+        }
+
+        // Handle arrow keys for caret movement
+        if (e.key === 'ArrowLeft') {
+            if (this.searchCaretPos > 0) {
+                this.searchCaretPos--;
+            }
+            e.preventDefault();
+            return;
+        }
+        if (e.key === 'ArrowRight') {
+            if (this.searchCaretPos < this.searchQuery.length) {
+                this.searchCaretPos++;
+            }
+            e.preventDefault();
+            return;
+        }
+
+        // Handle Home/End keys
+        if (e.key === 'Home') {
+            this.searchCaretPos = 0;
+            e.preventDefault();
+            return;
+        }
+        if (e.key === 'End') {
+            this.searchCaretPos = this.searchQuery.length;
             e.preventDefault();
             return;
         }
@@ -143,10 +187,11 @@ export class LeaderboardMenu {
             return;
         }
 
-        // Handle regular characters
+        // Handle regular characters - insert at caret position
         if (e.key.length === 1 && this.searchQuery.length < this.maxSearchLength) {
             if (/^[a-zA-Z0-9_\-]$/.test(e.key)) {
-                this.searchQuery += e.key;
+                this.searchQuery = this.searchQuery.slice(0, this.searchCaretPos) + e.key + this.searchQuery.slice(this.searchCaretPos);
+                this.searchCaretPos++;
                 this.triggerSearchDebounce();
             }
             e.preventDefault();
@@ -326,6 +371,17 @@ export class LeaderboardMenu {
                 this.searchActive = true;
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
+
+                // Calculate caret position from click
+                const charWidth = 26 * 0.55 * rX; // Approximate char width for 26px font
+                const textStartX = (730 + 15) * rX;
+                const relativeX = inX - textStartX;
+                if (relativeX <= 0) {
+                    this.searchCaretPos = 0;
+                } else {
+                    const clickedPos = Math.round(relativeX / charWidth);
+                    this.searchCaretPos = Math.min(clickedPos, this.searchQuery.length);
+                }
             } else {
                 // Clicked outside search box - deactivate it
                 this.searchActive = false;
@@ -356,6 +412,7 @@ export class LeaderboardMenu {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.searchQuery = '';
+                this.searchCaretPos = 0;
                 this.searchResults = [];
                 this.currentResultIndex = 0;
                 this.highlightedPlayer = null;
@@ -645,10 +702,13 @@ export class LeaderboardMenu {
         context.strokeRect(x * rX, y * rY, width * rX, height * rY);
         context.restore();
 
-        // Display text or placeholder
+        // Display text or placeholder with cursor at caret position
         const showCursor = this.searchActive && this.cursorBlink < 30;
         if (this.searchQuery.length > 0) {
-            const displayText = this.searchQuery + (showCursor ? '|' : '');
+            // Insert cursor at caret position
+            const beforeCaret = this.searchQuery.slice(0, this.searchCaretPos);
+            const afterCaret = this.searchQuery.slice(this.searchCaretPos);
+            const displayText = beforeCaret + (showCursor ? '|' : '') + afterCaret;
             this.super.drawGlowText(context, x + 15, y + 33, displayText, 26, '#00ff88', '#00ff00', 6);
         } else {
             const placeholder = showCursor ? '|' : 'Type name to search...';

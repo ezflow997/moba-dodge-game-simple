@@ -712,8 +712,8 @@ window.addEventListener('load', function () {
 
 					if (clicked && msPassed > retryButtonDelay && game.retryButtonBounds) {
 						const bounds = game.retryButtonBounds;
-						const mouseX = game.input.inX;
-						const mouseY = game.input.inY;
+						const mouseX = game.input.mouseX;
+						const mouseY = game.input.mouseY;
 						clickedRetry = mouseX > bounds.x && mouseX < bounds.x + bounds.w &&
 						               mouseY > bounds.y && mouseY < bounds.y + bounds.h;
 					}

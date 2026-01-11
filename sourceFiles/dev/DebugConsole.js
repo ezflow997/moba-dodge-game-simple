@@ -8,6 +8,7 @@ export class DebugConsole {
         
         this.visible = false;
         this.inputText = '';
+        this.inputCaretPos = 0;
         this.commandHistory = this.loadHistory();
         this.historyIndex = -1;
         this.outputMessages = [];
@@ -74,14 +75,39 @@ export class DebugConsole {
                 this.executeCommand();
             } else if (e.key === 'Backspace') {
                 e.preventDefault();
-                this.inputText = this.inputText.slice(0, -1);
-                this.updateSuggestions();
+                if (this.inputCaretPos > 0) {
+                    this.inputText = this.inputText.slice(0, this.inputCaretPos - 1) + this.inputText.slice(this.inputCaretPos);
+                    this.inputCaretPos--;
+                    this.updateSuggestions();
+                }
+            } else if (e.key === 'Delete') {
+                e.preventDefault();
+                if (this.inputCaretPos < this.inputText.length) {
+                    this.inputText = this.inputText.slice(0, this.inputCaretPos) + this.inputText.slice(this.inputCaretPos + 1);
+                    this.updateSuggestions();
+                }
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                if (this.inputCaretPos > 0) {
+                    this.inputCaretPos--;
+                }
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                if (this.inputCaretPos < this.inputText.length) {
+                    this.inputCaretPos++;
+                }
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 this.navigateHistory(-1);
             } else if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 this.navigateHistory(1);
+            } else if (e.key === 'Home') {
+                e.preventDefault();
+                this.inputCaretPos = 0;
+            } else if (e.key === 'End') {
+                e.preventDefault();
+                this.inputCaretPos = this.inputText.length;
             } else if (e.key === 'Tab') {
                 e.preventDefault();
                 this.autocomplete();
@@ -89,9 +115,10 @@ export class DebugConsole {
                 e.preventDefault();
                 this.hide();
             } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
-                // Regular character
+                // Regular character - insert at caret position
                 e.preventDefault();
-                this.inputText += e.key;
+                this.inputText = this.inputText.slice(0, this.inputCaretPos) + e.key + this.inputText.slice(this.inputCaretPos);
+                this.inputCaretPos++;
                 this.updateSuggestions();
             }
         };
@@ -117,10 +144,11 @@ export class DebugConsole {
         this.visible = true;
         this.animating = true;
         this.inputText = '';
+        this.inputCaretPos = 0;
         this.historyIndex = -1;
         this.updateSuggestions();
     }
-    
+
     /**
      * Hide console
      */
@@ -128,6 +156,7 @@ export class DebugConsole {
         this.visible = false;
         this.animating = true;
         this.inputText = '';
+        this.inputCaretPos = 0;
         this.suggestions = [];
     }
     
@@ -190,9 +219,10 @@ export class DebugConsole {
         // Display result
         const color = result.success ? '#00ff00' : '#ff0000';
         this.addMessage(result.message, color);
-        
+
         // Clear input
         this.inputText = '';
+        this.inputCaretPos = 0;
         this.historyIndex = -1;
         this.updateSuggestions();
     }
@@ -202,7 +232,7 @@ export class DebugConsole {
      */
     navigateHistory(direction) {
         if (this.commandHistory.length === 0) return;
-        
+
         if (direction < 0) {
             // Up arrow - go back in history
             if (this.historyIndex === -1) {
@@ -217,14 +247,16 @@ export class DebugConsole {
                 if (this.historyIndex >= this.commandHistory.length) {
                     this.historyIndex = -1;
                     this.inputText = '';
+                    this.inputCaretPos = 0;
                     this.updateSuggestions();
                     return;
                 }
             }
         }
-        
+
         if (this.historyIndex !== -1) {
             this.inputText = this.commandHistory[this.historyIndex];
+            this.inputCaretPos = this.inputText.length;
             this.updateSuggestions();
         }
     }
@@ -262,6 +294,7 @@ export class DebugConsole {
             this.inputText = suggestion + ' ';
         }
 
+        this.inputCaretPos = this.inputText.length;
         this.suggestions = [];
     }
     
@@ -322,9 +355,10 @@ export class DebugConsole {
             // Draw input line
             context.fillStyle = '#ffffff';
             context.fillText(`> ${this.inputText}`, textX, textY);
-            
-            // Draw cursor
-            const cursorX = textX + context.measureText(`> ${this.inputText}`).width;
+
+            // Draw cursor at caret position
+            const textBeforeCaret = `> ${this.inputText.slice(0, this.inputCaretPos)}`;
+            const cursorX = textX + context.measureText(textBeforeCaret).width;
             const cursorBlink = Math.floor(Date.now() / 500) % 2;
             if (cursorBlink === 0) {
                 context.fillRect(cursorX, textY - this.fontSize * rX, 2, this.fontSize * rX);

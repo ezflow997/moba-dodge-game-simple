@@ -32,6 +32,13 @@ export class AccountMenu {
         // Active field tracking
         this.activeField = 'currentPassword';
 
+        // Caret positions for each field
+        this.usernameCaretPos = 0;
+        this.currentPasswordCaretPos = 0;
+        this.newPasswordCaretPos = 0;
+        this.confirmPasswordCaretPos = 0;
+        this.securityAnswerCaretPos = 0;
+
         // Security question for recovery
         this.securityQuestion = '';
 
@@ -83,6 +90,13 @@ export class AccountMenu {
         this.isLoggedIn = isLoggedIn;
         this.hasSecurityQuestion = hasSecurityQuestion;
         this.selectedQuestionIndex = 0;
+
+        // Reset caret positions
+        this.usernameCaretPos = playerName.length;
+        this.currentPasswordCaretPos = 0;
+        this.newPasswordCaretPos = 0;
+        this.confirmPasswordCaretPos = 0;
+        this.securityAnswerCaretPos = 0;
 
         document.addEventListener('keydown', this.keyHandler);
 
@@ -155,10 +169,111 @@ export class AccountMenu {
             return;
         }
 
+        // Handle arrow keys for caret movement
+        if (e.key === 'ArrowLeft') {
+            this.moveCaretLeft();
+            e.preventDefault();
+            return;
+        }
+        if (e.key === 'ArrowRight') {
+            this.moveCaretRight();
+            e.preventDefault();
+            return;
+        }
+
+        // Handle Home/End keys for caret movement
+        if (e.key === 'Home') {
+            this.moveCaretToStart();
+            e.preventDefault();
+            return;
+        }
+        if (e.key === 'End') {
+            this.moveCaretToEnd();
+            e.preventDefault();
+            return;
+        }
+
+        // Handle Delete key
+        if (e.key === 'Delete') {
+            this.handleDelete();
+            e.preventDefault();
+            return;
+        }
+
         // Handle character input
         if (e.key.length === 1) {
             this.handleCharInput(e.key);
             e.preventDefault();
+        }
+    }
+
+    moveCaretLeft() {
+        if (this.activeField === 'username' && this.usernameCaretPos > 0) {
+            this.usernameCaretPos--;
+        } else if (this.activeField === 'currentPassword' && this.currentPasswordCaretPos > 0) {
+            this.currentPasswordCaretPos--;
+        } else if (this.activeField === 'newPassword' && this.newPasswordCaretPos > 0) {
+            this.newPasswordCaretPos--;
+        } else if (this.activeField === 'confirmPassword' && this.confirmPasswordCaretPos > 0) {
+            this.confirmPasswordCaretPos--;
+        } else if (this.activeField === 'securityAnswer' && this.securityAnswerCaretPos > 0) {
+            this.securityAnswerCaretPos--;
+        }
+    }
+
+    moveCaretRight() {
+        if (this.activeField === 'username' && this.usernameCaretPos < this.username.length) {
+            this.usernameCaretPos++;
+        } else if (this.activeField === 'currentPassword' && this.currentPasswordCaretPos < this.currentPassword.length) {
+            this.currentPasswordCaretPos++;
+        } else if (this.activeField === 'newPassword' && this.newPasswordCaretPos < this.newPassword.length) {
+            this.newPasswordCaretPos++;
+        } else if (this.activeField === 'confirmPassword' && this.confirmPasswordCaretPos < this.confirmPassword.length) {
+            this.confirmPasswordCaretPos++;
+        } else if (this.activeField === 'securityAnswer' && this.securityAnswerCaretPos < this.securityAnswer.length) {
+            this.securityAnswerCaretPos++;
+        }
+    }
+
+    moveCaretToStart() {
+        if (this.activeField === 'username') {
+            this.usernameCaretPos = 0;
+        } else if (this.activeField === 'currentPassword') {
+            this.currentPasswordCaretPos = 0;
+        } else if (this.activeField === 'newPassword') {
+            this.newPasswordCaretPos = 0;
+        } else if (this.activeField === 'confirmPassword') {
+            this.confirmPasswordCaretPos = 0;
+        } else if (this.activeField === 'securityAnswer') {
+            this.securityAnswerCaretPos = 0;
+        }
+    }
+
+    moveCaretToEnd() {
+        if (this.activeField === 'username') {
+            this.usernameCaretPos = this.username.length;
+        } else if (this.activeField === 'currentPassword') {
+            this.currentPasswordCaretPos = this.currentPassword.length;
+        } else if (this.activeField === 'newPassword') {
+            this.newPasswordCaretPos = this.newPassword.length;
+        } else if (this.activeField === 'confirmPassword') {
+            this.confirmPasswordCaretPos = this.confirmPassword.length;
+        } else if (this.activeField === 'securityAnswer') {
+            this.securityAnswerCaretPos = this.securityAnswer.length;
+        }
+    }
+
+    handleDelete() {
+        if (this.activeField === 'currentPassword' && this.currentPasswordCaretPos < this.currentPassword.length) {
+            this.currentPassword = this.currentPassword.slice(0, this.currentPasswordCaretPos) + this.currentPassword.slice(this.currentPasswordCaretPos + 1);
+        } else if (this.activeField === 'newPassword' && this.newPasswordCaretPos < this.newPassword.length) {
+            this.newPassword = this.newPassword.slice(0, this.newPasswordCaretPos) + this.newPassword.slice(this.newPasswordCaretPos + 1);
+        } else if (this.activeField === 'confirmPassword' && this.confirmPasswordCaretPos < this.confirmPassword.length) {
+            this.confirmPassword = this.confirmPassword.slice(0, this.confirmPasswordCaretPos) + this.confirmPassword.slice(this.confirmPasswordCaretPos + 1);
+        } else if (this.activeField === 'username' && this.usernameCaretPos < this.username.length) {
+            this.username = this.username.slice(0, this.usernameCaretPos) + this.username.slice(this.usernameCaretPos + 1);
+        } else if (this.activeField === 'securityAnswer' && this.securityAnswerCaretPos < this.securityAnswer.length) {
+            this.securityAnswer = this.securityAnswer.slice(0, this.securityAnswerCaretPos) + this.securityAnswer.slice(this.securityAnswerCaretPos + 1);
         }
     }
 
@@ -185,16 +300,21 @@ export class AccountMenu {
     }
 
     handleBackspace() {
-        if (this.activeField === 'currentPassword') {
-            this.currentPassword = this.currentPassword.slice(0, -1);
-        } else if (this.activeField === 'newPassword') {
-            this.newPassword = this.newPassword.slice(0, -1);
-        } else if (this.activeField === 'confirmPassword') {
-            this.confirmPassword = this.confirmPassword.slice(0, -1);
-        } else if (this.activeField === 'username') {
-            this.username = this.username.slice(0, -1);
-        } else if (this.activeField === 'securityAnswer') {
-            this.securityAnswer = this.securityAnswer.slice(0, -1);
+        if (this.activeField === 'currentPassword' && this.currentPasswordCaretPos > 0) {
+            this.currentPassword = this.currentPassword.slice(0, this.currentPasswordCaretPos - 1) + this.currentPassword.slice(this.currentPasswordCaretPos);
+            this.currentPasswordCaretPos--;
+        } else if (this.activeField === 'newPassword' && this.newPasswordCaretPos > 0) {
+            this.newPassword = this.newPassword.slice(0, this.newPasswordCaretPos - 1) + this.newPassword.slice(this.newPasswordCaretPos);
+            this.newPasswordCaretPos--;
+        } else if (this.activeField === 'confirmPassword' && this.confirmPasswordCaretPos > 0) {
+            this.confirmPassword = this.confirmPassword.slice(0, this.confirmPasswordCaretPos - 1) + this.confirmPassword.slice(this.confirmPasswordCaretPos);
+            this.confirmPasswordCaretPos--;
+        } else if (this.activeField === 'username' && this.usernameCaretPos > 0) {
+            this.username = this.username.slice(0, this.usernameCaretPos - 1) + this.username.slice(this.usernameCaretPos);
+            this.usernameCaretPos--;
+        } else if (this.activeField === 'securityAnswer' && this.securityAnswerCaretPos > 0) {
+            this.securityAnswer = this.securityAnswer.slice(0, this.securityAnswerCaretPos - 1) + this.securityAnswer.slice(this.securityAnswerCaretPos);
+            this.securityAnswerCaretPos--;
         }
     }
 
@@ -202,17 +322,22 @@ export class AccountMenu {
         if (!/^[a-zA-Z0-9!@#$%^&*_\- ]$/.test(char)) return;
 
         if (this.activeField === 'currentPassword' && this.currentPassword.length < this.maxLength) {
-            this.currentPassword += char;
+            this.currentPassword = this.currentPassword.slice(0, this.currentPasswordCaretPos) + char + this.currentPassword.slice(this.currentPasswordCaretPos);
+            this.currentPasswordCaretPos++;
         } else if (this.activeField === 'newPassword' && this.newPassword.length < this.maxLength) {
-            this.newPassword += char;
+            this.newPassword = this.newPassword.slice(0, this.newPasswordCaretPos) + char + this.newPassword.slice(this.newPasswordCaretPos);
+            this.newPasswordCaretPos++;
         } else if (this.activeField === 'confirmPassword' && this.confirmPassword.length < this.maxLength) {
-            this.confirmPassword += char;
+            this.confirmPassword = this.confirmPassword.slice(0, this.confirmPasswordCaretPos) + char + this.confirmPassword.slice(this.confirmPasswordCaretPos);
+            this.confirmPasswordCaretPos++;
         } else if (this.activeField === 'username' && this.username.length < 12) {
             if (/^[a-zA-Z0-9_\-]$/.test(char)) {
-                this.username += char;
+                this.username = this.username.slice(0, this.usernameCaretPos) + char + this.username.slice(this.usernameCaretPos);
+                this.usernameCaretPos++;
             }
         } else if (this.activeField === 'securityAnswer' && this.securityAnswer.length < 30) {
-            this.securityAnswer += char;
+            this.securityAnswer = this.securityAnswer.slice(0, this.securityAnswerCaretPos) + char + this.securityAnswer.slice(this.securityAnswerCaretPos);
+            this.securityAnswerCaretPos++;
         }
     }
 
@@ -420,6 +545,18 @@ export class AccountMenu {
         return mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
     }
 
+    // Calculate caret position from click X coordinate
+    calculateCaretPosFromClick(clickX, fieldX, value, rX) {
+        const charWidth = 30 * 0.55 * rX; // Approximate char width for 30px font
+        const textStartX = (fieldX + 15) * rX;
+        const relativeX = clickX - textStartX;
+
+        if (relativeX <= 0) return 0;
+
+        const clickedPos = Math.round(relativeX / charWidth);
+        return Math.min(clickedPos, value.length);
+    }
+
     update(game) {
         if (!this.isVisible) return;
 
@@ -530,7 +667,7 @@ export class AccountMenu {
             this.cancelButton.y = origCancelY;
         }
 
-        // Change password - click to select fields
+        // Change password - click to select fields and position caret
         if (this.mode === 'changePassword') {
             const rX = window.innerWidth / 2560;
             const rY = window.innerHeight / 1440;
@@ -540,12 +677,15 @@ export class AccountMenu {
                 if (this.isClickInField(inX, inY, 900, 420, 560, 50, rX, rY)) {
                     this.clicked = true;
                     this.activeField = 'currentPassword';
+                    this.currentPasswordCaretPos = this.calculateCaretPosFromClick(inX, 900, this.currentPassword, rX);
                 } else if (this.isClickInField(inX, inY, 900, 510, 560, 50, rX, rY)) {
                     this.clicked = true;
                     this.activeField = 'newPassword';
+                    this.newPasswordCaretPos = this.calculateCaretPosFromClick(inX, 900, this.newPassword, rX);
                 } else if (this.isClickInField(inX, inY, 900, 600, 560, 50, rX, rY)) {
                     this.clicked = true;
                     this.activeField = 'confirmPassword';
+                    this.confirmPasswordCaretPos = this.calculateCaretPosFromClick(inX, 900, this.confirmPassword, rX);
                 }
             }
 
@@ -577,7 +717,7 @@ export class AccountMenu {
             }
         }
 
-        // Set new password - click to select fields
+        // Set new password - click to select fields and position caret
         if (this.mode === 'setNewPassword') {
             const rX = window.innerWidth / 2560;
             const rY = window.innerHeight / 1440;
@@ -587,9 +727,11 @@ export class AccountMenu {
                 if (this.isClickInField(inX, inY, 900, 450, 560, 50, rX, rY)) {
                     this.clicked = true;
                     this.activeField = 'newPassword';
+                    this.newPasswordCaretPos = this.calculateCaretPosFromClick(inX, 900, this.newPassword, rX);
                 } else if (this.isClickInField(inX, inY, 900, 540, 560, 50, rX, rY)) {
                     this.clicked = true;
                     this.activeField = 'confirmPassword';
+                    this.confirmPasswordCaretPos = this.calculateCaretPosFromClick(inX, 900, this.confirmPassword, rX);
                 }
             }
 
@@ -641,14 +783,16 @@ export class AccountMenu {
             const rX = window.innerWidth / 2560;
             const rY = window.innerHeight / 1440;
 
-            // Check clicks on input fields
+            // Check clicks on input fields and position caret
             if (game.input.buttons.indexOf(0) > -1 && !this.clicked) {
                 if (this.isClickInField(inX, inY, 900, 400, 560, 50, rX, rY)) {
                     this.clicked = true;
                     this.activeField = 'currentPassword';
+                    this.currentPasswordCaretPos = this.calculateCaretPosFromClick(inX, 900, this.currentPassword, rX);
                 } else if (this.isClickInField(inX, inY, 900, 600, 560, 50, rX, rY)) {
                     this.clicked = true;
                     this.activeField = 'securityAnswer';
+                    this.securityAnswerCaretPos = this.calculateCaretPosFromClick(inX, 900, this.securityAnswer, rX);
                 }
             }
 
@@ -957,11 +1101,31 @@ export class AccountMenu {
         context.strokeRect(x * rX, y * rY, width * rX, 50 * rY);
         context.restore();
 
-        let displayValue = isPassword && value.length > 0 ? '*'.repeat(value.length) : value;
-        if (showCursor) displayValue += '|';
+        // Get the caret position for this field
+        let caretPos = 0;
+        if (fieldName === 'username') {
+            caretPos = this.usernameCaretPos;
+        } else if (fieldName === 'currentPassword') {
+            caretPos = this.currentPasswordCaretPos;
+        } else if (fieldName === 'newPassword') {
+            caretPos = this.newPasswordCaretPos;
+        } else if (fieldName === 'confirmPassword') {
+            caretPos = this.confirmPasswordCaretPos;
+        } else if (fieldName === 'securityAnswer') {
+            caretPos = this.securityAnswerCaretPos;
+        }
 
-        if (displayValue.length > 0) {
-            this.super.drawGlowText(context, x + 15, y + 38, displayValue, 30, '#00ff88', '#00ff00', 5);
+        // Display value with cursor at caret position
+        let displayValue = isPassword && value.length > 0 ? '*'.repeat(value.length) : value;
+
+        if (value.length > 0) {
+            // Insert cursor at caret position
+            const beforeCaret = displayValue.slice(0, caretPos);
+            const afterCaret = displayValue.slice(caretPos);
+            const displayText = beforeCaret + (showCursor ? '|' : '') + afterCaret;
+            this.super.drawGlowText(context, x + 15, y + 38, displayText, 30, '#00ff88', '#00ff00', 5);
+        } else if (showCursor) {
+            this.super.drawGlowText(context, x + 15, y + 38, '|', 30, '#00ff88', '#00ff00', 5);
         }
     }
 }
