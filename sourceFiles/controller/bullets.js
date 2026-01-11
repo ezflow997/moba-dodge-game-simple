@@ -186,8 +186,9 @@ export class Bullets {
                             if(bullet.destroy == true || bullet.enemyCollision == true){
                                 if(bullet.enemyCollision == true){
                                     // Check if bullet type should be independent (not clear all on hit)
+                                    // Use explicit flag OR gunType check for backwards compatibility
                                     const independentTypes = ['shotgun', 'nova', 'twin', 'homing', 'ricochet', 'piercing', 'rapidfire'];
-                                    const isIndependent = independentTypes.includes(bullet.gunType || bullet.bulletType);
+                                    const isIndependent = bullet.isIndependentBullet === true || independentTypes.includes(bullet.gunType || bullet.bulletType);
 
                                     // For piercing bullets with pierce remaining, continue
                                     if (bullet.gunType === 'piercing' && bullet.pierceCount > 0) {
@@ -197,7 +198,7 @@ export class Bullets {
                                     } else if (bullet.gunType === 'ricochet' && bullet.bouncesRemaining > 0) {
                                         bullet.enemyCollision = false;
                                     } else if (isIndependent) {
-                                        // Independent bullets: remove only this bullet
+                                        // Independent bullets: remove only this bullet, others continue
                                         this.bulletsList.splice(i, 1);
                                     } else {
                                         // Single-target weapons: clear all bullets
@@ -209,8 +210,8 @@ export class Bullets {
                                 else if(bullet.destroy == true){
                                     // Don't reset streak for multi-hit weapons (rapidfire, piercing, ricochet)
                                     // These fire multiple bullets or hit multiple targets - individual misses shouldn't reset streak
-                                    const noStreakReset = ['rapidfire', 'piercing', 'ricochet', 'shotgun'];
-                                    if (!noStreakReset.includes(bullet.gunType)) {
+                                    const noStreakReset = ['rapidfire', 'piercing', 'ricochet', 'shotgun', 'twin', 'nova'];
+                                    if (!noStreakReset.includes(bullet.gunType) && !bullet.isIndependentBullet) {
                                         enemies.hitStreak = 0;
                                     }
                                     this.bulletsList.splice(i,1);
@@ -234,8 +235,9 @@ export class Bullets {
                             if(bullet.destroy == true || bullet.enemyCollision == true){
                                 if(bullet.enemyCollision == true){
                                     // Check if bullet type should be independent (not clear all on hit)
+                                    // Use explicit flag OR gunType check for backwards compatibility
                                     const independentTypes = ['shotgun', 'nova', 'twin', 'homing', 'ricochet', 'piercing', 'rapidfire'];
-                                    const isIndependent = independentTypes.includes(bullet.gunType || bullet.bulletType);
+                                    const isIndependent = bullet.isIndependentBullet === true || independentTypes.includes(bullet.gunType || bullet.bulletType);
 
                                     // For piercing bullets with pierce remaining, continue
                                     if (bullet.gunType === 'piercing' && bullet.pierceCount > 0) {
@@ -244,7 +246,7 @@ export class Bullets {
                                     } else if (bullet.gunType === 'ricochet' && bullet.bouncesRemaining > 0) {
                                         bullet.enemyCollision = false;
                                     } else if (isIndependent) {
-                                        // Independent bullets: remove only this bullet
+                                        // Independent bullets: remove only this bullet, others continue
                                         this.bulletsList.splice(i, 1);
                                     } else {
                                         // Single-target weapons: clear all bullets
@@ -256,8 +258,8 @@ export class Bullets {
                                 else if(bullet.destroy == true){
                                     // Don't reset streak for multi-hit weapons (rapidfire, piercing, ricochet)
                                     // These fire multiple bullets or hit multiple targets - individual misses shouldn't reset streak
-                                    const noStreakReset = ['rapidfire', 'piercing', 'ricochet', 'shotgun'];
-                                    if (!noStreakReset.includes(bullet.gunType)) {
+                                    const noStreakReset = ['rapidfire', 'piercing', 'ricochet', 'shotgun', 'twin', 'nova'];
+                                    if (!noStreakReset.includes(bullet.gunType) && !bullet.isIndependentBullet) {
                                         enemies.hitStreak = 0;
                                     }
                                     this.bulletsList.splice(i, 1);
@@ -320,8 +322,9 @@ export class Bullets {
 
         // Update independent bullets (rapidfire, ricochet, etc.) after qPressed resets
         // They keep flying after cooldown completes - only run when qPressed is false to avoid double-updating
-        const independentUpdateTypes = ['rapidfire', 'ricochet', 'homing', 'piercing', 'shotgun'];
-        const needsIndependentUpdate = activeGun && independentUpdateTypes.includes(activeGun.gunType);
+        const independentUpdateTypes = ['rapidfire', 'ricochet', 'homing', 'piercing', 'shotgun', 'twin', 'nova'];
+        const needsIndependentUpdate = (activeGun && independentUpdateTypes.includes(activeGun.gunType)) ||
+            this.bulletsList.some(b => b && b.isIndependentBullet);
 
         if (!player.qPressed && needsIndependentUpdate && this.bulletsList.length > 0) {
             for (let i = this.bulletsList.length - 1; i >= 0; i--) {
@@ -341,14 +344,14 @@ export class Bullets {
                         if (bullet.gunType === 'ricochet' && bullet.bouncesRemaining > 0) {
                             bullet.enemyCollision = false;
                         } else {
-                            // Remove the bullet that hit
+                            // Remove only this bullet that hit - others continue
                             this.bulletsList.splice(i, 1);
                         }
                     } else if (bullet.destroy) {
                         // Don't reset streak for multi-hit weapons (rapidfire, piercing, ricochet, shotgun)
                         // These fire multiple bullets or hit multiple targets - individual misses shouldn't reset streak
-                        const noStreakReset = ['rapidfire', 'piercing', 'ricochet', 'shotgun'];
-                        if (!noStreakReset.includes(bullet.gunType)) {
+                        const noStreakReset = ['rapidfire', 'piercing', 'ricochet', 'shotgun', 'twin', 'nova'];
+                        if (!noStreakReset.includes(bullet.gunType) && !bullet.isIndependentBullet) {
                             enemies.hitStreak = 0;
                         }
                         this.bulletsList.splice(i, 1);
@@ -510,6 +513,7 @@ export class Bullets {
             );
             b.instantSpawn = true;  // All pellets fire at once
             b.spawned = true;  // Already spawned - no stagger delay
+            b.isIndependentBullet = true;  // Explicit flag for independent collision handling
             this.bulletsList.push(b);
         }
 
@@ -624,8 +628,15 @@ export class Bullets {
                 'twin',
                 gunData
             );
+            b.instantSpawn = true;  // All bullets fire at once
+            b.spawned = true;  // Already spawned - no stagger delay
+            b.isIndependentBullet = true;  // Explicit flag for independent collision handling
             this.bulletsList.push(b);
         }
+
+        // Immediately mark all bullets as spawned for instant fire
+        this.bulletsSpawnCount = count;
+        this.bulletsSpawned = true;
     }
 
     createNovaBullets(player, gunData, sizeMultiplier) {
@@ -646,8 +657,15 @@ export class Bullets {
                 gunData,
                 player  // Pass player reference for nova to follow
             );
+            b.instantSpawn = true;  // All bullets fire at once
+            b.spawned = true;  // Already spawned - no stagger delay
+            b.isIndependentBullet = true;  // Explicit flag for independent collision handling
             this.bulletsList.push(b);
         }
+
+        // Immediately mark all bullets as spawned for instant fire
+        this.bulletsSpawnCount = count;
+        this.bulletsSpawned = true;
     }
 
     createChainBullets(player, gunData, sizeMultiplier) {
@@ -670,7 +688,7 @@ export class Bullets {
         }
 
         // Check if we have independent bullets that should always be drawn
-        const independentDrawTypes = ['rapidfire', 'shotgun', 'ricochet', 'piercing', 'homing'];
+        const independentDrawTypes = ['rapidfire', 'shotgun', 'ricochet', 'piercing', 'homing', 'nova', 'twin'];
         const hasIndependentBullets = this.bulletsList.length > 0 &&
             this.bulletsList.some(b => b && independentDrawTypes.includes(b.gunType));
 

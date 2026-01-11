@@ -373,7 +373,7 @@ export const REWARDS = {
         gunType: 'twin',
         durability: 15,
         bulletCount: 2,
-        spacing: 30
+        spacing: 60
     },
     TWIN_UNCOMMON: {
         id: 'twin_uncommon',
@@ -384,7 +384,7 @@ export const REWARDS = {
         gunType: 'twin',
         durability: 22,
         bulletCount: 3,
-        spacing: 30
+        spacing: 60
     },
     TWIN_RARE: {
         id: 'twin_rare',
@@ -395,7 +395,7 @@ export const REWARDS = {
         gunType: 'twin',
         durability: 30,
         bulletCount: 4,
-        spacing: 30
+        spacing: 60
     },
     TWIN_EPIC: {
         id: 'twin_epic',
@@ -406,7 +406,7 @@ export const REWARDS = {
         gunType: 'twin',
         durability: 40,
         bulletCount: 5,
-        spacing: 30
+        spacing: 60
     },
     TWIN_LEGENDARY: {
         id: 'twin_legendary',
@@ -417,7 +417,7 @@ export const REWARDS = {
         gunType: 'twin',
         durability: 50,
         bulletCount: 6,
-        spacing: 30
+        spacing: 60
     },
     TWIN_STIER: {
         id: 'twin_stier',
@@ -428,7 +428,7 @@ export const REWARDS = {
         gunType: 'twin',
         durability: 65,
         bulletCount: 8,
-        spacing: 30
+        spacing: 60
     },
 
     // Nova - 360 degree burst
