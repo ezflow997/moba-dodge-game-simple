@@ -27,7 +27,7 @@ export class VortexBoss {
 
         this.invulnerable = false;
         this.invulnerableTime = 0;
-        this.invulnerableDuration = 200;
+        this.invulnerableDuration = 100;
 
         // Movement
         this.baseSpeed = 1.5;
@@ -83,7 +83,7 @@ export class VortexBoss {
                     radius: radius,
                     size: 8,
                     speed: speed,
-                    health: 3,
+                    health: 1,
                     pulsePhase: Math.random() * Math.PI * 2
                 });
             }
@@ -312,13 +312,15 @@ export class VortexBoss {
             y: this.y,
             vx: 0,
             vy: 0,
-            speed: 3 * rX,
+            speed: 14 * rX,
             size: 10 * rX,
-            turnSpeed: 0.05,
+            turnSpeed: 0.25,
             pulsePhase: 0,
             trail: [],
             maxTrailLength: 10,
             destroy: false,
+            createdAt: performance.now(),
+            lifetime: 5000,
             update: function(targetX, targetY) {
                 const dx = targetX - this.x;
                 const dy = targetY - this.y;
@@ -343,6 +345,11 @@ export class VortexBoss {
                 
                 if (this.x < -100 || this.x > window.innerWidth + 100 ||
                     this.y < -100 || this.y > window.innerHeight + 100) {
+                    this.destroy = true;
+                }
+
+                // Expire after lifetime
+                if (performance.now() - this.createdAt > this.lifetime) {
                     this.destroy = true;
                 }
             },
