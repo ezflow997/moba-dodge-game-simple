@@ -873,6 +873,10 @@ export class LeaderboardMenu {
             const entry = this.leaderboardData[i];
             const y = startY + (i + 1) * rowHeight;
 
+            // Calculate vertical center of row for text alignment
+            // Row background spans y-32 to y+16, center at y-8
+            const rowCenterY = y - 8;
+
             // Calculate actual rank based on page
             const actualRank = (this.currentPage - 1) * this.entriesPerPage + i + 1;
 
@@ -931,13 +935,14 @@ export class LeaderboardMenu {
             const isGenerated = entry.isGenerated === true;
 
             if (isChampion) {
-                // Draw animated rainbow champion name
-                this.drawChampionName(context, colName, y, displayName, 34, rX, isHighlighted);
+                // Draw animated rainbow champion name (uses middle baseline, pass row center)
+                this.drawChampionName(context, colName, rowCenterY, displayName, 34, rX, isHighlighted);
             } else {
+                // Regular name (uses alphabetic baseline, offset from row center)
                 const nameColor = isHighlighted ? '#00ffff' : '#ffffff';
                 const nameGlow = isHighlighted ? '#00ffff' : '#00ffff';
                 const nameGlowSize = isHighlighted ? 15 : 8;
-                this.super.drawGlowText(context, colName, y, displayName, 34, nameColor, nameGlow, nameGlowSize);
+                this.super.drawGlowText(context, colName, rowCenterY + 10, displayName, 34, nameColor, nameGlow, nameGlowSize);
             }
 
             // Show [GEN] indicator for generated accounts in dev mode
@@ -946,7 +951,7 @@ export class LeaderboardMenu {
                 context.font = `bold ${34 * rX}px Arial`;
                 const nameWidth = context.measureText(displayName).width / rX;
                 context.restore();
-                this.super.drawGlowText(context, colName + nameWidth + 15, y, "[GEN]", 18, '#ff8800', '#ff6600', 4);
+                this.super.drawGlowText(context, colName + nameWidth + 15, rowCenterY + 10, "[GEN]", 18, '#ff8800', '#ff6600', 4);
             }
 
             if (isRanked) {
@@ -1042,13 +1047,17 @@ export class LeaderboardMenu {
             const champion = pageChampions[i];
             const y = startY + (i + 1) * rowHeight;
 
+            // Calculate vertical center of row for text alignment
+            // Row background spans y-35 to y+15, center at y-10
+            const rowCenterY = y - 10;
+
             // Row background with golden tint
             context.save();
             context.fillStyle = `rgba(255, 215, 0, ${0.06 + (i % 2) * 0.04})`;
             context.fillRect(720 * rX, (y - 35) * rY, 1130 * rX, 50 * rY);
             context.restore();
 
-            // Trophy icon first
+            // Trophy icon first (uses middle baseline, draw at row center)
             const trophyHue = (this.animationTime * 60 + i * 40) % 360;
             context.save();
             context.font = `${28 * rX}px Arial`;
@@ -1057,17 +1066,17 @@ export class LeaderboardMenu {
             context.shadowColor = `hsl(${trophyHue}, 100%, 50%)`;
             context.shadowBlur = 10 * rX;
             context.fillStyle = `hsl(${trophyHue}, 100%, 70%)`;
-            context.fillText('🏆', colTrophy * rX, y * rY);
+            context.fillText('🏆', colTrophy * rX, rowCenterY * rY);
             context.restore();
 
             // Format season month (e.g., "2025-01" -> "January 2025")
             const seasonMonth = this.formatSeasonMonth(champion.season_month);
             this.super.drawGlowText(context, colSeason, y, seasonMonth, 28, '#ffd700', '#ffaa00', 6);
 
-            // Champion name with animated rainbow effect
+            // Champion name with animated rainbow effect (uses middle baseline, pass row center)
             const playerName = champion.player_name || 'Unknown';
             const displayName = playerName.length > 12 ? playerName.substring(0, 12) + '...' : playerName;
-            this.drawChampionName(context, colName, y, displayName, 30, rX, false);
+            this.drawChampionName(context, colName, rowCenterY, displayName, 30, rX, false);
 
             // Final ELO
             const elo = champion.final_elo || 1000;
