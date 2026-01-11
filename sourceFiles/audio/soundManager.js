@@ -1075,7 +1075,7 @@ export class SoundManager {
 
     // ========== PHANTOM BOSS SOUNDS ==========
 
-    // Phantom Boss teleport (glitchy, ethereal)
+    // Phantom Boss teleport (soft whoosh)
     playBossTeleport() {
         if (!this.enabled) return;
         this.init();
@@ -1083,34 +1083,39 @@ export class SoundManager {
 
         const now = this.audioContext.currentTime;
 
-        // Glitchy digital sound
+        // Soft whoosh sound using filtered noise
+        const bufferSize = this.audioContext.sampleRate * 0.25;
+        const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        const noise = this.audioContext.createBufferSource();
+        noise.buffer = buffer;
+        const filter = this.audioContext.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(400, now);
+        filter.frequency.exponentialRampToValueAtTime(150, now + 0.2);
+        filter.Q.value = 1;
+        const noiseGain = this.audioContext.createGain();
+        noiseGain.gain.setValueAtTime(0.1 * this.sfxVolume, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        noise.connect(filter);
+        filter.connect(noiseGain);
+        noiseGain.connect(this.audioContext.destination);
+        noise.start(now);
+        noise.stop(now + 0.3);
+
+        // Subtle low tone
         const osc = this.audioContext.createOscillator();
         const gain = this.audioContext.createGain();
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(1200, now);
-        osc.frequency.setValueAtTime(800, now + 0.05);
-        osc.frequency.setValueAtTime(1500, now + 0.1);
-        osc.frequency.setValueAtTime(400, now + 0.15);
-        osc.frequency.exponentialRampToValueAtTime(100, now + 0.25);
-        gain.gain.setValueAtTime(0.12 * this.sfxVolume, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(200, now);
+        osc.frequency.exponentialRampToValueAtTime(80, now + 0.2);
+        gain.gain.setValueAtTime(0.08 * this.sfxVolume, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
         osc.connect(gain);
         gain.connect(this.audioContext.destination);
         osc.start(now);
-        osc.stop(now + 0.35);
-
-        // Whoosh/phase shift
-        const osc2 = this.audioContext.createOscillator();
-        const gain2 = this.audioContext.createGain();
-        osc2.type = 'sine';
-        osc2.frequency.setValueAtTime(600, now);
-        osc2.frequency.exponentialRampToValueAtTime(80, now + 0.2);
-        gain2.gain.setValueAtTime(0.15 * this.sfxVolume, now);
-        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-        osc2.connect(gain2);
-        gain2.connect(this.audioContext.destination);
-        osc2.start(now);
-        osc2.stop(now + 0.3);
+        osc.stop(now + 0.3);
     }
 
     // Phantom Boss toxic burst attack
@@ -1121,34 +1126,33 @@ export class SoundManager {
 
         const now = this.audioContext.currentTime;
 
-        // Toxic spray sound
-        const bufferSize = this.audioContext.sampleRate * 0.2;
+        // Soft spray sound
+        const bufferSize = this.audioContext.sampleRate * 0.15;
         const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
         const data = buffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
         const noise = this.audioContext.createBufferSource();
         noise.buffer = buffer;
         const filter = this.audioContext.createBiquadFilter();
-        filter.type = 'bandpass';
-        filter.frequency.setValueAtTime(800, now);
-        filter.frequency.exponentialRampToValueAtTime(300, now + 0.15);
-        filter.Q.value = 2;
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(600, now);
+        filter.frequency.exponentialRampToValueAtTime(200, now + 0.12);
         const noiseGain = this.audioContext.createGain();
-        noiseGain.gain.setValueAtTime(0.18 * this.sfxVolume, now);
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        noiseGain.gain.setValueAtTime(0.1 * this.sfxVolume, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
         noise.connect(filter);
         filter.connect(noiseGain);
         noiseGain.connect(this.audioContext.destination);
         noise.start(now);
-        noise.stop(now + 0.25);
+        noise.stop(now + 0.18);
 
-        // Acidic tone
+        // Soft thump
         const osc = this.audioContext.createOscillator();
         const gain = this.audioContext.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(250, now);
-        osc.frequency.exponentialRampToValueAtTime(150, now + 0.1);
-        gain.gain.setValueAtTime(0.1 * this.sfxVolume, now);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(120, now);
+        osc.frequency.exponentialRampToValueAtTime(60, now + 0.1);
+        gain.gain.setValueAtTime(0.08 * this.sfxVolume, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
         osc.connect(gain);
         gain.connect(this.audioContext.destination);
@@ -1164,31 +1168,18 @@ export class SoundManager {
 
         const now = this.audioContext.currentTime;
 
-        // Ghostly whisper/echo
+        // Soft pew sound
         const osc = this.audioContext.createOscillator();
         const gain = this.audioContext.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(500, now);
-        osc.frequency.exponentialRampToValueAtTime(300, now + 0.15);
-        gain.gain.setValueAtTime(0.12 * this.sfxVolume, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.exponentialRampToValueAtTime(150, now + 0.1);
+        gain.gain.setValueAtTime(0.07 * this.sfxVolume, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
         osc.connect(gain);
         gain.connect(this.audioContext.destination);
         osc.start(now);
-        osc.stop(now + 0.25);
-
-        // Phasing overlay
-        const osc2 = this.audioContext.createOscillator();
-        const gain2 = this.audioContext.createGain();
-        osc2.type = 'triangle';
-        osc2.frequency.setValueAtTime(350, now + 0.05);
-        osc2.frequency.exponentialRampToValueAtTime(200, now + 0.18);
-        gain2.gain.setValueAtTime(0.08 * this.sfxVolume, now + 0.05);
-        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-        osc2.connect(gain2);
-        gain2.connect(this.audioContext.destination);
-        osc2.start(now);
-        osc2.stop(now + 0.25);
+        osc.stop(now + 0.15);
     }
 
     // Phantom Boss toxic fog spawn
@@ -1199,37 +1190,18 @@ export class SoundManager {
 
         const now = this.audioContext.currentTime;
 
-        // Low rumble with hiss
+        // Low rumble only
         const osc = this.audioContext.createOscillator();
         const gain = this.audioContext.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(60, now);
-        osc.frequency.exponentialRampToValueAtTime(40, now + 0.3);
-        gain.gain.setValueAtTime(0.2 * this.sfxVolume, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc.frequency.setValueAtTime(50, now);
+        osc.frequency.exponentialRampToValueAtTime(35, now + 0.25);
+        gain.gain.setValueAtTime(0.12 * this.sfxVolume, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
         osc.connect(gain);
         gain.connect(this.audioContext.destination);
         osc.start(now);
-        osc.stop(now + 0.4);
-
-        // Hissing
-        const bufferSize = this.audioContext.sampleRate * 0.3;
-        const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-        const noise = this.audioContext.createBufferSource();
-        noise.buffer = buffer;
-        const filter = this.audioContext.createBiquadFilter();
-        filter.type = 'highpass';
-        filter.frequency.value = 3000;
-        const noiseGain = this.audioContext.createGain();
-        noiseGain.gain.setValueAtTime(0.08 * this.sfxVolume, now);
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-        noise.connect(filter);
-        filter.connect(noiseGain);
-        noiseGain.connect(this.audioContext.destination);
-        noise.start(now);
-        noise.stop(now + 0.35);
+        osc.stop(now + 0.35);
     }
 
     // Phantom Boss shadow clone spawn
@@ -1240,32 +1212,39 @@ export class SoundManager {
 
         const now = this.audioContext.currentTime;
 
-        // Dark splitting sound
+        // Soft splitting whoosh
+        const bufferSize = this.audioContext.sampleRate * 0.2;
+        const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        const noise = this.audioContext.createBufferSource();
+        noise.buffer = buffer;
+        const filter = this.audioContext.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(300, now);
+        filter.frequency.exponentialRampToValueAtTime(100, now + 0.15);
+        filter.Q.value = 1;
+        const noiseGain = this.audioContext.createGain();
+        noiseGain.gain.setValueAtTime(0.1 * this.sfxVolume, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        noise.connect(filter);
+        filter.connect(noiseGain);
+        noiseGain.connect(this.audioContext.destination);
+        noise.start(now);
+        noise.stop(now + 0.25);
+
+        // Low tone
         const osc = this.audioContext.createOscillator();
         const gain = this.audioContext.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(150, now);
-        osc.frequency.exponentialRampToValueAtTime(300, now + 0.15);
-        osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);
-        gain.gain.setValueAtTime(0.15 * this.sfxVolume, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(100, now);
+        osc.frequency.exponentialRampToValueAtTime(60, now + 0.2);
+        gain.gain.setValueAtTime(0.08 * this.sfxVolume, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
         osc.connect(gain);
         gain.connect(this.audioContext.destination);
         osc.start(now);
-        osc.stop(now + 0.4);
-
-        // Echo effect
-        const osc2 = this.audioContext.createOscillator();
-        const gain2 = this.audioContext.createGain();
-        osc2.type = 'sine';
-        osc2.frequency.setValueAtTime(200, now + 0.1);
-        osc2.frequency.exponentialRampToValueAtTime(80, now + 0.35);
-        gain2.gain.setValueAtTime(0.1 * this.sfxVolume, now + 0.1);
-        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-        osc2.connect(gain2);
-        gain2.connect(this.audioContext.destination);
-        osc2.start(now);
-        osc2.stop(now + 0.45);
+        osc.stop(now + 0.3);
     }
 
     // Orbital shield hit
