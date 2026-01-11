@@ -313,6 +313,28 @@ function calculateEloChanges(entries, eloMap) {
     });
 }
 
+// Generate random scores within tolerance of banned player's score
+// Winner gets the higher of two random scores, loser gets the lower
+function generateBannedMatchScores(bannedScore, bannedWins) {
+    const tolerance = 0.10; // ±10%
+    const minScore = Math.floor(bannedScore * (1 - tolerance));
+    const maxScore = Math.ceil(bannedScore * (1 + tolerance));
+
+    // Generate two random scores in range
+    const score1 = Math.floor(Math.random() * (maxScore - minScore + 1)) + minScore;
+    const score2 = Math.floor(Math.random() * (maxScore - minScore + 1)) + minScore;
+
+    // Winner gets higher score, loser gets lower
+    const winnerScore = Math.max(score1, score2);
+    const loserScore = Math.min(score1, score2);
+
+    console.log(`[RANKED BAN] Generated scores: winner=${winnerScore}, loser=${loserScore} (range: ${minScore}-${maxScore})`);
+
+    return bannedWins
+        ? { bannedPlayerScore: winnerScore, otherPlayerScore: loserScore }
+        : { bannedPlayerScore: loserScore, otherPlayerScore: winnerScore };
+}
+
 // Resolve tournament with ban-adjusted winner logic
 // If the highest-scoring player is banned and there are non-banned players,
 // the banned player only has 25% chance of winning. If they lose the roll,
@@ -352,6 +374,31 @@ async function resolveTournament(allEntries) {
         } else {
             console.log(`[RANKED BAN] ${originalWinner.player_name} (banned) won 25% roll (${(roll * 100).toFixed(1)}%), keeping 1st place`);
         }
+    }
+
+    // Generate random scores for banned player matches (2-player only)
+    // Both players get generated scores within ±10% of the banned player's original score
+    let generatedScores = null;
+    const hasBannedPlayer = sortedEntries.some(e => bannedMap[e.player_name]);
+    if (sortedEntries.length === 2 && hasBannedPlayer && !allBanned) {
+        // Find the banned player and determine who won
+        const bannedEntry = sortedEntries.find(e => bannedMap[e.player_name]);
+        const bannedWins = banRollResult ? banRollResult.bannedWins : bannedMap[sortedEntries[0].player_name];
+
+        generatedScores = generateBannedMatchScores(bannedEntry.score, bannedWins);
+
+        // Apply generated scores to both players
+        for (const entry of sortedEntries) {
+            if (bannedMap[entry.player_name]) {
+                entry.score = generatedScores.bannedPlayerScore;
+            } else {
+                entry.score = generatedScores.otherPlayerScore;
+            }
+        }
+
+        // Re-sort after score change to ensure proper placement
+        sortedEntries.sort((a, b) => b.score - a.score);
+        console.log(`[RANKED BAN] Applied generated scores - ${sortedEntries[0].player_name}: ${sortedEntries[0].score}, ${sortedEntries[1].player_name}: ${sortedEntries[1].score}`);
     }
 
     // Fetch all player ELO records first for the calculation
@@ -395,13 +442,18 @@ async function resolveTournament(allEntries) {
             body: JSON.stringify(updateData)
         });
 
-        // Upsert history record (one entry per player, updated each tournament)
-        const historyCheck = await fetch(`${SUPABASE_URL}/rest/v1/ranked_history?player_name=eq.${encodeURIComponent(result.player_name)}&limit=1`, {
-            method: 'GET',
-            headers: getHeaders()
-        });
-        const existingHistory = await historyCheck.json();
+        // For 2-player matches, find opponent info
+        let opponentName = null;
+        let opponentScore = null;
+        if (totalPlayers === 2) {
+            const opponent = results.find(r => r.player_name !== result.player_name);
+            if (opponent) {
+                opponentName = opponent.player_name;
+                opponentScore = opponent.score;
+            }
+        }
 
+        // Insert history record (always INSERT to keep full history)
         const historyData = {
             tournament_id: tournamentId,
             player_name: result.player_name,
@@ -411,24 +463,17 @@ async function resolveTournament(allEntries) {
             elo_before: eloBefore,
             elo_after: eloAfter,
             elo_change: result.eloChange,
-            resolved_at: new Date().toISOString()
+            resolved_at: new Date().toISOString(),
+            opponent_name: opponentName,
+            opponent_score: opponentScore,
+            is_generated_score: generatedScores !== null
         };
 
-        if (existingHistory.length > 0) {
-            // Update existing entry
-            await fetch(`${SUPABASE_URL}/rest/v1/ranked_history?player_name=eq.${encodeURIComponent(result.player_name)}`, {
-                method: 'PATCH',
-                headers: getHeaders(),
-                body: JSON.stringify(historyData)
-            });
-        } else {
-            // Insert new entry
-            await fetch(`${SUPABASE_URL}/rest/v1/ranked_history`, {
-                method: 'POST',
-                headers: getHeaders(),
-                body: JSON.stringify(historyData)
-            });
-        }
+        await fetch(`${SUPABASE_URL}/rest/v1/ranked_history`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(historyData)
+        });
 
         // Add ELO info to result for response
         result.eloBefore = eloBefore;

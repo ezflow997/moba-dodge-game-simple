@@ -34,6 +34,7 @@ export class RankedMenu {
         this.allQueuesSummary = [];
         this.dataFetchTime = null; // Timestamp when queue data was fetched
         this.isQueued = false; // Whether player is actually in a queue
+        this.queueHistory = []; // Player's last completed queue results
 
         // Queue view pagination
         this.queueViewPage = 0; // 0 = current queue, 1 = all queues
@@ -63,8 +64,9 @@ export class RankedMenu {
         this.backButton = new Button(0, 0, 200, 70, "Back", 30, 0, 0, false, true, 'white', 'white');
 
         // Queue view page navigation buttons
-        this.prevPageButton = new Button(0, 0, 150, 50, "My Queue", 20, 0, 0, false, true, 'white', 'white');
-        this.nextPageButton = new Button(0, 0, 150, 50, "All Queues", 20, 0, 0, false, true, 'white', 'white');
+        this.prevPageButton = new Button(0, 0, 130, 50, "My Queue", 18, 0, 0, false, true, 'white', 'white');
+        this.nextPageButton = new Button(0, 0, 130, 50, "All Queues", 18, 0, 0, false, true, 'white', 'white');
+        this.lastQueueButton = new Button(0, 0, 130, 50, "Last Queue", 18, 0, 0, false, true, 'white', 'white');
 
         // Admin button for fixing stuck queues
         this.fixQueuesButton = new Button(0, 0, 180, 50, "Fix Queues", 18, 0, 0, false, true, 'white', 'white');
@@ -172,6 +174,10 @@ export class RankedMenu {
         this.timeRemaining = status.timeRemaining !== undefined ? status.timeRemaining : null;
         if (status.allQueuesSummary) {
             this.allQueuesSummary = status.allQueuesSummary;
+        }
+        // Queue history (last 5 completed tournaments)
+        if (status.queueHistory) {
+            this.queueHistory = status.queueHistory;
         }
         // Store fetch time for live countdown calculation
         this.dataFetchTime = Date.now();
@@ -301,14 +307,16 @@ export class RankedMenu {
                 return 'start_ranked';
             }
         } else if (this.state === 'queue_view') {
-            // Page navigation buttons at top
+            // Page navigation buttons at top (3 tabs)
             const refPanelTop = 720 - refPanelH / 2;
             const pageNavY = refPanelTop + 70;
-            setButtonPos(this.prevPageButton, refCenterX - 160, pageNavY, 150, 50);
-            setButtonPos(this.nextPageButton, refCenterX + 10, pageNavY, 150, 50);
+            setButtonPos(this.prevPageButton, refCenterX - 220, pageNavY, 130, 50);
+            setButtonPos(this.nextPageButton, refCenterX - 65, pageNavY, 130, 50);
+            setButtonPos(this.lastQueueButton, refCenterX + 90, pageNavY, 130, 50);
 
             this.prevPageButton.update(inX, inY);
             this.nextPageButton.update(inX, inY);
+            this.lastQueueButton.update(inX, inY);
 
             // Fix Queues button (only visible in dev mode) and Back button
             const devModeEnabled = window.game && window.game.devMode && window.game.devMode.enabled;
@@ -335,6 +343,14 @@ export class RankedMenu {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.queueViewPage = 1;
+                this.scrollOffset = 0;
+                return true;
+            }
+
+            if (this.lastQueueButton.isHovered && clicking && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.queueViewPage = 2;
                 this.scrollOffset = 0;
                 return true;
             }
@@ -662,13 +678,21 @@ export class RankedMenu {
             context.shadowBlur = 0;
         }
 
+        // Update tab button colors based on active page
+        this.prevPageButton.text_color = this.queueViewPage === 0 ? '#00ffff' : 'white';
+        this.nextPageButton.text_color = this.queueViewPage === 1 ? '#00ffff' : 'white';
+        this.lastQueueButton.text_color = this.queueViewPage === 2 ? '#00ffff' : 'white';
+
         this.prevPageButton.draw(context);
         this.nextPageButton.draw(context);
+        this.lastQueueButton.draw(context);
 
         if (this.queueViewPage === 0) {
             this.drawMyQueuePage(context, centerX, panelY, rX, rY);
-        } else {
+        } else if (this.queueViewPage === 1) {
             this.drawAllQueuesPage(context, centerX, panelY, rX, rY);
+        } else {
+            this.drawQueueHistory(context, centerX, panelY, rX, rY);
         }
 
         // Draw back button and fix queues button (only if dev mode enabled)
@@ -937,6 +961,121 @@ export class RankedMenu {
             }
             context.fill();
             context.shadowBlur = 0;
+        }
+    }
+
+    drawQueueHistory(context, centerX, panelY, rX, rY) {
+        const panelW = 1150;
+        const startY = panelY + 180 * rY;
+        const rowHeight = 65 * rY;
+
+        // Title
+        context.font = `bold ${24 * rX}px Arial`;
+        context.textAlign = 'center';
+        context.fillStyle = '#ffaa00';
+        context.fillText('Your Recent Queue Results', centerX, panelY + 150 * rY);
+
+        if (this.queueHistory.length === 0) {
+            context.font = `${22 * rX}px Arial`;
+            context.fillStyle = '#666666';
+            context.fillText('No queue history yet', centerX, panelY + 350 * rY);
+            context.fillStyle = '#888888';
+            context.font = `${18 * rX}px Arial`;
+            context.fillText('Complete a ranked queue to see your history here', centerX, panelY + 390 * rY);
+            return;
+        }
+
+        // Column headers
+        const colDate = centerX - 450 * rX;
+        const colYourScore = centerX - 280 * rX;
+        const colOpponent = centerX - 60 * rX;
+        const colOppScore = centerX + 150 * rX;
+        const colElo = centerX + 340 * rX;
+
+        context.font = `${16 * rX}px Arial`;
+        context.textAlign = 'left';
+        context.fillStyle = '#888888';
+        context.fillText('DATE', colDate, startY - 15 * rY);
+        context.fillText('YOUR SCORE', colYourScore, startY - 15 * rY);
+        context.fillText('OPPONENT', colOpponent, startY - 15 * rY);
+        context.fillText('THEIR SCORE', colOppScore, startY - 15 * rY);
+        context.fillText('ELO CHANGE', colElo, startY - 15 * rY);
+
+        // Separator line
+        context.strokeStyle = 'rgba(255, 170, 0, 0.3)';
+        context.lineWidth = 1;
+        context.beginPath();
+        context.moveTo(centerX - 480 * rX, startY);
+        context.lineTo(centerX + 480 * rX, startY);
+        context.stroke();
+
+        // Draw each history entry
+        for (let i = 0; i < this.queueHistory.length; i++) {
+            const entry = this.queueHistory[i];
+            const y = startY + 35 * rY + i * rowHeight;
+
+            // Row background
+            context.fillStyle = i % 2 === 0 ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.1)';
+            context.fillRect(centerX - 490 * rX, y - 20 * rY, 980 * rX, rowHeight - 5 * rY);
+
+            // Highlight winner row
+            if (entry.placement === 1) {
+                context.strokeStyle = 'rgba(0, 255, 136, 0.3)';
+                context.lineWidth = 2 * rX;
+                context.strokeRect(centerX - 490 * rX, y - 20 * rY, 980 * rX, rowHeight - 5 * rY);
+            }
+
+            context.font = `${20 * rX}px Arial`;
+            context.textAlign = 'left';
+
+            // Date (formatted)
+            const date = new Date(entry.resolvedAt);
+            const dateStr = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear().toString().slice(2)}`;
+            context.fillStyle = '#aaaaaa';
+            context.fillText(dateStr, colDate, y + 8 * rY);
+
+            // Your score (green if won, red if lost)
+            const scoreColor = entry.placement === 1 ? '#00ff88' : '#ff6666';
+            context.fillStyle = scoreColor;
+            context.font = `bold ${22 * rX}px Arial`;
+            context.fillText(entry.score.toLocaleString(), colYourScore, y + 8 * rY);
+
+            // Opponent name
+            context.font = `${20 * rX}px Arial`;
+            const oppName = entry.opponentName || '???';
+            const displayOppName = oppName.length > 12 ? oppName.substring(0, 12) + '..' : oppName;
+            context.fillStyle = '#ffffff';
+            context.fillText(displayOppName, colOpponent, y + 8 * rY);
+
+            // Opponent score
+            const oppScore = entry.opponentScore !== null && entry.opponentScore !== undefined
+                ? entry.opponentScore.toLocaleString()
+                : '???';
+            context.fillStyle = '#cccccc';
+            context.fillText(oppScore, colOppScore, y + 8 * rY);
+
+            // ELO change
+            const eloChange = entry.eloChange;
+            const eloColor = eloChange >= 0 ? '#00ff88' : '#ff4444';
+            const eloStr = (eloChange >= 0 ? '+' : '') + eloChange;
+            context.fillStyle = eloColor;
+            context.font = `bold ${22 * rX}px Arial`;
+            context.fillText(eloStr, colElo, y + 8 * rY);
+
+            // Generated score indicator
+            if (entry.isGeneratedScore) {
+                context.font = `${14 * rX}px Arial`;
+                context.fillStyle = '#ffaa00';
+                context.fillText('*', colElo + 70 * rX, y + 8 * rY);
+            }
+        }
+
+        // Footer note for generated scores
+        if (this.queueHistory.some(e => e.isGeneratedScore)) {
+            context.font = `${14 * rX}px Arial`;
+            context.textAlign = 'center';
+            context.fillStyle = '#ffaa00';
+            context.fillText('* Scores were generated due to banned player match', centerX, panelY + 620 * rY);
         }
     }
 

@@ -278,6 +278,14 @@ async function getOrCreatePlayerElo(playerName) {
     return insertedData[0];
 }
 
+// Get player's queue history (last N completed tournaments)
+async function getPlayerQueueHistory(playerName, limit = 5) {
+    const url = `${SUPABASE_URL}/rest/v1/ranked_history?player_name=eq.${encodeURIComponent(playerName)}&order=resolved_at.desc&limit=${limit}`;
+    const response = await fetch(url, { method: 'GET', headers: getHeaders() });
+    if (!response.ok) return [];
+    return await response.json();
+}
+
 // Calculate expected win probability based on ELO difference
 function getExpectedScore(playerElo, opponentElo) {
     return 1 / (1 + Math.pow(10, (opponentElo - playerElo) / 400));
@@ -597,6 +605,22 @@ export default async function handler(req, res) {
             timeRemaining = Math.max(0, QUEUE_TIMEOUT_MS - queueAge);
         }
 
+        // Get player's queue history (last 5 completed tournaments)
+        const rawHistory = await getPlayerQueueHistory(name, 5);
+        const queueHistory = rawHistory.map(h => ({
+            tournamentId: h.tournament_id,
+            score: h.score,
+            placement: h.placement,
+            totalPlayers: h.total_players,
+            eloBefore: h.elo_before,
+            eloAfter: h.elo_after,
+            eloChange: h.elo_change,
+            resolvedAt: h.resolved_at,
+            opponentName: h.opponent_name,
+            opponentScore: h.opponent_score,
+            isGeneratedScore: h.is_generated_score || false
+        }));
+
         return res.status(200).json({
             queueSize: uniquePlayers,
             totalEntries: queue.length,
@@ -625,7 +649,8 @@ export default async function handler(req, res) {
             totalPlayersAllQueues,
             allQueuesSummary,
             timeRemaining,
-            maxPlayers: MIN_PLAYERS_FOR_TOURNAMENT
+            maxPlayers: MIN_PLAYERS_FOR_TOURNAMENT,
+            queueHistory
         });
     } catch (error) {
         console.error('ranked-status error:', error);
