@@ -498,6 +498,11 @@ export class AccountMenu {
 
         // Sub-menus with Cancel button
         if (this.mode !== 'main') {
+            // Adjust cancel button y to be level with next button for enterUsername and answerQuestion modes
+            const origCancelY = this.cancelButton.y;
+            if (this.mode === 'enterUsername' || this.mode === 'answerQuestion') {
+                this.cancelButton.y = this.nextButton.y;
+            }
             this.cancelButton.update(inX, inY);
             if (this.cancelButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
                 this.clicked = true;
@@ -505,6 +510,7 @@ export class AccountMenu {
                 this.mode = 'main';
                 this.errorMessage = '';
             }
+            this.cancelButton.y = origCancelY;
         }
 
         // Change password - click to select fields
@@ -773,6 +779,10 @@ export class AccountMenu {
         this.super.drawGlowText(context, 910, 460, "Username:", 24, '#888888', '#666666', 5);
         this.drawInputField(context, rX, rY, 900, 470, 560, 'username', this.username, false);
 
+        // Temporarily adjust cancel button to be level with next button
+        const origCancelY = this.cancelButton.y;
+        this.cancelButton.y = this.nextButton.y;
+
         if (this.username.trim().length > 0) {
             this.nextButton.draw(context);
         } else {
@@ -782,6 +792,7 @@ export class AccountMenu {
             context.restore();
         }
         this.cancelButton.draw(context);
+        this.cancelButton.y = origCancelY;
     }
 
     drawAnswerQuestion(context, rX, rY) {
@@ -790,6 +801,10 @@ export class AccountMenu {
 
         this.super.drawGlowText(context, 910, 490, "Your Answer:", 24, '#888888', '#666666', 5);
         this.drawInputField(context, rX, rY, 900, 500, 560, 'securityAnswer', this.securityAnswer, false);
+
+        // Temporarily adjust cancel button to be level with next button
+        const origCancelY = this.cancelButton.y;
+        this.cancelButton.y = this.nextButton.y;
 
         if (this.securityAnswer.trim().length > 0) {
             this.nextButton.draw(context);
@@ -800,6 +815,7 @@ export class AccountMenu {
             context.restore();
         }
         this.cancelButton.draw(context);
+        this.cancelButton.y = origCancelY;
     }
 
     drawSetNewPassword(context, rX, rY) {
