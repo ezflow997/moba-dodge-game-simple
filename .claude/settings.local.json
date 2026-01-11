@@ -31,7 +31,10 @@
       "WebFetch(domain:uppbeat.io)",
       "Bash(npx vercel --prod)",
       "Bash(vercel --version:*)",
-      "Bash(where:*)"
+      "Bash(where:*)",
+      "Bash(clip:*)",
+      "Bash(powershell -Command \"$input | Select-Object -Last 300\")",
+      "Bash(powershell:*)"
     ]
   }
 }

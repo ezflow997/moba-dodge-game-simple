@@ -32,3 +32,6 @@ test-results.json
 dist/
 build/
 node_modules/
+
+# Submission docs (private)
+POKI_SUBMISSION.md

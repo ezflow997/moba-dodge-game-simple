@@ -2,7 +2,6 @@
 import { Button } from "./supers.js";
 import { superFunctions } from "./supers.js";
 import { MenuEffects } from "../effects/menuEffects.js";
-import { adRewards } from "../poki/adRewards.js";
 
 export class Menu{
     constructor(){
@@ -27,7 +26,6 @@ export class Menu{
         this.startButton = new Button(btnX, 80 + btnSpacing * 3, btnW, btnH, "New Game", 32, 0, 0, false, true, 'white', 'white');
         this.rankedButton = new Button(btnX, 80 + btnSpacing * 4, btnW, btnH, "Ranked", 32, 0, 0, false, true, 'white', 'white');
         this.shopButton = new Button(btnX, 80 + btnSpacing * 5, btnW, btnH, "Shop", 32, 0, 0, false, true, 'white', 'white');
-        this.watchAdButton = new Button(btnX + btnW + 20, 80 + btnSpacing * 5, 160, btnH, "Watch Ad", 24, 0, 0, false, true, '#ffdd00', '#ffdd00');
         this.leaderboardButton = new Button(btnX, 80 + btnSpacing * 6, btnW, btnH, "Leaderboard", 32, 0, 0, false, true, 'white', 'white');
         this.loginButton = new Button(btnX, 80 + btnSpacing * 7, btnW, btnH, "Login", 32, 0, 0, false, true, 'white', 'white');
         this.logoutButton = new Button(btnX + btnW + 20, 80 + btnSpacing * 7, 120, 50, "Logout", 24, 0, 0, false, true, 'white', 'white');
@@ -190,20 +188,6 @@ export class Menu{
                 });
             }
 
-            // Watch Ad button - watch rewarded ad for points and rewards
-            this.watchAdButton.update(inX, inY);
-            if(this.watchAdButton.isHovered == true && game.input.buttons.indexOf(0) > -1 && this.clicked == false){
-                this.clicked = true;
-                if (window.gameSound) window.gameSound.playMenuClick();
-                // Trigger rewarded ad
-                adRewards.watchAdForReward(game);
-            }
-        }
-
-        // Handle ad reward notification dismiss
-        if (adRewards.hasNotification() && game.input.buttons.indexOf(0) > -1 && this.clicked == false) {
-            this.clicked = true;
-            adRewards.dismissNotification();
         }
 
         // Leaderboard button - only active when leaderboard menu is not visible
@@ -338,41 +322,7 @@ export class Menu{
         if (game.playerName) {
             this.rankedButton.draw(context);
             this.shopButton.draw(context);
-            this.watchAdButton.draw(context);
-
-            // Show cooldown or Poki-only indicator on watch ad button
-            if (!adRewards.isOnPoki()) {
-                // Dim button and show "Poki Only" when not on Poki
-                context.save();
-                context.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                context.fillRect(this.watchAdButton.x * rX, this.watchAdButton.y * rY,
-                    this.watchAdButton.w * rX, this.watchAdButton.h * rY);
-                context.fillStyle = '#888888';
-                context.font = `bold ${16 * rX}px Arial`;
-                context.textAlign = 'center';
-                context.fillText('Poki Only',
-                    (this.watchAdButton.x + this.watchAdButton.w / 2) * rX,
-                    (this.watchAdButton.y + this.watchAdButton.h / 2 + 5) * rY);
-                context.restore();
-            } else if (!adRewards.canWatchAd()) {
-                const remaining = adRewards.getCooldownRemaining();
-                context.save();
-                context.fillStyle = 'rgba(0, 0, 0, 0.6)';
-                context.fillRect(this.watchAdButton.x * rX, this.watchAdButton.y * rY,
-                    this.watchAdButton.w * rX, this.watchAdButton.h * rY);
-                context.fillStyle = '#ffdd00';
-                context.font = `bold ${20 * rX}px Arial`;
-                context.textAlign = 'center';
-                context.fillText(`${remaining}s`,
-                    (this.watchAdButton.x + this.watchAdButton.w / 2) * rX,
-                    (this.watchAdButton.y + this.watchAdButton.h / 2 + 7) * rY);
-                context.restore();
-            }
         }
-
-        // Update and draw ad reward notification
-        adRewards.update();
-        adRewards.draw(context, game);
 
         this.leaderboardButton.draw(context);
 

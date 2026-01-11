@@ -1,5 +1,6 @@
 import { Button, superFunctions } from "./supers.js";
 import { REWARDS, CATEGORY, RARITY } from "../controller/rewardTypes.js";
+import { adRewards } from "../poki/adRewards.js";
 
 // Pricing structures
 const SINGLE_USE_PRICES = {
@@ -166,6 +167,7 @@ export class ShopMenu {
         this.closeButton = new Button(0, 0, 180, 60, "Close", 28, 0, 0, false, true, 'white', 'white');
         this.buyOneButton = new Button(0, 0, 160, 50, "Buy 1x", 22, 0, 0, false, true, 'white', 'white');
         this.buyPermButton = new Button(0, 0, 160, 50, "Unlock", 22, 0, 0, false, true, 'white', 'white');
+        this.watchAdButton = new Button(0, 0, 160, 45, "Watch Ad", 20, 0, 0, false, true, '#ffdd00', '#ffdd00');
 
         // Category tab buttons
         this.categoryButtons = {};
@@ -329,6 +331,27 @@ export class ShopMenu {
             if (window.gameSound) window.gameSound.playMenuClick();
             this.hide();
             return true;
+        }
+
+        // Update Watch Ad button (positioned near points display at top right)
+        const refPanelRight = refCenterX + 700;
+        this.watchAdButton.x = refPanelRight - 190;
+        this.watchAdButton.y = refPanelTop + 70;
+        this.watchAdButton.update(inX, inY);
+
+        // Handle Watch Ad click (only if on Poki and not on cooldown)
+        if (this.watchAdButton.isHovered && clicking && !this.clicked) {
+            this.clicked = true;
+            if (adRewards.isOnPoki() && adRewards.canWatchAd()) {
+                if (window.gameSound) window.gameSound.playMenuClick();
+                adRewards.watchAdForReward(game);
+            }
+        }
+
+        // Handle ad reward notification dismiss
+        if (adRewards.hasNotification() && clicking && !this.clicked) {
+            this.clicked = true;
+            adRewards.dismissNotification();
         }
 
         // Scale factors for coordinate conversion
@@ -524,6 +547,37 @@ export class ShopMenu {
         context.textAlign = 'right';
         context.fillText(`${this.playerPoints.toLocaleString()} Points`, panelX + panelW - 30 * rX, panelY + 55 * rY);
 
+        // Draw Watch Ad button
+        this.watchAdButton.draw(context);
+
+        // Show overlay on Watch Ad button if not on Poki or on cooldown
+        if (!adRewards.isOnPoki()) {
+            const btnX = this.watchAdButton.x * rX;
+            const btnY = this.watchAdButton.y * rY;
+            const btnW = this.watchAdButton.w * rX;
+            const btnH = this.watchAdButton.h * rY;
+
+            context.fillStyle = 'rgba(0, 0, 0, 0.75)';
+            context.fillRect(btnX, btnY, btnW, btnH);
+            context.fillStyle = '#888888';
+            context.font = `bold ${14 * rX}px Arial`;
+            context.textAlign = 'center';
+            context.fillText('Poki Only', btnX + btnW / 2, btnY + btnH / 2 + 5 * rY);
+        } else if (!adRewards.canWatchAd()) {
+            const remaining = adRewards.getCooldownRemaining();
+            const btnX = this.watchAdButton.x * rX;
+            const btnY = this.watchAdButton.y * rY;
+            const btnW = this.watchAdButton.w * rX;
+            const btnH = this.watchAdButton.h * rY;
+
+            context.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            context.fillRect(btnX, btnY, btnW, btnH);
+            context.fillStyle = '#ffdd00';
+            context.font = `bold ${18 * rX}px Arial`;
+            context.textAlign = 'center';
+            context.fillText(`${remaining}s`, btnX + btnW / 2, btnY + btnH / 2 + 6 * rY);
+        }
+
         // Draw category tabs
         this.drawCategoryTabs(context, rX, rY, panelX, panelY);
 
@@ -547,6 +601,10 @@ export class ShopMenu {
         }
 
         context.restore();
+
+        // Update and draw ad reward notification (on top of everything)
+        adRewards.update();
+        adRewards.draw(context, game);
     }
 
     drawCategoryTabs(context, rX, rY, panelX, panelY) {
