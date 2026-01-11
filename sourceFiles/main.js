@@ -760,7 +760,6 @@ window.addEventListener('load', function () {
 
 							// Preserve loadout data before set_difficulty (which clears it)
 							const savedLoadoutRewards = game.pendingLoadoutRewards;
-							const savedUsedIds = game.usedLoadoutRewardIds;
 							const savedWeapon = game.pendingLoadoutWeapon;
 
 							game.gameOver = false;
@@ -769,8 +768,9 @@ window.addEventListener('load', function () {
 
 							// Restore loadout data after reset
 							game.pendingLoadoutRewards = savedLoadoutRewards;
-							game.usedLoadoutRewardIds = savedUsedIds;
 							game.pendingLoadoutWeapon = savedWeapon;
+							// Regenerate usedLoadoutRewardIds from pendingLoadoutRewards (was cleared after first consumption)
+							game.usedLoadoutRewardIds = game.pendingLoadoutRewards ? game.pendingLoadoutRewards.map(r => r.id) : [];
 
 							// Apply loadout rewards to the new game
 							if (game.pendingLoadoutRewards && game.pendingLoadoutRewards.length > 0) {
@@ -864,7 +864,6 @@ window.addEventListener('load', function () {
 
 							// Preserve loadout data before set_difficulty (which clears it)
 							const savedLoadoutRewards = game.pendingLoadoutRewards;
-							const savedUsedIds = game.usedLoadoutRewardIds;
 							const savedWeapon = game.pendingLoadoutWeapon;
 
 							game.gameOver = false;
@@ -873,8 +872,9 @@ window.addEventListener('load', function () {
 
 							// Restore loadout data after reset
 							game.pendingLoadoutRewards = savedLoadoutRewards;
-							game.usedLoadoutRewardIds = savedUsedIds;
 							game.pendingLoadoutWeapon = savedWeapon;
+							// Regenerate usedLoadoutRewardIds from pendingLoadoutRewards (was cleared after first consumption)
+							game.usedLoadoutRewardIds = game.pendingLoadoutRewards ? game.pendingLoadoutRewards.map(r => r.id) : [];
 
 							// Apply loadout rewards to the new game
 							if (game.pendingLoadoutRewards && game.pendingLoadoutRewards.length > 0) {
