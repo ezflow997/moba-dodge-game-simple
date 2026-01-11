@@ -37,13 +37,18 @@ export class NameInputMenu {
         this.securityAnswer = '';
         this.maxAnswerLength = 30;
 
+        // Caret positions for each field
+        this.nameCaretPos = 0;
+        this.passwordCaretPos = 0;
+        this.securityAnswerCaretPos = 0;
+
         this.submitButton = new Button(1080, 580, 280, 70, "Submit", 45, 75, 50, false, true, 'white', 'white');
         this.nextButton = new Button(1080, 580, 280, 70, "Next", 45, 90, 50, false, true, 'white', 'white');
-        this.togglePasswordButton = new Button(1320, 500, 50, 50, "*", 35, 12, 38, false, true, 'white', 'white');
+        this.togglePasswordButton = new Button(1570, 500, 50, 50, "*", 35, 12, 38, false, true, 'white', 'white');
 
         // Security question navigation buttons
-        this.prevQuestionButton = new Button(650, 440, 50, 50, "<", 35, 12, 38, false, true, 'white', 'white');
-        this.nextQuestionButton = new Button(1160, 440, 50, 50, ">", 35, 12, 38, false, true, 'white', 'white');
+        this.prevQuestionButton = new Button(900, 440, 50, 50, "<", 35, 12, 38, false, true, 'white', 'white');
+        this.nextQuestionButton = new Button(1410, 440, 50, 50, ">", 35, 12, 38, false, true, 'white', 'white');
 
         // Forgot password link (shown after failed login)
         this.showForgotPassword = false;
@@ -72,6 +77,11 @@ export class NameInputMenu {
         this.showForgotPassword = false;
         this.allowRegistration = allowRegistration;
 
+        // Reset caret positions
+        this.nameCaretPos = 0;
+        this.passwordCaretPos = 0;
+        this.securityAnswerCaretPos = 0;
+
         // Add keyboard listener
         document.addEventListener('keydown', this.keyHandler);
     }
@@ -87,14 +97,86 @@ export class NameInputMenu {
         if (!this.isVisible) return;
         if (this.inputState === 'checkingName' || this.inputState === 'submitting') return;
 
-        // Handle backspace
+        // Handle backspace - delete character before caret
         if (e.key === 'Backspace') {
             if (this.activeField === 'name' && this.inputState === 'name') {
-                this.playerName = this.playerName.slice(0, -1);
+                if (this.nameCaretPos > 0) {
+                    this.playerName = this.playerName.slice(0, this.nameCaretPos - 1) + this.playerName.slice(this.nameCaretPos);
+                    this.nameCaretPos--;
+                }
             } else if (this.activeField === 'password' && this.inputState === 'password') {
-                this.password = this.password.slice(0, -1);
+                if (this.passwordCaretPos > 0) {
+                    this.password = this.password.slice(0, this.passwordCaretPos - 1) + this.password.slice(this.passwordCaretPos);
+                    this.passwordCaretPos--;
+                }
             } else if (this.activeField === 'securityAnswer' && this.inputState === 'security') {
-                this.securityAnswer = this.securityAnswer.slice(0, -1);
+                if (this.securityAnswerCaretPos > 0) {
+                    this.securityAnswer = this.securityAnswer.slice(0, this.securityAnswerCaretPos - 1) + this.securityAnswer.slice(this.securityAnswerCaretPos);
+                    this.securityAnswerCaretPos--;
+                }
+            }
+            e.preventDefault();
+            return;
+        }
+
+        // Handle Delete key - delete character after caret
+        if (e.key === 'Delete') {
+            if (this.activeField === 'name' && this.inputState === 'name') {
+                if (this.nameCaretPos < this.playerName.length) {
+                    this.playerName = this.playerName.slice(0, this.nameCaretPos) + this.playerName.slice(this.nameCaretPos + 1);
+                }
+            } else if (this.activeField === 'password' && this.inputState === 'password') {
+                if (this.passwordCaretPos < this.password.length) {
+                    this.password = this.password.slice(0, this.passwordCaretPos) + this.password.slice(this.passwordCaretPos + 1);
+                }
+            } else if (this.activeField === 'securityAnswer' && this.inputState === 'security') {
+                if (this.securityAnswerCaretPos < this.securityAnswer.length) {
+                    this.securityAnswer = this.securityAnswer.slice(0, this.securityAnswerCaretPos) + this.securityAnswer.slice(this.securityAnswerCaretPos + 1);
+                }
+            }
+            e.preventDefault();
+            return;
+        }
+
+        // Handle Left/Right arrow keys for caret movement (not in security question selection)
+        if (e.key === 'ArrowLeft' && this.inputState !== 'security') {
+            if (this.activeField === 'name' && this.nameCaretPos > 0) {
+                this.nameCaretPos--;
+            } else if (this.activeField === 'password' && this.passwordCaretPos > 0) {
+                this.passwordCaretPos--;
+            }
+            e.preventDefault();
+            return;
+        }
+        if (e.key === 'ArrowRight' && this.inputState !== 'security') {
+            if (this.activeField === 'name' && this.nameCaretPos < this.playerName.length) {
+                this.nameCaretPos++;
+            } else if (this.activeField === 'password' && this.passwordCaretPos < this.password.length) {
+                this.passwordCaretPos++;
+            }
+            e.preventDefault();
+            return;
+        }
+
+        // Handle Home/End keys for caret movement
+        if (e.key === 'Home') {
+            if (this.activeField === 'name') {
+                this.nameCaretPos = 0;
+            } else if (this.activeField === 'password') {
+                this.passwordCaretPos = 0;
+            } else if (this.activeField === 'securityAnswer') {
+                this.securityAnswerCaretPos = 0;
+            }
+            e.preventDefault();
+            return;
+        }
+        if (e.key === 'End') {
+            if (this.activeField === 'name') {
+                this.nameCaretPos = this.playerName.length;
+            } else if (this.activeField === 'password') {
+                this.passwordCaretPos = this.password.length;
+            } else if (this.activeField === 'securityAnswer') {
+                this.securityAnswerCaretPos = this.securityAnswer.length;
             }
             e.preventDefault();
             return;
@@ -109,15 +191,27 @@ export class NameInputMenu {
             return;
         }
 
-        // Handle arrow keys for question selection (in security state)
+        // Handle arrow keys in security state
         if (this.inputState === 'security') {
-            if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+            // Up/Down for question selection
+            if (e.key === 'ArrowUp') {
                 this.selectedQuestionIndex = (this.selectedQuestionIndex - 1 + SECURITY_QUESTIONS.length) % SECURITY_QUESTIONS.length;
                 e.preventDefault();
                 return;
             }
-            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+            if (e.key === 'ArrowDown') {
                 this.selectedQuestionIndex = (this.selectedQuestionIndex + 1) % SECURITY_QUESTIONS.length;
+                e.preventDefault();
+                return;
+            }
+            // Left/Right for caret movement in answer field
+            if (e.key === 'ArrowLeft' && this.securityAnswerCaretPos > 0) {
+                this.securityAnswerCaretPos--;
+                e.preventDefault();
+                return;
+            }
+            if (e.key === 'ArrowRight' && this.securityAnswerCaretPos < this.securityAnswer.length) {
+                this.securityAnswerCaretPos++;
                 e.preventDefault();
                 return;
             }
@@ -148,19 +242,22 @@ export class NameInputMenu {
             return;
         }
 
-        // Handle regular characters
+        // Handle regular characters - insert at caret position
         if (e.key.length === 1) {
             if (this.activeField === 'name' && this.inputState === 'name') {
                 if (this.playerName.length < this.maxNameLength && /^[a-zA-Z0-9_\-]$/.test(e.key)) {
-                    this.playerName += e.key;
+                    this.playerName = this.playerName.slice(0, this.nameCaretPos) + e.key + this.playerName.slice(this.nameCaretPos);
+                    this.nameCaretPos++;
                 }
             } else if (this.activeField === 'password' && this.inputState === 'password') {
                 if (this.password.length < this.maxPasswordLength && /^[a-zA-Z0-9!@#$%^&*_\-]$/.test(e.key)) {
-                    this.password += e.key;
+                    this.password = this.password.slice(0, this.passwordCaretPos) + e.key + this.password.slice(this.passwordCaretPos);
+                    this.passwordCaretPos++;
                 }
             } else if (this.activeField === 'securityAnswer' && this.inputState === 'security') {
                 if (this.securityAnswer.length < this.maxAnswerLength && /^[a-zA-Z0-9 _\-]$/.test(e.key)) {
-                    this.securityAnswer += e.key;
+                    this.securityAnswer = this.securityAnswer.slice(0, this.securityAnswerCaretPos) + e.key + this.securityAnswer.slice(this.securityAnswerCaretPos);
+                    this.securityAnswerCaretPos++;
                 }
             }
             e.preventDefault();
@@ -277,13 +374,13 @@ export class NameInputMenu {
         const inY = game.input.mouseY;
         const clicking = game.input.buttons.indexOf(0) > -1;
 
-        // Click outside to close (panel: x=580, y=280, w=900, h=520 max)
+        // Click outside to close (panel: x=830, y=280, w=900, h=520 max)
         // Only check when not in a loading state
         if (this.inputState !== 'checkingName' && this.inputState !== 'submitting') {
             const rX = window.innerWidth / 2560;
             const rY = window.innerHeight / 1440;
-            const panelLeft = 580 * rX;
-            const panelRight = (580 + 900) * rX;
+            const panelLeft = 830 * rX;
+            const panelRight = (830 + 900) * rX;
             const panelTop = 280 * rY;
             const panelBottom = (280 + 520) * rY;
 
@@ -307,6 +404,55 @@ export class NameInputMenu {
 
         // Don't process buttons during loading states
         if (this.inputState === 'checkingName' || this.inputState === 'submitting') return;
+
+        // Store scale factors for input field click detection
+        const rX = window.innerWidth / 2560;
+        const rY = window.innerHeight / 1440;
+
+        // Click detection for input fields to position caret
+        if (clicking && !this.clicked) {
+            // Approximate character width for 36px Arial font
+            const charWidth = 36 * 0.55 * rX;
+
+            // Name input field (name state): x=900, y=420, w=560, h=60
+            if (this.inputState === 'name' && this.isClickInInputField(inX, inY, 900, 420, 560, 60, rX, rY)) {
+                this.clicked = true;
+                const textStartX = (900 + 20) * rX;
+                const relativeX = inX - textStartX;
+                if (relativeX <= 0) {
+                    this.nameCaretPos = 0;
+                } else {
+                    const clickedPos = Math.round(relativeX / charWidth);
+                    this.nameCaretPos = Math.min(clickedPos, this.playerName.length);
+                }
+            }
+
+            // Password input field (password state): x=900, y=470, w=560, h=60
+            if (this.inputState === 'password' && this.isClickInInputField(inX, inY, 900, 470, 560, 60, rX, rY)) {
+                this.clicked = true;
+                const textStartX = (900 + 20) * rX;
+                const relativeX = inX - textStartX;
+                if (relativeX <= 0) {
+                    this.passwordCaretPos = 0;
+                } else {
+                    const clickedPos = Math.round(relativeX / charWidth);
+                    this.passwordCaretPos = Math.min(clickedPos, this.password.length);
+                }
+            }
+
+            // Security answer field (security state): x=900, y=530, w=560, h=60
+            if (this.inputState === 'security' && this.isClickInInputField(inX, inY, 900, 530, 560, 60, rX, rY)) {
+                this.clicked = true;
+                const textStartX = (900 + 20) * rX;
+                const relativeX = inX - textStartX;
+                if (relativeX <= 0) {
+                    this.securityAnswerCaretPos = 0;
+                } else {
+                    const clickedPos = Math.round(relativeX / charWidth);
+                    this.securityAnswerCaretPos = Math.min(clickedPos, this.securityAnswer.length);
+                }
+            }
+        }
 
         // Next button (name state)
         if (this.inputState === 'name') {
@@ -342,7 +488,7 @@ export class NameInputMenu {
                 const rX = window.innerWidth / 2560;
                 const rY = window.innerHeight / 1440;
                 // Check if click is within the "Forgot Password?" text area (text drawn at y=610)
-                const linkX = 660 * rX;
+                const linkX = 910 * rX;
                 const linkY = 585 * rY;
                 const linkW = 200 * rX;
                 const linkH = 35 * rY;
@@ -405,41 +551,41 @@ export class NameInputMenu {
         if (this.inputState === 'password') panelHeight = this.showForgotPassword ? 460 : 420;
         if (this.inputState === 'security') panelHeight = 520;
 
-        // Input panel
+        // Input panel (centered: x=830 for 900 width on 2560 reference)
         context.save();
         context.fillStyle = 'rgba(10, 20, 40, 0.95)';
-        context.fillRect(580 * rX, 280 * rY, 900 * rX, panelHeight * rY);
+        context.fillRect(830 * rX, 280 * rY, 900 * rX, panelHeight * rY);
         context.strokeStyle = '#00ffff';
         context.shadowColor = '#00ffff';
         context.shadowBlur = 20 * rX;
         context.lineWidth = 3 * rY;
-        context.strokeRect(580 * rX, 280 * rY, 900 * rX, panelHeight * rY);
+        context.strokeRect(830 * rX, 280 * rY, 900 * rX, panelHeight * rY);
         context.restore();
 
         // Title based on state
         if (this.inputState === 'name') {
-            this.super.drawGlowText(context, 820, 350, "ENTER YOUR NAME", 50, '#ffffff', '#00ffff', 12);
-            this.super.drawGlowText(context, 780, 390, "to submit your score", 28, '#888888', '#666666', 5);
+            this.super.drawGlowText(context, 1070, 350, "ENTER YOUR NAME", 50, '#ffffff', '#00ffff', 12);
+            this.super.drawGlowText(context, 1030, 390, "to submit your score", 28, '#888888', '#666666', 5);
         } else if (this.inputState === 'checkingName') {
-            this.super.drawGlowText(context, 900, 380, "Checking...", 45, '#ffff00', '#ffaa00', 10);
+            this.super.drawGlowText(context, 1150, 380, "Checking...", 45, '#ffff00', '#ffaa00', 10);
         } else if (this.inputState === 'password') {
             if (this.isNewPlayer) {
-                this.super.drawGlowText(context, 780, 340, "CREATE PASSWORD", 50, '#ffffff', '#00ffff', 12);
-                this.super.drawGlowText(context, 720, 380, "New account for: " + this.playerName, 28, '#00ff88', '#00ff00', 5);
+                this.super.drawGlowText(context, 1030, 340, "CREATE PASSWORD", 50, '#ffffff', '#00ffff', 12);
+                this.super.drawGlowText(context, 970, 380, "New account for: " + this.playerName, 28, '#00ff88', '#00ff00', 5);
             } else {
-                this.super.drawGlowText(context, 800, 340, "ENTER PASSWORD", 50, '#ffffff', '#00ffff', 12);
-                this.super.drawGlowText(context, 780, 380, "Welcome back, " + this.playerName, 28, '#00ff88', '#00ff00', 5);
+                this.super.drawGlowText(context, 1050, 340, "ENTER PASSWORD", 50, '#ffffff', '#00ffff', 12);
+                this.super.drawGlowText(context, 1030, 380, "Welcome back, " + this.playerName, 28, '#00ff88', '#00ff00', 5);
             }
         } else if (this.inputState === 'security') {
-            this.super.drawGlowText(context, 750, 340, "SECURITY QUESTION", 50, '#ffffff', '#00ffff', 12);
-            this.super.drawGlowText(context, 700, 380, "For password recovery", 28, '#888888', '#666666', 5);
+            this.super.drawGlowText(context, 1000, 340, "SECURITY QUESTION", 50, '#ffffff', '#00ffff', 12);
+            this.super.drawGlowText(context, 950, 380, "For password recovery", 28, '#888888', '#666666', 5);
         } else if (this.inputState === 'submitting') {
-            this.super.drawGlowText(context, 900, 380, "Submitting...", 45, '#ffff00', '#ffaa00', 10);
+            this.super.drawGlowText(context, 1150, 380, "Submitting...", 45, '#ffff00', '#ffaa00', 10);
         }
 
         // Name input state
         if (this.inputState === 'name') {
-            this.drawInputField(context, rX, rY, 650, 420, 560, 'name', this.playerName, this.maxNameLength, "Type your name...");
+            this.drawInputField(context, rX, rY, 900, 420, 560, 'name', this.playerName, this.maxNameLength, "Type your name...");
 
             if (this.playerName.trim().length > 0) {
                 this.nextButton.draw(context);
@@ -450,13 +596,13 @@ export class NameInputMenu {
                 context.restore();
             }
 
-            this.super.drawGlowText(context, 750, 670, "Press ENTER to continue | ESC to skip", 22, '#666666', '#444444', 3);
+            this.super.drawGlowText(context, 1000, 670, "Press ENTER to continue | ESC to skip", 22, '#666666', '#444444', 3);
         }
 
         // Password input state
         if (this.inputState === 'password') {
-            this.super.drawGlowText(context, 660, 440, "Name: " + this.playerName, 32, '#888888', '#666666', 5);
-            this.drawInputField(context, rX, rY, 650, 470, 560, 'password', this.password, this.maxPasswordLength, "Enter password...");
+            this.super.drawGlowText(context, 910, 440, "Name: " + this.playerName, 32, '#888888', '#666666', 5);
+            this.drawInputField(context, rX, rY, 900, 470, 560, 'password', this.password, this.maxPasswordLength, "Enter password...");
             this.togglePasswordButton.draw(context);
 
             // Show Next for new players, Submit for existing
@@ -471,14 +617,14 @@ export class NameInputMenu {
             }
 
             const reqColor = this.password.length >= 4 ? '#00ff88' : '#ff8888';
-            this.super.drawGlowText(context, 660, 560, "Min 4 characters", 22, reqColor, reqColor, 3);
+            this.super.drawGlowText(context, 910, 560, "Min 4 characters", 22, reqColor, reqColor, 3);
 
             // Show "Forgot Password?" link after failed login
             if (this.showForgotPassword) {
                 // Check if mouse is hovering over the link for highlight effect
                 const rX = window.innerWidth / 2560;
                 const rY = window.innerHeight / 1440;
-                const linkX = 660 * rX;
+                const linkX = 910 * rX;
                 const linkY = 585 * rY;
                 const linkW = 200 * rX;
                 const linkH = 35 * rY;
@@ -488,28 +634,28 @@ export class NameInputMenu {
 
                 const linkColor = isHovered ? '#00ffff' : '#ffaa00';
                 const linkGlow = isHovered ? '#00ffff' : '#ff8800';
-                this.super.drawGlowText(context, 660, 610, "Forgot Password?", 24, linkColor, linkGlow, isHovered ? 12 : 6);
+                this.super.drawGlowText(context, 910, 610, "Forgot Password?", 24, linkColor, linkGlow, isHovered ? 12 : 6);
             }
 
-            this.super.drawGlowText(context, 720, 720, "Press ENTER to continue | ESC to cancel", 22, '#666666', '#444444', 3);
+            this.super.drawGlowText(context, 970, 720, "Press ENTER to continue | ESC to cancel", 22, '#666666', '#444444', 3);
         }
 
         // Security question state
         if (this.inputState === 'security') {
             // Display selected question with navigation
             const question = SECURITY_QUESTIONS[this.selectedQuestionIndex];
-            this.super.drawGlowText(context, 720, 450, question, 28, '#ffaa00', '#ff8800', 8);
+            this.super.drawGlowText(context, 970, 450, question, 28, '#ffaa00', '#ff8800', 8);
 
             // Question navigation buttons
             this.prevQuestionButton.draw(context);
             this.nextQuestionButton.draw(context);
 
             // Question counter
-            this.super.drawGlowText(context, 1000, 450, `${this.selectedQuestionIndex + 1}/${SECURITY_QUESTIONS.length}`, 22, '#666666', '#444444', 3);
+            this.super.drawGlowText(context, 1250, 450, `${this.selectedQuestionIndex + 1}/${SECURITY_QUESTIONS.length}`, 22, '#666666', '#444444', 3);
 
             // Answer input field
-            this.super.drawGlowText(context, 660, 510, "Your Answer:", 26, '#888888', '#666666', 5);
-            this.drawInputField(context, rX, rY, 650, 530, 560, 'securityAnswer', this.securityAnswer, this.maxAnswerLength, "Type your answer...");
+            this.super.drawGlowText(context, 910, 510, "Your Answer:", 26, '#888888', '#666666', 5);
+            this.drawInputField(context, rX, rY, 900, 530, 560, 'securityAnswer', this.securityAnswer, this.maxAnswerLength, "Type your answer...");
 
             // Submit button
             if (this.securityAnswer.trim().length >= 1) {
@@ -522,13 +668,53 @@ export class NameInputMenu {
             }
 
             // Instructions
-            this.super.drawGlowText(context, 680, 720, "Use arrows to change question | ENTER to submit", 22, '#666666', '#444444', 3);
+            this.super.drawGlowText(context, 930, 720, "Use arrows to change question | ENTER to submit", 22, '#666666', '#444444', 3);
         }
 
         // Error message
         if (this.errorMessage) {
-            this.super.drawGlowText(context, 800, 800, this.errorMessage, 28, '#ff4444', '#ff0000', 8);
+            this.super.drawGlowText(context, 1050, 800, this.errorMessage, 28, '#ff4444', '#ff0000', 8);
         }
+    }
+
+    // Calculate caret position from click X coordinate
+    calculateCaretFromClick(context, clickX, fieldX, value, fontSize, rX) {
+        if (value.length === 0) return 0;
+
+        const textStartX = (fieldX + 20) * rX;
+        const relativeX = clickX - textStartX;
+
+        if (relativeX <= 0) return 0;
+
+        // Measure each character to find the closest caret position
+        context.save();
+        context.font = `${fontSize * rX}px Arial`;
+
+        let caretPos = 0;
+        let prevWidth = 0;
+
+        for (let i = 1; i <= value.length; i++) {
+            const width = context.measureText(value.slice(0, i)).width;
+            const midPoint = (prevWidth + width) / 2;
+
+            if (relativeX < midPoint) {
+                break;
+            }
+            caretPos = i;
+            prevWidth = width;
+        }
+
+        context.restore();
+        return caretPos;
+    }
+
+    // Check if click is within input field bounds
+    isClickInInputField(clickX, clickY, fieldX, fieldY, fieldW, fieldH, rX, rY) {
+        const x = fieldX * rX;
+        const y = fieldY * rY;
+        const w = fieldW * rX;
+        const h = fieldH * rY;
+        return clickX >= x && clickX <= x + w && clickY >= y && clickY <= y + h;
     }
 
     drawInputField(context, rX, rY, x, y, width, fieldType, value, maxLength, placeholder) {
@@ -546,14 +732,27 @@ export class NameInputMenu {
         context.strokeRect(x * rX, y * rY, width * rX, 60 * rY);
         context.restore();
 
-        // Display value
+        // Get the caret position for this field
+        let caretPos = 0;
+        if (fieldType === 'name') {
+            caretPos = this.nameCaretPos;
+        } else if (fieldType === 'password') {
+            caretPos = this.passwordCaretPos;
+        } else if (fieldType === 'securityAnswer') {
+            caretPos = this.securityAnswerCaretPos;
+        }
+
+        // Display value with cursor at caret position
         let displayValue = value;
         if (fieldType === 'password' && !this.showPassword && value.length > 0) {
             displayValue = '*'.repeat(value.length);
         }
 
         if (value.length > 0) {
-            const displayText = displayValue + (showCursor ? '|' : '');
+            // Insert cursor at caret position
+            const beforeCaret = displayValue.slice(0, caretPos);
+            const afterCaret = displayValue.slice(caretPos);
+            const displayText = beforeCaret + (showCursor ? '|' : '') + afterCaret;
             this.super.drawGlowText(context, x + 20, y + 45, displayText, 36, '#00ff88', '#00ff00', 8);
         } else {
             this.super.drawGlowText(context, x + 20, y + 45, showCursor ? '|' : '', 36, '#00ff88', '#00ff00', 8);
