@@ -43,7 +43,7 @@ export class PhantomBoss {
         this.teleportStart = 0;
         this.glitchDuration = 500;
         this.invisibleDuration = 500; // Varies by phase
-        this.teleportCooldown = 5000;
+        this.teleportCooldown = 6000;
         this.lastTeleport = performance.now();
         this.teleportTarget = { x: 0, y: 0 };
         this.glitchOffset = { x: 0, y: 0 };
@@ -53,7 +53,7 @@ export class PhantomBoss {
 
         // Toxic burst attack
         this.lastBurst = performance.now();
-        this.burstCooldown = 3500;
+        this.burstCooldown = 4500;
         this.burstCharging = false;
         this.burstChargeStart = 0;
         this.burstChargeDuration = 400;
@@ -133,16 +133,16 @@ export class PhantomBoss {
 
         if (this.health <= this.phaseThresholds[3] && this.phase < 3) {
             this.phase = 3;
-            this.teleportCooldown = 3000;
-            this.burstCooldown = 2500;
+            this.teleportCooldown = 4000;
+            this.burstCooldown = 3500;
             this.invisibleDuration = 300;
             this.color = '#00ff88';
             this.glowColor = '#66ffaa';
             this.ghostAlpha = 0.7; // More transparent in phase 3
         } else if (this.health <= this.phaseThresholds[2] && this.phase < 2) {
             this.phase = 2;
-            this.teleportCooldown = 4000;
-            this.burstCooldown = 3000;
+            this.teleportCooldown = 5000;
+            this.burstCooldown = 4000;
             this.invisibleDuration = 400;
             this.color = '#00ff77';
             this.glowColor = '#55ff99';
@@ -276,7 +276,7 @@ export class PhantomBoss {
         this.teleportTarget.y = Math.max(margin, Math.min(h - margin, this.teleportTarget.y));
 
         // Ensure minimum distance from player (prevent teleporting on top of player)
-        const minDistanceFromPlayer = 250;
+        const minDistanceFromPlayer = 350;
         const dx = this.teleportTarget.x - player.x;
         const dy = this.teleportTarget.y - player.y;
         const distToPlayer = Math.sqrt(dx * dx + dy * dy);
@@ -335,9 +335,9 @@ export class PhantomBoss {
             if (!img.hasAttacked && age >= img.attackDelay) {
                 img.isAttacking = true;
 
-                // Fire 3 projectiles toward player
+                // Fire 2 projectiles toward player
                 const baseAngle = Math.atan2(player.y - img.y, player.x - img.x);
-                const spreadAngles = [-0.4, 0, 0.4];
+                const spreadAngles = [-0.3, 0.3];
 
                 for (const spread of spreadAngles) {
                     const angle = baseAngle + spread;
@@ -441,8 +441,8 @@ export class PhantomBoss {
     executeBurst(player) {
         const rX = window.innerWidth / 2560;
         const baseAngle = Math.atan2(player.y - this.y, player.x - this.x);
-        const projectileCount = 5;
-        const spreadAngle = Math.PI / 4; // 45 degrees spread
+        const projectileCount = 3;
+        const spreadAngle = Math.PI / 3; // 60 degrees spread
 
         // Play burst sound (throttled)
         if (window.gameSound && this.canPlaySound('burst')) {
