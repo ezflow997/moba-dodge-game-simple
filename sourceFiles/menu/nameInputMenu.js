@@ -45,6 +45,9 @@ export class NameInputMenu {
         this.prevQuestionButton = new Button(650, 440, 50, 50, "<", 35, 12, 38, false, true, 'white', 'white');
         this.nextQuestionButton = new Button(1160, 440, 50, 50, ">", 35, 12, 38, false, true, 'white', 'white');
 
+        // Forgot password link (shown after failed login)
+        this.showForgotPassword = false;
+
         // Bind keyboard handler
         this.keyHandler = this.handleKeyPress.bind(this);
 
@@ -66,6 +69,7 @@ export class NameInputMenu {
         this.existingPlayerHasSecurityQuestion = true; // Track existing player's security question status
         this.errorMessage = '';
         this.showPassword = false;
+        this.showForgotPassword = false;
         this.allowRegistration = allowRegistration;
 
         // Add keyboard listener
@@ -214,6 +218,7 @@ export class NameInputMenu {
                     this.errorMessage = 'Incorrect password';
                     this.inputState = 'password';
                     this.password = '';
+                    this.showForgotPassword = true; // Show forgot password option after failed login
                     return;
                 }
             } catch (error) {
@@ -310,6 +315,29 @@ export class NameInputMenu {
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.showPassword = !this.showPassword;
             }
+
+            // Forgot password link click detection (when visible)
+            if (this.showForgotPassword && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                const rX = window.innerWidth / 2560;
+                const rY = window.innerHeight / 1440;
+                // Check if click is within the "Forgot Password?" text area (text drawn at y=610)
+                const linkX = 660 * rX;
+                const linkY = 585 * rY;
+                const linkW = 200 * rX;
+                const linkH = 35 * rY;
+                if (inX >= linkX && inX <= linkX + linkW && inY >= linkY && inY <= linkY + linkH) {
+                    this.clicked = true;
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    // Open account menu in forgot password mode with username pre-filled
+                    this.hide();
+                    if (this.onSubmit) this.onSubmit(null); // Signal cancelled
+                    if (window.game && window.game.accountMenu) {
+                        window.game.accountMenu.show(false, this.playerName.trim(), false);
+                        window.game.accountMenu.mode = 'enterUsername';
+                        window.game.accountMenu.activeField = 'username';
+                    }
+                }
+            }
         }
 
         // Security question state
@@ -353,7 +381,7 @@ export class NameInputMenu {
 
         // Calculate panel height based on state
         let panelHeight = 320;
-        if (this.inputState === 'password') panelHeight = 420;
+        if (this.inputState === 'password') panelHeight = this.showForgotPassword ? 460 : 420;
         if (this.inputState === 'security') panelHeight = 520;
 
         // Input panel
@@ -423,6 +451,25 @@ export class NameInputMenu {
 
             const reqColor = this.password.length >= 4 ? '#00ff88' : '#ff8888';
             this.super.drawGlowText(context, 660, 560, "Min 4 characters", 22, reqColor, reqColor, 3);
+
+            // Show "Forgot Password?" link after failed login
+            if (this.showForgotPassword) {
+                // Check if mouse is hovering over the link for highlight effect
+                const rX = window.innerWidth / 2560;
+                const rY = window.innerHeight / 1440;
+                const linkX = 660 * rX;
+                const linkY = 585 * rY;
+                const linkW = 200 * rX;
+                const linkH = 35 * rY;
+                const mouseX = game.input.mouseX;
+                const mouseY = game.input.mouseY;
+                const isHovered = mouseX >= linkX && mouseX <= linkX + linkW && mouseY >= linkY && mouseY <= linkY + linkH;
+
+                const linkColor = isHovered ? '#00ffff' : '#ffaa00';
+                const linkGlow = isHovered ? '#00ffff' : '#ff8800';
+                this.super.drawGlowText(context, 660, 610, "Forgot Password?", 24, linkColor, linkGlow, isHovered ? 12 : 6);
+            }
+
             this.super.drawGlowText(context, 720, 720, "Press ENTER to continue | ESC to cancel", 22, '#666666', '#444444', 3);
         }
 

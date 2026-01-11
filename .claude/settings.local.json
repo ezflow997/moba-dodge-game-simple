@@ -20,7 +20,18 @@
       "Bash(git checkout:*)",
       "Bash(npm run dev:*)",
       "Bash(timeout:*)",
-      "Bash(npx serve -l 3000)"
+      "Bash(npx serve -l 3000)",
+      "Bash(ping:*)",
+      "Bash(git reset:*)",
+      "Bash(find:*)",
+      "WebFetch(domain:www.chosic.com)",
+      "WebFetch(domain:www.free-stock-music.com)",
+      "WebFetch(domain:www.bensound.com)",
+      "WebFetch(domain:pixabay.com)",
+      "WebFetch(domain:uppbeat.io)",
+      "Bash(npx vercel --prod)",
+      "Bash(vercel --version:*)",
+      "Bash(where:*)"
     ]
   }
 }

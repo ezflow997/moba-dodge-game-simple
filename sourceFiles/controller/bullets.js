@@ -44,6 +44,7 @@ export class Bullets {
         this.bulletsSpawned = false;
         this.bulletsDeSpawned = false;
         this.bulletsHitTarget = false;
+        this.homingMissileCount = 0;
     }
     update(player, input, enemies, game){
         if(this.prevWindowWidth != window.innerWidth || this.prevWindowHeight != window.innerHeight){
@@ -128,6 +129,7 @@ export class Bullets {
 
                 // Standard completion check - bullets gone or hit target
                 if(this.bulletsList.length == 0 || this.bulletsHitTarget == true){
+                    console.log(`[STATE] Resetting bulletsCreated to false (bulletsList.length=${this.bulletsList.length}, bulletsHitTarget=${this.bulletsHitTarget})`);
                     this.bulletsCreated = false;
                     this.bulletsSpawned = false;
                     this.bulletsDeSpawned = true;
@@ -199,9 +201,14 @@ export class Bullets {
                                         bullet.enemyCollision = false;
                                     } else if (isIndependent) {
                                         // Independent bullets: remove only this bullet, others continue
+                                        console.log(`[HIT] Removing bullet ${bullet.targetPreference || 'N/A'} (gunType=${bullet.gunType}, hit), ${this.bulletsList.length - 1} remaining`);
+                                        this.bulletsList.splice(i, 1);
+                                    } else if (bullet.gunType === 'nova' || bullet.gunType === 'twin' || bullet.gunType === 'shotgun') {
+                                        // Safeguard: these should always be independent, only remove this bullet
                                         this.bulletsList.splice(i, 1);
                                     } else {
                                         // Single-target weapons: clear all bullets
+                                        console.log(`[BULLETS] Clearing all bullets (single-target hit, gun: ${bullet.gunType})`);
                                         this.bulletsList = [];
                                         this.bulletsHitTarget = true;
                                         break;
@@ -210,10 +217,11 @@ export class Bullets {
                                 else if(bullet.destroy == true){
                                     // Don't reset streak for multi-hit weapons (rapidfire, piercing, ricochet)
                                     // These fire multiple bullets or hit multiple targets - individual misses shouldn't reset streak
-                                    const noStreakReset = ['rapidfire', 'piercing', 'ricochet', 'shotgun', 'twin', 'nova'];
+                                    const noStreakReset = ['rapidfire', 'piercing', 'ricochet', 'shotgun', 'twin', 'nova', 'homing'];
                                     if (!noStreakReset.includes(bullet.gunType) && !bullet.isIndependentBullet) {
                                         enemies.hitStreak = 0;
                                     }
+                                    console.log(`[DESTROY] Removing bullet ${bullet.targetPreference || 'N/A'} (gunType=${bullet.gunType}, destroy=true), ${this.bulletsList.length - 1} remaining`);
                                     this.bulletsList.splice(i,1);
                                 }
                             }
@@ -247,6 +255,12 @@ export class Bullets {
                                         bullet.enemyCollision = false;
                                     } else if (isIndependent) {
                                         // Independent bullets: remove only this bullet, others continue
+                                        if (bullet.gunType === 'homing') {
+                                            console.log(`[HOMING-SPAWN] Removing missile ${bullet.targetPreference} (hit), ${this.bulletsList.length - 1} missiles remaining`);
+                                        }
+                                        this.bulletsList.splice(i, 1);
+                                    } else if (bullet.gunType === 'nova' || bullet.gunType === 'twin' || bullet.gunType === 'shotgun') {
+                                        // Safeguard: these should always be independent, only remove this bullet
                                         this.bulletsList.splice(i, 1);
                                     } else {
                                         // Single-target weapons: clear all bullets
@@ -258,9 +272,12 @@ export class Bullets {
                                 else if(bullet.destroy == true){
                                     // Don't reset streak for multi-hit weapons (rapidfire, piercing, ricochet)
                                     // These fire multiple bullets or hit multiple targets - individual misses shouldn't reset streak
-                                    const noStreakReset = ['rapidfire', 'piercing', 'ricochet', 'shotgun', 'twin', 'nova'];
+                                    const noStreakReset = ['rapidfire', 'piercing', 'ricochet', 'shotgun', 'twin', 'nova', 'homing'];
                                     if (!noStreakReset.includes(bullet.gunType) && !bullet.isIndependentBullet) {
                                         enemies.hitStreak = 0;
+                                    }
+                                    if (bullet.gunType === 'homing') {
+                                        console.log(`[HOMING-SPAWN] Removing missile ${bullet.targetPreference} (expired), ${this.bulletsList.length - 1} missiles remaining`);
                                     }
                                     this.bulletsList.splice(i, 1);
                                 }
@@ -291,10 +308,14 @@ export class Bullets {
                 this.super.getOffset(this, player.x, player.y, this.angle, (player.size/2));
                 player.qTriggered = true;
 
-                // For rapid fire, don't clear existing bullets - let them keep flying
-                // For other guns, clear the list for fresh burst
-                if (!(activeGun && activeGun.gunType === 'rapidfire')) {
+                // For independent weapons (rapidfire, homing, etc.), don't clear existing bullets
+                // Let them keep flying while new ones are added
+                const independentGunTypes = ['rapidfire', 'homing', 'shotgun', 'nova', 'twin', 'ricochet', 'piercing'];
+                if (!(activeGun && independentGunTypes.includes(activeGun.gunType))) {
+                    console.log(`[BULLETS] Clearing bulletsList (gun: ${activeGun?.gunType}, had ${this.bulletsList.length} bullets)`);
                     this.bulletsList = [];
+                } else {
+                    console.log(`[BULLETS] Keeping bulletsList for independent gun (gun: ${activeGun?.gunType}, has ${this.bulletsList.length} bullets)`);
                 }
 
                 // Create bullets based on active gun type
@@ -326,7 +347,13 @@ export class Bullets {
         const needsIndependentUpdate = (activeGun && independentUpdateTypes.includes(activeGun.gunType)) ||
             this.bulletsList.some(b => b && b.isIndependentBullet);
 
+        // Debug: log why independent update might not run
+        if (this.bulletsList.length > 0 && this.bulletsList.some(b => b && b.gunType === 'homing')) {
+            console.log(`[IND-CHECK] qPressed=${player.qPressed}, needsIndependent=${needsIndependentUpdate}, bullets=${this.bulletsList.length}`);
+        }
+
         if (!player.qPressed && needsIndependentUpdate && this.bulletsList.length > 0) {
+            console.log(`[IND-UPDATE] Processing ${this.bulletsList.length} independent bullets`);
             for (let i = this.bulletsList.length - 1; i >= 0; i--) {
                 const bullet = this.bulletsList[i];
                 if (!bullet) continue;
@@ -339,20 +366,27 @@ export class Bullets {
 
                 // Handle destroy/collision
                 if (bullet.destroy || bullet.enemyCollision) {
+                    console.log(`[IND-UPDATE] Bullet ${i} flagged for removal: destroy=${bullet.destroy}, enemyCollision=${bullet.enemyCollision}, gunType=${bullet.gunType}`);
                     if (bullet.enemyCollision) {
                         // For ricochet bullets with bounces remaining, continue bouncing
                         if (bullet.gunType === 'ricochet' && bullet.bouncesRemaining > 0) {
                             bullet.enemyCollision = false;
                         } else {
                             // Remove only this bullet that hit - others continue
+                            if (bullet.gunType === 'homing') {
+                                console.log(`[HOMING-IND] Removing missile ${bullet.targetPreference} (hit), ${this.bulletsList.length - 1} missiles remaining`);
+                            }
                             this.bulletsList.splice(i, 1);
                         }
                     } else if (bullet.destroy) {
                         // Don't reset streak for multi-hit weapons (rapidfire, piercing, ricochet, shotgun)
                         // These fire multiple bullets or hit multiple targets - individual misses shouldn't reset streak
-                        const noStreakReset = ['rapidfire', 'piercing', 'ricochet', 'shotgun', 'twin', 'nova'];
+                        const noStreakReset = ['rapidfire', 'piercing', 'ricochet', 'shotgun', 'twin', 'nova', 'homing'];
                         if (!noStreakReset.includes(bullet.gunType) && !bullet.isIndependentBullet) {
                             enemies.hitStreak = 0;
+                        }
+                        if (bullet.gunType === 'homing') {
+                            console.log(`[HOMING-IND] Removing missile ${bullet.targetPreference} (expired), ${this.bulletsList.length - 1} missiles remaining`);
                         }
                         this.bulletsList.splice(i, 1);
                     }
@@ -386,7 +420,8 @@ export class Bullets {
             case 'ricochet':
                 return 3;  // Ricochet always creates 3 bullets
             case 'homing':
-                return 3;  // Homing always creates 3 bullets
+                // Return actual missile count (set by createHomingBullets)
+                return this.homingMissileCount || 3;
             default:
                 return this.bulletsMax;
         }
@@ -572,9 +607,20 @@ export class Bullets {
     createHomingBullets(player, gunData, sizeMultiplier) {
         const baseAngle = this.getFullAngle();
 
-        // Only create missiles for the number of available targets (max 3)
-        const targetCount = this.currentHomingTargets ? this.currentHomingTargets.length : 0;
+        // Filter to only visible/in-bounds enemies for missile count
+        const visibleTargets = this.currentHomingTargets ? this.currentHomingTargets.filter(e => {
+            return e.x >= 0 && e.x <= window.innerWidth &&
+                   e.y >= 0 && e.y <= window.innerHeight;
+        }) : [];
+
+        // Only create missiles for the number of visible targets (max 3)
+        const targetCount = visibleTargets.length;
         const missileCount = Math.min(Math.max(targetCount, 1), 3); // At least 1, max 3
+
+        console.log(`[HOMING] Creating ${missileCount} missiles for ${targetCount} visible targets (bulletsList already has ${this.bulletsList.length} bullets)`);
+
+        // Store actual missile count for getMaxBullets
+        this.homingMissileCount = missileCount;
 
         for (let i = 0; i < missileCount; i++) {
             // Spread missiles based on count
@@ -602,8 +648,15 @@ export class Bullets {
             );
             // Assign target preference so each missile targets a different enemy
             b.targetPreference = i; // 0 = closest, 1 = 2nd closest, 2 = 3rd closest
+            b.isIndependentBullet = true; // Each missile is handled independently
+            b.instantSpawn = true;
+            b.spawned = true;
             this.bulletsList.push(b);
         }
+
+        // Immediately mark all bullets as spawned for instant fire
+        this.bulletsSpawnCount = missileCount;
+        this.bulletsSpawned = true;
     }
 
     createTwinBullets(player, gunData, sizeMultiplier) {
@@ -657,9 +710,7 @@ export class Bullets {
                 gunData,
                 player  // Pass player reference for nova to follow
             );
-            b.instantSpawn = true;  // All bullets fire at once
-            b.spawned = true;  // Already spawned - no stagger delay
-            b.isIndependentBullet = true;  // Explicit flag for independent collision handling
+            b.isIndependentBullet = true;  // Ensure each bullet is handled independently
             this.bulletsList.push(b);
         }
 

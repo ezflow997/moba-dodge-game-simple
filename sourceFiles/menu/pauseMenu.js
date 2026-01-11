@@ -37,15 +37,23 @@ export class PauseMenu {
         const fontSize = 32;
 
         this.resumeButton = new Button(btnX, 280, btnW, btnH, "Resume (ESC)", fontSize, 0, 0, false, true, 'white', 'white');
+        this.audioButton = new Button(btnX, 280 + btnSpace, btnW, btnH, "Audio", fontSize, 0, 0, false, true, 'white', 'white');
+        this.controlsButton = new Button(btnX, 280 + btnSpace * 2, btnW, btnH, "Controls", fontSize, 0, 0, false, true, 'white', 'white');
+        this.uiScaleButton = new Button(btnX, 280 + btnSpace * 3, btnW, btnH, "UI Scale", fontSize, 0, 0, false, true, 'white', 'white');
+        this.performanceButton = new Button(btnX, 280 + btnSpace * 4, btnW, btnH, "Performance Mode: OFF", fontSize, 0, 0, false, true, 'white', 'white');
+        this.devModeButton = new Button(btnX, 280 + btnSpace * 5, btnW, btnH, "Dev Mode: OFF", fontSize, 0, 0, false, true, 'white', 'white');
+        this.exitTestRoomButton = new Button(btnX, 280 + btnSpace * 6, btnW, btnH, "Exit Test Room", fontSize, 0, 0, false, true, 'white', 'white');
+        this.quitButton = new Button(btnX, 280 + btnSpace * 7, btnW, btnH, "Quit to Menu", fontSize, 0, 0, false, true, 'white', 'white');
+
+        // Audio submenu buttons
+        this.volumeButton = new Button(btnX, 280, btnW, btnH, "Volume", fontSize, 0, 0, false, true, 'white', 'white');
+        this.musicSelectionButton = new Button(btnX, 280 + btnSpace, btnW, btnH, "Music Selection", fontSize, 0, 0, false, true, 'white', 'white');
+        this.audioBackButton = new Button(btnX, 280 + btnSpace * 2, btnW, btnH, "Back", fontSize, 0, 0, false, true, 'white', 'white');
+
+        // Controls submenu buttons
+        this.controlSchemeButton = new Button(btnX, 280, btnW, btnH, "Controls: Mouse", fontSize, 0, 0, false, true, 'white', 'white');
         this.keybindsButton = new Button(btnX, 280 + btnSpace, btnW, btnH, "Keybinds", fontSize, 0, 0, false, true, 'white', 'white');
-        this.volumeButton = new Button(btnX, 280 + btnSpace * 2, btnW, btnH, "Volume", fontSize, 0, 0, false, true, 'white', 'white');
-        this.musicSelectionButton = new Button(btnX, 280 + btnSpace * 3, btnW, btnH, "Music Selection", fontSize, 0, 0, false, true, 'white', 'white');
-        this.uiScaleButton = new Button(btnX, 280 + btnSpace * 4, btnW, btnH, "UI Scale", fontSize, 0, 0, false, true, 'white', 'white');
-        this.controlSchemeButton = new Button(btnX, 280 + btnSpace * 5, btnW, btnH, "Controls: Mouse", fontSize, 0, 0, false, true, 'white', 'white');
-        this.performanceButton = new Button(btnX, 280 + btnSpace * 6, btnW, btnH, "Performance Mode: OFF", fontSize, 0, 0, false, true, 'white', 'white');
-        this.devModeButton = new Button(btnX, 280 + btnSpace * 7, btnW, btnH, "Dev Mode: OFF", fontSize, 0, 0, false, true, 'white', 'white');
-        this.exitTestRoomButton = new Button(btnX, 280 + btnSpace * 8, btnW, btnH, "Exit Test Room", fontSize, 0, 0, false, true, 'white', 'white');
-        this.quitButton = new Button(btnX, 280 + btnSpace * 9, btnW, btnH, "Quit to Menu", fontSize, 0, 0, false, true, 'white', 'white');
+        this.controlsBackButton = new Button(btnX, 280 + btnSpace * 2, btnW, btnH, "Back", fontSize, 0, 0, false, true, 'white', 'white');
 
         // Load performance mode setting from localStorage
         const savedPerfMode = localStorage.getItem('performanceMode') === 'true';
@@ -63,16 +71,18 @@ export class PauseMenu {
         this.gameRef = null; // Reference to game for event handlers
 
         // Submenu states
+        this.showAudio = false;
+        this.showControls = false;
         this.showKeybinds = false;
         this.showVolume = false;
         this.showUIScale = false;
         this.showMusicSelection = false;
 
-        // Keybinds submenu
-        this.keybindQButton = new Button(700, 300, 600, 80, "Shoot: Q", 50, 140, 60, false, true, 'white', 'white');
-        this.keybindEButton = new Button(700, 400, 600, 80, "Dash: E", 50, 150, 60, false, true, 'white', 'white');
-        this.keybindFButton = new Button(700, 500, 600, 80, "Ultimate: F", 50, 100, 60, false, true, 'white', 'white');
-        this.keybindBackButton = new Button(880, 620, 400, 80, "Back", 50, 140, 60, false, true, 'white', 'white');
+        // Keybinds submenu - centered like other panels
+        this.keybindQButton = new Button(btnX, 280, btnW, btnH, "Shoot: Q", fontSize, 0, 0, false, true, 'white', 'white');
+        this.keybindEButton = new Button(btnX, 280 + btnSpace, btnW, btnH, "Dash: E", fontSize, 0, 0, false, true, 'white', 'white');
+        this.keybindFButton = new Button(btnX, 280 + btnSpace * 2, btnW, btnH, "Ultimate: F", fontSize, 0, 0, false, true, 'white', 'white');
+        this.keybindBackButton = new Button(btnX, 280 + btnSpace * 3, btnW, btnH, "Back", fontSize, 0, 0, false, true, 'white', 'white');
         this.waitingForKey = null; // 'q', 'e', or 'f'
 
         // Load custom keys from localStorage or use defaults
@@ -94,15 +104,15 @@ export class PauseMenu {
         // Update keybind button text based on loaded control scheme
         this.updateKeybindButtons();
 
-        // Volume submenu
-        this.musicVolumeSlider = new Slider(700, 350, 800, 30, 0, 1);
-        this.sfxVolumeSlider = new Slider(700, 500, 800, 30, 0, 1);
-        this.volumeBackButton = new Button(880, 600, 400, 80, "Back", 50, 140, 60, false, true, 'white', 'white');
+        // Volume submenu - centered like other panels
+        this.musicVolumeSlider = new Slider(930, 340, 700, 30, 0, 1);
+        this.sfxVolumeSlider = new Slider(930, 490, 700, 30, 0, 1);
+        this.volumeBackButton = new Button(btnX, 580, btnW, btnH, "Back", fontSize, 0, 0, false, true, 'white', 'white');
 
-        // UI Scale submenu
-        this.uiScaleSlider = new Slider(700, 400, 800, 30, 0.5, 2.0);
+        // UI Scale submenu - centered like other panels
+        this.uiScaleSlider = new Slider(930, 380, 700, 30, 0.5, 2.0);
         this.uiScaleSlider.setValue(uiScale); // Initialize with current value
-        this.uiScaleBackButton = new Button(880, 550, 400, 80, "Back", 50, 140, 60, false, true, 'white', 'white');
+        this.uiScaleBackButton = new Button(btnX, 480, btnW, btnH, "Back", fontSize, 0, 0, false, true, 'white', 'white');
 
         // Music Selection submenu
         this.musicSelectionBackButton = new Button(1280, 680, 300, 60, "Back", 32, 0, 0, false, true, 'white', 'white');
@@ -125,7 +135,7 @@ export class PauseMenu {
             }
 
             // Konami code detection (only when pause menu is open and not in submenu)
-            if (this.isPaused && !this.showKeybinds && !this.showVolume && !this.showUIScale && !this.waitingForKey) {
+            if (this.isPaused && !this.showAudio && !this.showControls && !this.showKeybinds && !this.showVolume && !this.showUIScale && !this.showMusicSelection && !this.waitingForKey) {
                 this.checkKonamiCode(ev.key, this.gameRef);
             }
         };
@@ -156,6 +166,8 @@ export class PauseMenu {
                 window.gameSound.resumeMusic();
             }
             // Close all submenus when unpausing
+            this.showAudio = false;
+            this.showControls = false;
             this.showKeybinds = false;
             this.showVolume = false;
             this.showUIScale = false;
@@ -255,7 +267,7 @@ export class PauseMenu {
             const pressedKey = this.capturedKey;
             this.capturedKey = null;
             
-            // Cancel if ESC is pressed - go back to main pause menu
+            // Cancel if ESC is pressed - go back to Controls submenu
             if (pressedKey === 'Escape') {
                 this.waitingForKey = null;
                 this.showKeybinds = false;
@@ -377,7 +389,7 @@ export class PauseMenu {
         }
 
         // Main pause menu
-        if (!this.showKeybinds && !this.showVolume && !this.showUIScale && !this.showMusicSelection) {
+        if (!this.showAudio && !this.showControls && !this.showKeybinds && !this.showVolume && !this.showUIScale && !this.showMusicSelection) {
             this.resumeButton.update(inX, inY);
             if (this.resumeButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
                 this.clicked = true;
@@ -385,23 +397,18 @@ export class PauseMenu {
                 this.toggle();
             }
 
-            this.keybindsButton.update(inX, inY);
-            if (this.keybindsButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+            this.audioButton.update(inX, inY);
+            if (this.audioButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
-                this.showKeybinds = true;
+                this.showAudio = true;
             }
 
-            this.volumeButton.update(inX, inY);
-            if (this.volumeButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+            this.controlsButton.update(inX, inY);
+            if (this.controlsButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
-                this.showVolume = true;
-                // Initialize sliders with current volumes
-                if (window.gameSound) {
-                    this.musicVolumeSlider.setValue(window.gameSound.bgMusicVolume);
-                    this.sfxVolumeSlider.setValue(window.gameSound.sfxVolume);
-                }
+                this.showControls = true;
             }
 
             this.uiScaleButton.update(inX, inY);
@@ -413,22 +420,12 @@ export class PauseMenu {
                 this.uiScaleSlider.setValue(uiScale);
             }
 
-            this.musicSelectionButton.update(inX, inY);
-            if (this.musicSelectionButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
-                this.clicked = true;
-                if (window.gameSound) window.gameSound.playMenuClick();
-                this.showMusicSelection = true;
-                // Reset selection and scroll
-                this.selectedTrackIndex = 0;
-                this.trackListScrollOffset = 0;
-            }
-
             // Calculate button positions based on what's visible
             const inTestRoom = game.testRoom && game.testRoom.active;
             const devModeVisible = game.devMode && (this.devModeVisible || game.devMode.isEnabled());
 
-            // Base position after Performance button (index 6, since Music Selection is index 3 and UI Scale is index 4)
-            let nextButtonIndex = 7;
+            // Base position after Performance button (index 4)
+            let nextButtonIndex = 5;
 
             // Dev mode takes slot 5 if visible
             if (devModeVisible) nextButtonIndex++;
@@ -443,6 +440,8 @@ export class PauseMenu {
                     // Just exit test room, return to game
                     game.testRoom.exit();
                     this.isPaused = false;
+                    this.showAudio = false;
+                    this.showControls = false;
                     this.showKeybinds = false;
                     this.showVolume = false;
                     this.showUIScale = false;
@@ -479,38 +478,12 @@ export class PauseMenu {
                 game.world.reset();
                 game.rewardManager.reset();
                 this.isPaused = false;
+                this.showAudio = false;
+                this.showControls = false;
                 this.showKeybinds = false;
                 this.showVolume = false;
                 this.showUIScale = false;
                 this.showMusicSelection = false;
-            }
-
-            this.controlSchemeButton.update(inX, inY);
-            if (this.controlSchemeButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
-                this.clicked = true;
-                if (window.gameSound) window.gameSound.playMenuClick();
-
-                // Toggle control scheme
-                this.controlScheme = this.controlScheme === 'mouse' ? 'wasd' : 'mouse';
-                this.controlSchemeButton.text = `Controls: ${this.controlScheme === 'mouse' ? 'Mouse' : 'WASD'}`;
-
-                // Save to localStorage
-                localStorage.setItem('controlScheme', this.controlScheme);
-
-                // Load saved keybinds for the new mode, or use defaults
-                if (this.controlScheme === 'mouse') {
-                    const savedCustomKeys = localStorage.getItem('customKeys');
-                    this.customKeys = savedCustomKeys ? JSON.parse(savedCustomKeys) : { q: 'q', e: 'e', f: 'f' };
-                } else {
-                    const savedWasdKeys = localStorage.getItem('wasdKeys');
-                    this.wasdKeys = savedWasdKeys ? JSON.parse(savedWasdKeys) : {
-                        shoot: 0,  // Left click
-                        dash: 'e',
-                        ult: 'q'
-                    };
-                }
-
-                this.updateKeybindButtons();
             }
 
             // Performance Mode button
@@ -555,6 +528,81 @@ export class PauseMenu {
                 }
             }
         }
+        // Audio submenu
+        else if (this.showAudio && !this.showVolume && !this.showMusicSelection) {
+            this.volumeButton.update(inX, inY);
+            if (this.volumeButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.showVolume = true;
+                // Initialize sliders with current volumes
+                if (window.gameSound) {
+                    this.musicVolumeSlider.setValue(window.gameSound.bgMusicVolume);
+                    this.sfxVolumeSlider.setValue(window.gameSound.sfxVolume);
+                }
+            }
+
+            this.musicSelectionButton.update(inX, inY);
+            if (this.musicSelectionButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.showMusicSelection = true;
+                // Reset selection and scroll
+                this.selectedTrackIndex = 0;
+                this.trackListScrollOffset = 0;
+            }
+
+            this.audioBackButton.update(inX, inY);
+            if (this.audioBackButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.showAudio = false;
+            }
+        }
+        // Controls submenu
+        else if (this.showControls && !this.showKeybinds) {
+            this.controlSchemeButton.update(inX, inY);
+            if (this.controlSchemeButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+
+                // Toggle control scheme
+                this.controlScheme = this.controlScheme === 'mouse' ? 'wasd' : 'mouse';
+                this.controlSchemeButton.text = `Controls: ${this.controlScheme === 'mouse' ? 'Mouse' : 'WASD'}`;
+
+                // Save to localStorage
+                localStorage.setItem('controlScheme', this.controlScheme);
+
+                // Load saved keybinds for the new mode, or use defaults
+                if (this.controlScheme === 'mouse') {
+                    const savedCustomKeys = localStorage.getItem('customKeys');
+                    this.customKeys = savedCustomKeys ? JSON.parse(savedCustomKeys) : { q: 'q', e: 'e', f: 'f' };
+                } else {
+                    const savedWasdKeys = localStorage.getItem('wasdKeys');
+                    this.wasdKeys = savedWasdKeys ? JSON.parse(savedWasdKeys) : {
+                        shoot: 0,  // Left click
+                        dash: 'e',
+                        ult: 'q'
+                    };
+                }
+
+                this.updateKeybindButtons();
+            }
+
+            this.keybindsButton.update(inX, inY);
+            if (this.keybindsButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.showKeybinds = true;
+            }
+
+            this.controlsBackButton.update(inX, inY);
+            if (this.controlsBackButton.isHovered && input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.showControls = false;
+            }
+        }
         // Keybinds submenu
         else if (this.showKeybinds) {
             this.keybindQButton.update(inX, inY);
@@ -590,9 +638,10 @@ export class PauseMenu {
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.showKeybinds = false;
                 this.waitingForKey = null;
+                // Go back to Controls submenu
             }
         }
-        // Volume submenu
+        // Volume submenu (accessed via Audio submenu)
         else if (this.showVolume) {
             // Update sliders (only if not just opened - prevents click-through)
             const mouseDown = input.buttons.indexOf(0) > -1 && !this.clicked;
@@ -613,6 +662,7 @@ export class PauseMenu {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.showVolume = false;
+                // Go back to Audio submenu
             }
         }
         // UI Scale submenu
@@ -645,8 +695,8 @@ export class PauseMenu {
             // Use same positioning as draw method
             const panelY = 200;
 
-            // Tab buttons positioning
-            const tabY = panelY + 40;
+            // Tab buttons positioning - must match draw() method
+            const tabY = panelY + 55;
             const tabSpacing = 30;
             const totalTabWidth = 200 + 200 + tabSpacing;
             const tabStartX = (2560 - totalTabWidth) / 2;
@@ -687,7 +737,7 @@ export class PauseMenu {
 
             const listWidth = 700;
             const listX = (2560 - listWidth) / 2;
-            const listY = panelY + 140;
+            const listY = panelY + 160;
             const itemHeight = 55;
             const listHeight = this.visibleTrackCount * itemHeight;
 
@@ -725,9 +775,9 @@ export class PauseMenu {
             const centerXScreen = (2560 / 2) * rX;
             const scrollBtnX = centerXScreen - scrollBtnWidth / 2;
 
-            // Check scroll up click
+            // Check scroll up click - offset must match draw() method (-15)
             if (canScrollUp) {
-                const scrollUpY = listYScreen - 35 * rY;
+                const scrollUpY = listYScreen - 15 * rY;
                 const isHoveredUp = inX >= scrollBtnX && inX <= scrollBtnX + scrollBtnWidth &&
                                     inY >= scrollUpY && inY <= scrollUpY + scrollBtnHeight;
                 if (isHoveredUp && input.buttons.indexOf(0) > -1 && !this.clicked) {
@@ -737,9 +787,9 @@ export class PauseMenu {
                 }
             }
 
-            // Check scroll down click
+            // Check scroll down click - offset must match draw() method (+20)
             if (canScrollDown) {
-                const scrollDownY = listYScreen + listHeightScreen + 5 * rY;
+                const scrollDownY = listYScreen + listHeightScreen + 20 * rY;
                 const isHoveredDown = inX >= scrollBtnX && inX <= scrollBtnX + scrollBtnWidth &&
                                       inY >= scrollDownY && inY <= scrollDownY + scrollBtnHeight;
                 if (isHoveredDown && input.buttons.indexOf(0) > -1 && !this.clicked) {
@@ -810,6 +860,7 @@ export class PauseMenu {
                 this.clicked = true;
                 if (window.gameSound) window.gameSound.playMenuClick();
                 this.showMusicSelection = false;
+                // Go back to Audio submenu
             }
         }
     }
@@ -884,14 +935,14 @@ export class PauseMenu {
         context.restore();
 
         // Main pause menu
-        if (!this.showKeybinds && !this.showVolume && !this.showUIScale && !this.showMusicSelection) {
+        if (!this.showAudio && !this.showControls && !this.showKeybinds && !this.showVolume && !this.showUIScale && !this.showMusicSelection) {
             // Check if in test room for extra button
             const inTestRoom = game.testRoom && game.testRoom.active;
             const devModeVisible = game.devMode && (this.devModeVisible || game.devMode.isEnabled());
 
             // Calculate panel height based on visible buttons
-            // Base: Resume, Keybinds, Volume, Music Selection, UI Scale, Controls, Performance = 7 buttons
-            let buttonCount = 7;
+            // Base: Resume, Audio, Controls, UI Scale, Performance = 5 buttons
+            let buttonCount = 5;
             if (devModeVisible) buttonCount++;  // Dev Mode button
             if (inTestRoom) buttonCount++;      // Exit Test Room button
             if (!inMainMenu) buttonCount++;     // Quit button
@@ -923,11 +974,9 @@ export class PauseMenu {
 
             // Draw buttons
             this.resumeButton.draw(context);
-            this.keybindsButton.draw(context);
-            this.volumeButton.draw(context);
-            this.musicSelectionButton.draw(context);
+            this.audioButton.draw(context);
+            this.controlsButton.draw(context);
             this.uiScaleButton.draw(context);
-            this.controlSchemeButton.draw(context);
             this.performanceButton.draw(context);
             // Only draw dev mode button if visible (konami code entered or dev mode ON)
             if (devModeVisible) {
@@ -935,10 +984,10 @@ export class PauseMenu {
             }
             if (!inMainMenu) {
                 // Calculate button positions based on what's visible
-                // Base position after Performance button (index 6), Dev Mode is at index 7
-                let nextButtonIndex = 7;
+                // Base position after Performance button (index 4), Dev Mode is at index 5
+                let nextButtonIndex = 5;
 
-                // Dev mode takes slot 6 if visible
+                // Dev mode takes slot 5 if visible
                 if (devModeVisible) nextButtonIndex++;
 
                 // Draw Exit Test Room button when in test room
@@ -953,21 +1002,63 @@ export class PauseMenu {
                 this.quitButton.draw(context);
             }
         }
-        // Keybinds submenu
-        else if (this.showKeybinds) {
-            // Draw keybinds background
+        // Audio submenu
+        else if (this.showAudio && !this.showVolume && !this.showMusicSelection) {
+            // Draw audio submenu background
             context.save();
             context.fillStyle = 'rgba(10, 20, 40, 0.95)';
-            context.fillRect(650 * rX, 200 * rY, 700 * rX, 550 * rY);
+            context.fillRect(880 * rX, 200 * rY, 800 * rX, 380 * rY);
             context.strokeStyle = '#00ffff';
             context.shadowColor = '#00ffff';
             context.shadowBlur = 15 * rX;
             context.lineWidth = 3 * rY;
-            context.strokeRect(650 * rX, 200 * rY, 700 * rX, 550 * rY);
+            context.strokeRect(880 * rX, 200 * rY, 800 * rX, 380 * rY);
             context.restore();
 
             // Draw title
-            this.super.drawGlowText(context, 850, 260, "KEYBINDS", 60, '#ffffff', '#00ffff', 12);
+            this.super.drawGlowText(context, 1280, 250, "AUDIO", 55, '#ffffff', '#00ffff', 15, true);
+
+            // Draw buttons
+            this.volumeButton.draw(context);
+            this.musicSelectionButton.draw(context);
+            this.audioBackButton.draw(context);
+        }
+        // Controls submenu
+        else if (this.showControls && !this.showKeybinds) {
+            // Draw controls submenu background
+            context.save();
+            context.fillStyle = 'rgba(10, 20, 40, 0.95)';
+            context.fillRect(880 * rX, 200 * rY, 800 * rX, 380 * rY);
+            context.strokeStyle = '#00ffff';
+            context.shadowColor = '#00ffff';
+            context.shadowBlur = 15 * rX;
+            context.lineWidth = 3 * rY;
+            context.strokeRect(880 * rX, 200 * rY, 800 * rX, 380 * rY);
+            context.restore();
+
+            // Draw title
+            this.super.drawGlowText(context, 1280, 250, "CONTROLS", 55, '#ffffff', '#00ffff', 15, true);
+
+            // Draw buttons
+            this.controlSchemeButton.draw(context);
+            this.keybindsButton.draw(context);
+            this.controlsBackButton.draw(context);
+        }
+        // Keybinds submenu
+        else if (this.showKeybinds) {
+            // Draw keybinds background - centered like other panels
+            context.save();
+            context.fillStyle = 'rgba(10, 20, 40, 0.95)';
+            context.fillRect(880 * rX, 200 * rY, 800 * rX, 465 * rY);
+            context.strokeStyle = '#00ffff';
+            context.shadowColor = '#00ffff';
+            context.shadowBlur = 15 * rX;
+            context.lineWidth = 3 * rY;
+            context.strokeRect(880 * rX, 200 * rY, 800 * rX, 465 * rY);
+            context.restore();
+
+            // Draw title
+            this.super.drawGlowText(context, 1280, 250, "KEYBINDS", 55, '#ffffff', '#00ffff', 15, true);
 
             // Draw buttons
             this.keybindQButton.draw(context);
@@ -977,12 +1068,12 @@ export class PauseMenu {
             // Draw waiting message or back button (not both to avoid overlap)
             if (this.waitingForKey) {
                 if (this.controlScheme === 'mouse') {
-                    this.super.drawGlowText(context, 700, 620, "Press any keyboard key...", 40, '#ffff00', '#ffaa00', 8);
-                    this.super.drawGlowText(context, 700, 665, "(Mouse buttons not allowed)", 32, '#ff8888', '#ff4444', 6);
-                    this.super.drawGlowText(context, 700, 705, "Press ESC to go back", 28, '#aaaaaa', '#888888', 6);
+                    this.super.drawGlowText(context, 1280, 560, "Press any keyboard key...", 32, '#ffff00', '#ffaa00', 8, true);
+                    this.super.drawGlowText(context, 1280, 600, "(Mouse buttons not allowed)", 24, '#ff8888', '#ff4444', 6, true);
+                    this.super.drawGlowText(context, 1280, 640, "Press ESC to go back", 22, '#aaaaaa', '#888888', 6, true);
                 } else {
-                    this.super.drawGlowText(context, 700, 620, "Press any key or mouse button...", 40, '#ffff00', '#ffaa00', 8);
-                    this.super.drawGlowText(context, 700, 665, "Press ESC to go back", 32, '#aaaaaa', '#888888', 6);
+                    this.super.drawGlowText(context, 1280, 560, "Press any key or mouse button...", 32, '#ffff00', '#ffaa00', 8, true);
+                    this.super.drawGlowText(context, 1280, 600, "Press ESC to go back", 24, '#aaaaaa', '#888888', 6, true);
                 }
             } else {
                 this.keybindBackButton.draw(context);
@@ -990,56 +1081,56 @@ export class PauseMenu {
         }
         // Volume submenu
         else if (this.showVolume) {
-            // Draw volume background
+            // Draw volume background - centered like other panels
             context.save();
             context.fillStyle = 'rgba(10, 20, 40, 0.95)';
-            context.fillRect(650 * rX, 200 * rY, 900 * rX, 500 * rY);
+            context.fillRect(880 * rX, 200 * rY, 800 * rX, 480 * rY);
             context.strokeStyle = '#00ffff';
             context.shadowColor = '#00ffff';
             context.shadowBlur = 15 * rX;
             context.lineWidth = 3 * rY;
-            context.strokeRect(650 * rX, 200 * rY, 900 * rX, 500 * rY);
+            context.strokeRect(880 * rX, 200 * rY, 800 * rX, 480 * rY);
             context.restore();
 
             // Draw title
-            this.super.drawGlowText(context, 950, 260, "VOLUME", 60, '#ffffff', '#00ffff', 12);
+            this.super.drawGlowText(context, 1280, 250, "VOLUME", 55, '#ffffff', '#00ffff', 15, true);
 
             // Draw music volume
-            this.super.drawGlowText(context, 720, 320, "Music Volume", 40, '#ffffff', '#00ffff', 8);
+            this.super.drawGlowText(context, 1280, 310, "Music Volume", 32, '#ffffff', '#00ffff', 8, true);
             this.musicVolumeSlider.draw(context);
-            this.super.drawGlowText(context, 1420, 415, `${Math.round(this.musicVolumeSlider.value * 100)}%`, 35, '#00ff88', '#00ff00', 6);
+            this.super.drawGlowText(context, 1560, 395, `${Math.round(this.musicVolumeSlider.value * 100)}%`, 28, '#00ff88', '#00ff00', 6);
 
             // Draw SFX volume
-            this.super.drawGlowText(context, 720, 470, "SFX Volume", 40, '#ffffff', '#00ffff', 8);
+            this.super.drawGlowText(context, 1280, 460, "SFX Volume", 32, '#ffffff', '#00ffff', 8, true);
             this.sfxVolumeSlider.draw(context);
-            this.super.drawGlowText(context, 1420, 565, `${Math.round(this.sfxVolumeSlider.value * 100)}%`, 35, '#00ff88', '#00ff00', 6);
+            this.super.drawGlowText(context, 1560, 545, `${Math.round(this.sfxVolumeSlider.value * 100)}%`, 28, '#00ff88', '#00ff00', 6);
 
             // Draw back button
             this.volumeBackButton.draw(context);
         }
         // UI Scale submenu
         else if (this.showUIScale) {
-            // Draw UI scale background
+            // Draw UI scale background - centered like other panels
             context.save();
             context.fillStyle = 'rgba(10, 20, 40, 0.95)';
-            context.fillRect(650 * rX, 250 * rY, 900 * rX, 400 * rY);
+            context.fillRect(880 * rX, 200 * rY, 800 * rX, 380 * rY);
             context.strokeStyle = '#00ffff';
             context.shadowColor = '#00ffff';
             context.shadowBlur = 15 * rX;
             context.lineWidth = 3 * rY;
-            context.strokeRect(650 * rX, 250 * rY, 900 * rX, 400 * rY);
+            context.strokeRect(880 * rX, 200 * rY, 800 * rX, 380 * rY);
             context.restore();
 
             // Draw title
-            this.super.drawGlowText(context, 950, 310, "UI SCALE", 60, '#ffffff', '#00ffff', 12);
+            this.super.drawGlowText(context, 1280, 250, "UI SCALE", 55, '#ffffff', '#00ffff', 15, true);
 
             // Draw UI scale slider
-            this.super.drawGlowText(context, 720, 380, "HUD Size", 40, '#ffffff', '#00ffff', 8);
+            this.super.drawGlowText(context, 1280, 310, "HUD Size", 32, '#ffffff', '#00ffff', 8, true);
             this.uiScaleSlider.draw(context);
-            this.super.drawGlowText(context, 1420, 465, `${Math.round(this.uiScaleSlider.value * 100)}%`, 35, '#00ff88', '#00ff00', 6);
+            this.super.drawGlowText(context, 1560, 425, `${Math.round(this.uiScaleSlider.value * 100)}%`, 28, '#00ff88', '#00ff00', 6);
 
             // Draw preview hint
-            this.super.drawGlowText(context, 1100, 520, "Adjusts ability bar, powerups, and weapon slots", 20, '#888888', '#666666', 4, true);
+            this.super.drawGlowText(context, 1280, 455, "Adjusts ability bar, powerups, and weapon slots", 18, '#888888', '#666666', 4, true);
 
             // Draw back button
             this.uiScaleBackButton.draw(context);
@@ -1055,7 +1146,7 @@ export class PauseMenu {
 
             // Panel dimensions - centered
             const panelWidth = 800;
-            const panelHeight = 600;
+            const panelHeight = 680;
             const panelX = (2560 - panelWidth) / 2; // Center horizontally
             const panelY = 200;
 
@@ -1108,14 +1199,14 @@ export class PauseMenu {
             this.gameTabButton.draw(context);
             this.menuTabButton.draw(context);
 
-            // Draw subtitle
+            // Draw subtitle - positioned below tabs with room for scroll indicator
             const categoryLabel = this.musicCategoryTab === 'game' ? 'In-Game Music' : 'Menu Music';
-            this.super.drawGlowText(context, centerX, panelY + 115, categoryLabel, 22, '#888888', '#666666', 4, true);
+            this.super.drawGlowText(context, centerX, panelY + 128, categoryLabel, 22, '#888888', '#666666', 4, true);
 
             // Track list area - centered in panel
             const listWidth = 700;
             const listX = (2560 - listWidth) / 2;
-            const listY = panelY + 140;
+            const listY = panelY + 160;
             const itemHeight = 55;
             const listHeight = this.visibleTrackCount * itemHeight;
 

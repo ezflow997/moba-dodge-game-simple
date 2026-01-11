@@ -181,7 +181,6 @@ export class SupabaseLeaderboard {
                 url += '&daily=true';
             }
 
-            console.log('[Supabase] Searching:', url);
             const response = await fetch(url, { method: 'GET' });
 
             if (!response.ok) {
@@ -206,9 +205,7 @@ export class SupabaseLeaderboard {
                 url += '&devMode=true';
             }
 
-            console.log('[Supabase] Fetching:', url);
             const response = await fetch(url, { method: 'GET' });
-            console.log('[Supabase] Response status:', response.status);
 
             if (!response.ok) {
                 const errorText = await response.text();
@@ -375,6 +372,33 @@ export class SupabaseLeaderboard {
             return data;
         } catch (error) {
             console.error('setSecurityQuestion error:', error);
+            return { error: error.message };
+        }
+    }
+
+    // Change security question (requires password verification)
+    async changeSecurityQuestion(playerName, password, securityQuestion, securityAnswer) {
+        try {
+            const response = await fetch(`${this.apiBase}/change-security-question`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    playerName,
+                    password,
+                    securityQuestion,
+                    securityAnswer
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                return { error: data.error };
+            }
+
+            return data;
+        } catch (error) {
+            console.error('changeSecurityQuestion error:', error);
             return { error: error.message };
         }
     }

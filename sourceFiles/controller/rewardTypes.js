@@ -294,7 +294,7 @@ export const REWARDS = {
         speedMultiplier: 1.5
     },
 
-    // Homing - Tracks enemies
+    // Homing - Tracks enemies (needs extra range to chase targets across screen)
     HOMING_COMMON: {
         id: 'homing_common',
         name: 'Seeker',
@@ -304,7 +304,8 @@ export const REWARDS = {
         gunType: 'homing',
         durability: 12,
         turnSpeed: 0.015,
-        speedMultiplier: 0.5
+        speedMultiplier: 0.5,
+        rangeMultiplier: 3.0
     },
     HOMING_UNCOMMON: {
         id: 'homing_uncommon',
@@ -315,7 +316,8 @@ export const REWARDS = {
         gunType: 'homing',
         durability: 18,
         turnSpeed: 0.025,
-        speedMultiplier: 0.55
+        speedMultiplier: 0.55,
+        rangeMultiplier: 3.5
     },
     HOMING_RARE: {
         id: 'homing_rare',
@@ -326,7 +328,8 @@ export const REWARDS = {
         gunType: 'homing',
         durability: 25,
         turnSpeed: 0.035,
-        speedMultiplier: 0.6
+        speedMultiplier: 0.6,
+        rangeMultiplier: 4.0
     },
     HOMING_EPIC: {
         id: 'homing_epic',
@@ -337,7 +340,8 @@ export const REWARDS = {
         gunType: 'homing',
         durability: 35,
         turnSpeed: 0.05,
-        speedMultiplier: 0.7
+        speedMultiplier: 0.7,
+        rangeMultiplier: 4.5
     },
     HOMING_LEGENDARY: {
         id: 'homing_legendary',
@@ -348,7 +352,8 @@ export const REWARDS = {
         gunType: 'homing',
         durability: 45,
         turnSpeed: 0.07,
-        speedMultiplier: 0.85
+        speedMultiplier: 0.85,
+        rangeMultiplier: 5.0
     },
     HOMING_STIER: {
         id: 'homing_stier',
@@ -360,6 +365,7 @@ export const REWARDS = {
         durability: 60,
         turnSpeed: 0.1,
         speedMultiplier: 0.9,
+        rangeMultiplier: 6.0,
         bulletCount: 3
     },
 

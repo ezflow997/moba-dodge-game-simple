@@ -46,7 +46,8 @@ export class SpecialBullet {
         // Homing
         this.isHoming = gunType === 'homing';
         this.turnSpeed = gunData.turnSpeed || 0.03;
-        this.targetEnemy = null;
+        this.targetEnemy = null;  // Currently tracked target
+        this.lockedTarget = null; // The specific enemy this missile is locked onto
         this.targetPreference = 0; // Which nth-closest enemy to target (0 = closest)
 
         // Chain lightning
@@ -191,11 +192,39 @@ export class SpecialBullet {
     }
 
     updateHoming(enemies) {
+        // If we have a locked target that's still valid, keep tracking it
+        if (this.lockedTarget) {
+            // Check if locked target is still in the enemies list and on-screen
+            const inList = enemies.includes(this.lockedTarget);
+            const onScreen = this.lockedTarget.x >= 0 && this.lockedTarget.x <= window.innerWidth &&
+                this.lockedTarget.y >= 0 && this.lockedTarget.y <= window.innerHeight;
+            const notPierced = !this.piercedEnemies.has(this.lockedTarget);
+            const targetStillValid = inList && onScreen && notPierced;
+
+            if (targetStillValid) {
+                // Continue homing toward locked target
+                this.homeToward(this.lockedTarget);
+                return;
+            } else {
+                // Target no longer valid, clear lock to acquire new target
+                console.log(`[HOMING] Missile ${this.targetPreference} lost target (inList=${inList}, onScreen=${onScreen}, notPierced=${notPierced})`);
+                this.lockedTarget = null;
+            }
+        }
+
+        // No locked target - find a new one
         // Build list of enemies sorted by distance
         const sortedEnemies = [];
 
         for (const enemy of enemies) {
             if (this.piercedEnemies.has(enemy)) continue;
+
+            // Skip enemies that are out of bounds (off-screen)
+            if (enemy.x < 0 || enemy.x > window.innerWidth ||
+                enemy.y < 0 || enemy.y > window.innerHeight) continue;
+
+            // Skip enemies already killed this frame
+            if (enemy.bulletCollision) continue;
 
             const dx = enemy.x - this.x;
             const dy = enemy.y - this.y;
@@ -213,25 +242,34 @@ export class SpecialBullet {
         const targetEnemy = sortedEnemies[targetIndex]?.enemy;
 
         if (targetEnemy) {
-            // Turn towards enemy
-            const targetAngle = Math.atan2(targetEnemy.y - this.y, targetEnemy.x - this.x);
-            let angleDiff = targetAngle - this.angle;
-
-            // Normalize angle difference
-            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-
-            // Apply turn
-            if (Math.abs(angleDiff) < this.turnSpeed) {
-                this.angle = targetAngle;
-            } else {
-                this.angle += Math.sign(angleDiff) * this.turnSpeed;
-            }
-
-            // Update direction
-            this.dirX = Math.cos(this.angle);
-            this.dirY = Math.sin(this.angle);
+            // Lock onto this target
+            this.lockedTarget = targetEnemy;
+            console.log(`[HOMING] Missile ${this.targetPreference} locked onto enemy at index ${targetIndex} pos (${Math.round(targetEnemy.x)}, ${Math.round(targetEnemy.y)})`);
+            this.homeToward(targetEnemy);
+        } else {
+            console.log(`[HOMING] Missile ${this.targetPreference} found no valid target (${sortedEnemies.length} in list)`);
         }
+    }
+
+    homeToward(target) {
+        // Turn towards target
+        const targetAngle = Math.atan2(target.y - this.y, target.x - this.x);
+        let angleDiff = targetAngle - this.angle;
+
+        // Normalize angle difference
+        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+
+        // Apply turn
+        if (Math.abs(angleDiff) < this.turnSpeed) {
+            this.angle = targetAngle;
+        } else {
+            this.angle += Math.sign(angleDiff) * this.turnSpeed;
+        }
+
+        // Update direction
+        this.dirX = Math.cos(this.angle);
+        this.dirY = Math.sin(this.angle);
     }
 
     checkBounce() {
@@ -278,11 +316,49 @@ export class SpecialBullet {
     }
 
     checkCollision(enemies, onChain = null) {
+        // For homing missiles, only check collision with the locked target
+        if (this.isHoming) {
+            if (this.lockedTarget) {
+                const enemy = this.lockedTarget;
+
+                // Skip if already pierced
+                if (this.piercedEnemies.has(enemy)) {
+                    this.enemyCollision = false;
+                    return;
+                }
+
+                const distX = Math.abs(this.x - enemy.x);
+                const distY = Math.abs(this.y - enemy.y);
+                const distC = Math.sqrt(distX * distX + distY * distY);
+
+                if (distC <= this.size + enemy.size) {
+                    this.piercedEnemies.add(enemy);
+
+                    // Mark enemy as hit so it gets killed
+                    enemy.bulletCollision = true;
+                    this.enemyCollision = true;
+                    console.log(`[HOMING] Missile ${this.targetPreference} HIT target`);
+                    return;
+                }
+
+                // No collision with locked target yet
+                this.enemyCollision = false;
+                return;
+            } else {
+                // Homing missile with no locked target - don't collide with anything
+                this.enemyCollision = false;
+                return;
+            }
+        }
+
         for (let i = 0; i < enemies.length; i++) {
             const enemy = enemies[i];
 
             // Skip already pierced enemies
             if (this.piercedEnemies.has(enemy)) continue;
+
+            // Skip enemies already killed by another bullet this frame
+            if (enemy.bulletCollision) continue;
 
             const distX = Math.abs(this.x - enemy.x);
             const distY = Math.abs(this.y - enemy.y);

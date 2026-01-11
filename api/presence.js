@@ -71,18 +71,25 @@ async function getOnlinePlayers() {
     }));
 }
 
-// Register or update a player's presence (unique by player_name)
+// Register or update a player's presence (unique by session_id)
 async function pingPresence(sessionId, playerName) {
     const now = new Date().toISOString();
 
-    // Delete any existing entries for this player (ensures uniqueness by player_name)
-    const deleteUrl = `${SUPABASE_URL}/rest/v1/player_presence?player_name=eq.${encodeURIComponent(playerName)}`;
-    await fetch(deleteUrl, {
+    // Delete any existing entries for this session (handles switching users in same browser)
+    const deleteBySessionUrl = `${SUPABASE_URL}/rest/v1/player_presence?session_id=eq.${encodeURIComponent(sessionId)}`;
+    await fetch(deleteBySessionUrl, {
         method: 'DELETE',
         headers: getHeaders()
     });
 
-    // Insert fresh entry for this player
+    // Also delete any existing entries for this player from other sessions (ensures one entry per player)
+    const deleteByPlayerUrl = `${SUPABASE_URL}/rest/v1/player_presence?player_name=eq.${encodeURIComponent(playerName)}`;
+    await fetch(deleteByPlayerUrl, {
+        method: 'DELETE',
+        headers: getHeaders()
+    });
+
+    // Insert fresh entry for this player/session
     const insertUrl = `${SUPABASE_URL}/rest/v1/player_presence`;
     const insertResponse = await fetch(insertUrl, {
         method: 'POST',

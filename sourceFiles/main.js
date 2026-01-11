@@ -137,7 +137,6 @@ window.addEventListener('load', function () {
 				this.onlineCount = 0;
 				this.lastPresencePing = 0;
 				this.presencePingInterval = 5 * 60 * 1000; // 5 minutes
-				console.log('[Presence] Initializing with session:', this.sessionId);
 				this.pingPresence(); // Initial ping
 			}
 
@@ -171,7 +170,6 @@ window.addEventListener('load', function () {
 						if (response.ok) {
 							const data = await response.json();
 							this.onlineCount = data.online || 0;
-							console.log('[Presence] Online count (anonymous):', this.onlineCount);
 						} else {
 							console.error('[Presence] GET failed:', response.status);
 						}
@@ -182,23 +180,25 @@ window.addEventListener('load', function () {
 					return;
 				}
 
-				console.log('[Presence] Pinging as:', this.playerName);
 				try {
+					const requestBody = {
+						sessionId: this.sessionId,
+						playerName: this.playerName
+					};
+
 					const response = await fetch(`${baseUrl}/api/presence`, {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({
-							sessionId: this.sessionId,
-							playerName: this.playerName
-						})
+						body: JSON.stringify(requestBody)
 					});
+
+					const responseText = await response.text();
+
 					if (response.ok) {
-						const data = await response.json();
+						const data = JSON.parse(responseText);
 						this.onlineCount = data.online || 0;
-						console.log('[Presence] Online count:', this.onlineCount);
 					} else {
-						const errorText = await response.text();
-						console.error('[Presence] API error:', response.status, errorText);
+						console.error('[Presence] API error:', response.status, responseText);
 					}
 				} catch (error) {
 					console.error('[Presence] Ping failed:', error);

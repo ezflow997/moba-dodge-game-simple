@@ -239,6 +239,9 @@ export class Menu{
                         localStorage.setItem('playerPassword', result.password);
                         // Fetch player's leaderboard scores on login
                         this.fetchPlayerScores(game);
+                        // Immediately ping presence to register online status and update count
+                        console.log('[LOGIN] Calling pingPresence for:', game.playerName);
+                        game.pingPresence();
                     }
                     game.awaitingNameInput = false;
                 }, allowRegistration);

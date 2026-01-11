@@ -18,7 +18,7 @@ export class AccountMenu {
         this.clicked = false;
         this.cursorBlink = 0;
 
-        // Mode: 'main', 'changePassword', 'forgotPassword', 'enterUsername', 'answerQuestion', 'setNewPassword', 'setSecurityQuestion'
+        // Mode: 'main', 'changePassword', 'forgotPassword', 'enterUsername', 'answerQuestion', 'setNewPassword', 'setSecurityQuestion', 'changeSecurityQuestion'
         this.mode = 'main';
 
         // Input fields
@@ -44,20 +44,21 @@ export class AccountMenu {
         this.successMessage = '';
         this.isLoading = false;
 
-        // Buttons - Main menu
-        this.changePasswordButton = new Button(830, 420, 400, 70, "Change Password", 32, 0, 0, false, true, 'white', 'white');
-        this.forgotPasswordButton = new Button(830, 500, 400, 70, "Forgot Password", 32, 0, 0, false, true, 'white', 'white');
-        this.setSecurityButton = new Button(830, 580, 400, 70, "Set Security Question", 28, 0, 0, false, true, 'white', 'white');
-        this.backButton = new Button(830, 660, 400, 70, "Back", 32, 0, 0, false, true, 'white', 'white');
+        // Buttons - Main menu (centered: panel at x=830)
+        this.changePasswordButton = new Button(1080, 420, 400, 70, "Change Password", 32, 0, 0, false, true, 'white', 'white');
+        this.forgotPasswordButton = new Button(1080, 500, 400, 70, "Forgot Password", 32, 0, 0, false, true, 'white', 'white');
+        this.setSecurityButton = new Button(1080, 580, 400, 70, "Set Security Question", 28, 0, 0, false, true, 'white', 'white');
+        this.changeSecurityButton = new Button(1080, 580, 400, 70, "Change Security Question", 26, 0, 0, false, true, 'white', 'white');
+        this.backButton = new Button(1080, 660, 400, 70, "Back", 32, 0, 0, false, true, 'white', 'white');
 
         // Buttons - Sub-menus
-        this.submitButton = new Button(1050, 680, 200, 60, "Submit", 28, 0, 0, false, true, 'white', 'white');
-        this.cancelButton = new Button(810, 680, 200, 60, "Cancel", 28, 0, 0, false, true, 'white', 'white');
-        this.nextButton = new Button(1050, 580, 200, 60, "Next", 28, 0, 0, false, true, 'white', 'white');
+        this.submitButton = new Button(1300, 680, 200, 60, "Submit", 28, 0, 0, false, true, 'white', 'white');
+        this.cancelButton = new Button(1060, 680, 200, 60, "Cancel", 28, 0, 0, false, true, 'white', 'white');
+        this.nextButton = new Button(1300, 580, 200, 60, "Next", 28, 0, 0, false, true, 'white', 'white');
 
         // Security question selector buttons
-        this.prevQuestionButton = new Button(650, 440, 60, 50, "<", 32, 0, 0, false, true, 'white', 'white');
-        this.nextQuestionButton = new Button(1150, 440, 60, 50, ">", 32, 0, 0, false, true, 'white', 'white');
+        this.prevQuestionButton = new Button(900, 440, 60, 50, "<", 32, 0, 0, false, true, 'white', 'white');
+        this.nextQuestionButton = new Button(1400, 440, 60, 50, ">", 32, 0, 0, false, true, 'white', 'white');
 
         // Keyboard handler
         this.keyHandler = this.handleKeyPress.bind(this);
@@ -176,6 +177,10 @@ export class AccountMenu {
             this.activeField = fields[(idx + 1) % fields.length];
         } else if (this.mode === 'setSecurityQuestion') {
             this.activeField = 'securityAnswer';
+        } else if (this.mode === 'changeSecurityQuestion') {
+            const fields = ['currentPassword', 'securityAnswer'];
+            const idx = fields.indexOf(this.activeField);
+            this.activeField = fields[(idx + 1) % fields.length];
         }
     }
 
@@ -222,6 +227,8 @@ export class AccountMenu {
             this.submitNewPassword();
         } else if (this.mode === 'setSecurityQuestion') {
             this.submitSetSecurityQuestion();
+        } else if (this.mode === 'changeSecurityQuestion') {
+            this.submitChangeSecurityQuestion();
         }
     }
 
@@ -366,6 +373,44 @@ export class AccountMenu {
         this.isLoading = false;
     }
 
+    async submitChangeSecurityQuestion() {
+        if (this.currentPassword.length < 1) {
+            this.errorMessage = 'Please enter your current password';
+            return;
+        }
+        if (this.securityAnswer.trim().length < 1) {
+            this.errorMessage = 'Please enter your new security answer';
+            return;
+        }
+
+        this.isLoading = true;
+        this.errorMessage = '';
+
+        try {
+            const question = SECURITY_QUESTIONS[this.selectedQuestionIndex];
+
+            const result = await this.supabase.changeSecurityQuestion(
+                this.username,
+                this.currentPassword,
+                question,
+                this.securityAnswer.trim()
+            );
+
+            if (result.error) {
+                this.errorMessage = result.error;
+            } else {
+                this.successMessage = 'Security question changed successfully!';
+                this.mode = 'main';
+                this.currentPassword = '';
+                this.securityAnswer = '';
+            }
+        } catch (error) {
+            this.errorMessage = 'Failed to change security question';
+        }
+
+        this.isLoading = false;
+    }
+
     // Helper to check if click is within an input field
     isClickInField(mouseX, mouseY, fieldX, fieldY, fieldW, fieldH, rX, rY) {
         const x = fieldX * rX;
@@ -427,6 +472,22 @@ export class AccountMenu {
                 }
             }
 
+            // Change security question button (only if security question already set)
+            if (this.hasSecurityQuestion) {
+                this.changeSecurityButton.update(inX, inY);
+                if (this.changeSecurityButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                    this.clicked = true;
+                    if (window.gameSound) window.gameSound.playMenuClick();
+                    this.mode = 'changeSecurityQuestion';
+                    this.activeField = 'currentPassword';
+                    this.selectedQuestionIndex = 0;
+                    this.currentPassword = '';
+                    this.securityAnswer = '';
+                    this.errorMessage = '';
+                    this.successMessage = '';
+                }
+            }
+
             this.backButton.update(inX, inY);
             if (this.backButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
                 this.clicked = true;
@@ -453,13 +514,13 @@ export class AccountMenu {
 
             // Check clicks on input fields
             if (game.input.buttons.indexOf(0) > -1 && !this.clicked) {
-                if (this.isClickInField(inX, inY, 650, 420, 560, 50, rX, rY)) {
+                if (this.isClickInField(inX, inY, 900, 420, 560, 50, rX, rY)) {
                     this.clicked = true;
                     this.activeField = 'currentPassword';
-                } else if (this.isClickInField(inX, inY, 650, 510, 560, 50, rX, rY)) {
+                } else if (this.isClickInField(inX, inY, 900, 510, 560, 50, rX, rY)) {
                     this.clicked = true;
                     this.activeField = 'newPassword';
-                } else if (this.isClickInField(inX, inY, 650, 600, 560, 50, rX, rY)) {
+                } else if (this.isClickInField(inX, inY, 900, 600, 560, 50, rX, rY)) {
                     this.clicked = true;
                     this.activeField = 'confirmPassword';
                 }
@@ -500,10 +561,10 @@ export class AccountMenu {
 
             // Check clicks on input fields
             if (game.input.buttons.indexOf(0) > -1 && !this.clicked) {
-                if (this.isClickInField(inX, inY, 650, 450, 560, 50, rX, rY)) {
+                if (this.isClickInField(inX, inY, 900, 450, 560, 50, rX, rY)) {
                     this.clicked = true;
                     this.activeField = 'newPassword';
-                } else if (this.isClickInField(inX, inY, 650, 540, 560, 50, rX, rY)) {
+                } else if (this.isClickInField(inX, inY, 900, 540, 560, 50, rX, rY)) {
                     this.clicked = true;
                     this.activeField = 'confirmPassword';
                 }
@@ -551,6 +612,55 @@ export class AccountMenu {
                 this.submitSetSecurityQuestion();
             }
         }
+
+        // Change security question mode
+        if (this.mode === 'changeSecurityQuestion') {
+            const rX = window.innerWidth / 2560;
+            const rY = window.innerHeight / 1440;
+
+            // Check clicks on input fields
+            if (game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                if (this.isClickInField(inX, inY, 900, 400, 560, 50, rX, rY)) {
+                    this.clicked = true;
+                    this.activeField = 'currentPassword';
+                } else if (this.isClickInField(inX, inY, 900, 600, 560, 50, rX, rY)) {
+                    this.clicked = true;
+                    this.activeField = 'securityAnswer';
+                }
+            }
+
+            // Question navigation buttons
+            const origPrevY = this.prevQuestionButton.y;
+            const origNextY = this.nextQuestionButton.y;
+            this.prevQuestionButton.y = 500;
+            this.nextQuestionButton.y = 500;
+
+            this.prevQuestionButton.update(inX, inY);
+            if (this.prevQuestionButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.selectedQuestionIndex = (this.selectedQuestionIndex - 1 + SECURITY_QUESTIONS.length) % SECURITY_QUESTIONS.length;
+            }
+
+            this.nextQuestionButton.update(inX, inY);
+            if (this.nextQuestionButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.selectedQuestionIndex = (this.selectedQuestionIndex + 1) % SECURITY_QUESTIONS.length;
+            }
+
+            // Restore original positions
+            this.prevQuestionButton.y = origPrevY;
+            this.nextQuestionButton.y = origNextY;
+
+            // Submit button
+            this.submitButton.update(inX, inY);
+            if (this.submitButton.isHovered && game.input.buttons.indexOf(0) > -1 && !this.clicked && this.currentPassword.length > 0 && this.securityAnswer.trim().length > 0) {
+                this.clicked = true;
+                if (window.gameSound) window.gameSound.playMenuClick();
+                this.submitChangeSecurityQuestion();
+            }
+        }
     }
 
     draw(context, game) {
@@ -568,18 +678,20 @@ export class AccountMenu {
         // Panel height based on mode
         let panelHeight = 480;
         if (this.mode === 'main') {
-            panelHeight = !this.hasSecurityQuestion ? 480 : 400;
+            panelHeight = 480; // Always show all buttons
         } else if (this.mode === 'setSecurityQuestion') {
             panelHeight = 520;
+        } else if (this.mode === 'changeSecurityQuestion') {
+            panelHeight = 560;
         }
         context.save();
         context.fillStyle = 'rgba(10, 20, 40, 0.95)';
-        context.fillRect(580 * rX, 280 * rY, 900 * rX, panelHeight * rY);
+        context.fillRect(830 * rX, 280 * rY, 900 * rX, panelHeight * rY);
         context.strokeStyle = '#00ffff';
         context.shadowColor = '#00ffff';
         context.shadowBlur = 20 * rX;
         context.lineWidth = 3 * rY;
-        context.strokeRect(580 * rX, 280 * rY, 900 * rX, panelHeight * rY);
+        context.strokeRect(830 * rX, 280 * rY, 900 * rX, panelHeight * rY);
         context.restore();
 
         // Draw based on mode
@@ -595,69 +707,71 @@ export class AccountMenu {
             this.drawSetNewPassword(context, rX, rY);
         } else if (this.mode === 'setSecurityQuestion') {
             this.drawSetSecurityQuestion(context, rX, rY);
+        } else if (this.mode === 'changeSecurityQuestion') {
+            this.drawChangeSecurityQuestion(context, rX, rY);
         }
 
         // Loading indicator
         if (this.isLoading) {
-            this.super.drawGlowText(context, 950, 700, "Loading...", 28, '#ffff00', '#ffaa00', 8);
+            this.super.drawGlowText(context, 1200, 700, "Loading...", 28, '#ffff00', '#ffaa00', 8);
         }
 
         // Error message
         if (this.errorMessage) {
-            this.super.drawGlowText(context, 750, 750, this.errorMessage, 24, '#ff4444', '#ff0000', 8);
+            this.super.drawGlowText(context, 1000, 750, this.errorMessage, 24, '#ff4444', '#ff0000', 8);
         }
 
         // Success message
         if (this.successMessage) {
-            this.super.drawGlowText(context, 750, 750, this.successMessage, 24, '#00ff88', '#00ff00', 8);
+            this.super.drawGlowText(context, 1000, 750, this.successMessage, 24, '#00ff88', '#00ff00', 8);
         }
     }
 
     drawMainMenu(context, rX, rY) {
-        this.super.drawGlowText(context, 880, 350, "ACCOUNT", 50, '#ffffff', '#00ffff', 12);
-        this.super.drawGlowText(context, 860, 390, "Logged in as: " + this.username, 24, '#00ff88', '#00ff00', 5);
+        this.super.drawGlowText(context, 1130, 350, "ACCOUNT", 50, '#ffffff', '#00ffff', 12);
+        this.super.drawGlowText(context, 1110, 390, "Logged in as: " + this.username, 24, '#00ff88', '#00ff00', 5);
 
         this.changePasswordButton.draw(context);
         this.forgotPasswordButton.draw(context);
 
         // Show "Set Security Question" button if user doesn't have one
+        // Show "Change Security Question" button if user already has one
         if (!this.hasSecurityQuestion) {
             this.setSecurityButton.draw(context);
-            // Back button at lower position
-            this.backButton.y = 660;
         } else {
-            // Back button shifts up when no security button
-            this.backButton.y = 580;
+            this.changeSecurityButton.draw(context);
         }
 
+        // Back button always at the same position
+        this.backButton.y = 660;
         this.backButton.draw(context);
     }
 
     drawChangePassword(context, rX, rY) {
-        this.super.drawGlowText(context, 820, 340, "CHANGE PASSWORD", 40, '#ffffff', '#00ffff', 12);
+        this.super.drawGlowText(context, 1070, 340, "CHANGE PASSWORD", 40, '#ffffff', '#00ffff', 12);
 
         // Current password
-        this.super.drawGlowText(context, 660, 410, "Current Password:", 24, '#888888', '#666666', 5);
-        this.drawInputField(context, rX, rY, 650, 420, 560, 'currentPassword', this.currentPassword, true);
+        this.super.drawGlowText(context, 910, 410, "Current Password:", 24, '#888888', '#666666', 5);
+        this.drawInputField(context, rX, rY, 900, 420, 560, 'currentPassword', this.currentPassword, true);
 
         // New password
-        this.super.drawGlowText(context, 660, 500, "New Password:", 24, '#888888', '#666666', 5);
-        this.drawInputField(context, rX, rY, 650, 510, 560, 'newPassword', this.newPassword, true);
+        this.super.drawGlowText(context, 910, 500, "New Password:", 24, '#888888', '#666666', 5);
+        this.drawInputField(context, rX, rY, 900, 510, 560, 'newPassword', this.newPassword, true);
 
         // Confirm password
-        this.super.drawGlowText(context, 660, 590, "Confirm Password:", 24, '#888888', '#666666', 5);
-        this.drawInputField(context, rX, rY, 650, 600, 560, 'confirmPassword', this.confirmPassword, true);
+        this.super.drawGlowText(context, 910, 590, "Confirm Password:", 24, '#888888', '#666666', 5);
+        this.drawInputField(context, rX, rY, 900, 600, 560, 'confirmPassword', this.confirmPassword, true);
 
         this.submitButton.draw(context);
         this.cancelButton.draw(context);
     }
 
     drawEnterUsername(context, rX, rY) {
-        this.super.drawGlowText(context, 820, 340, "FORGOT PASSWORD", 40, '#ffffff', '#00ffff', 12);
-        this.super.drawGlowText(context, 750, 390, "Enter your username to recover", 24, '#888888', '#666666', 5);
+        this.super.drawGlowText(context, 1070, 340, "FORGOT PASSWORD", 40, '#ffffff', '#00ffff', 12);
+        this.super.drawGlowText(context, 1000, 390, "Enter your username to recover", 24, '#888888', '#666666', 5);
 
-        this.super.drawGlowText(context, 660, 460, "Username:", 24, '#888888', '#666666', 5);
-        this.drawInputField(context, rX, rY, 650, 470, 560, 'username', this.username, false);
+        this.super.drawGlowText(context, 910, 460, "Username:", 24, '#888888', '#666666', 5);
+        this.drawInputField(context, rX, rY, 900, 470, 560, 'username', this.username, false);
 
         if (this.username.trim().length > 0) {
             this.nextButton.draw(context);
@@ -671,11 +785,11 @@ export class AccountMenu {
     }
 
     drawAnswerQuestion(context, rX, rY) {
-        this.super.drawGlowText(context, 820, 340, "SECURITY QUESTION", 40, '#ffffff', '#00ffff', 12);
-        this.super.drawGlowText(context, 700, 420, this.securityQuestion, 26, '#ffaa00', '#ff8800', 8);
+        this.super.drawGlowText(context, 1070, 340, "SECURITY QUESTION", 40, '#ffffff', '#00ffff', 12);
+        this.super.drawGlowText(context, 950, 420, this.securityQuestion, 26, '#ffaa00', '#ff8800', 8);
 
-        this.super.drawGlowText(context, 660, 490, "Your Answer:", 24, '#888888', '#666666', 5);
-        this.drawInputField(context, rX, rY, 650, 500, 560, 'securityAnswer', this.securityAnswer, false);
+        this.super.drawGlowText(context, 910, 490, "Your Answer:", 24, '#888888', '#666666', 5);
+        this.drawInputField(context, rX, rY, 900, 500, 560, 'securityAnswer', this.securityAnswer, false);
 
         if (this.securityAnswer.trim().length > 0) {
             this.nextButton.draw(context);
@@ -689,37 +803,37 @@ export class AccountMenu {
     }
 
     drawSetNewPassword(context, rX, rY) {
-        this.super.drawGlowText(context, 850, 340, "SET NEW PASSWORD", 40, '#ffffff', '#00ffff', 12);
+        this.super.drawGlowText(context, 1100, 340, "SET NEW PASSWORD", 40, '#ffffff', '#00ffff', 12);
 
-        this.super.drawGlowText(context, 660, 440, "New Password:", 24, '#888888', '#666666', 5);
-        this.drawInputField(context, rX, rY, 650, 450, 560, 'newPassword', this.newPassword, true);
+        this.super.drawGlowText(context, 910, 440, "New Password:", 24, '#888888', '#666666', 5);
+        this.drawInputField(context, rX, rY, 900, 450, 560, 'newPassword', this.newPassword, true);
 
-        this.super.drawGlowText(context, 660, 530, "Confirm Password:", 24, '#888888', '#666666', 5);
-        this.drawInputField(context, rX, rY, 650, 540, 560, 'confirmPassword', this.confirmPassword, true);
+        this.super.drawGlowText(context, 910, 530, "Confirm Password:", 24, '#888888', '#666666', 5);
+        this.drawInputField(context, rX, rY, 900, 540, 560, 'confirmPassword', this.confirmPassword, true);
 
         this.submitButton.draw(context);
         this.cancelButton.draw(context);
     }
 
     drawSetSecurityQuestion(context, rX, rY) {
-        this.super.drawGlowText(context, 800, 340, "SET SECURITY QUESTION", 36, '#ffffff', '#00ffff', 12);
-        this.super.drawGlowText(context, 700, 380, "This is a one-time setup for password recovery", 20, '#888888', '#666666', 5);
+        this.super.drawGlowText(context, 1050, 340, "SET SECURITY QUESTION", 36, '#ffffff', '#00ffff', 12);
+        this.super.drawGlowText(context, 950, 380, "This is a one-time setup for password recovery", 20, '#888888', '#666666', 5);
 
         // Security question selector
-        this.super.drawGlowText(context, 660, 420, "Select Question:", 24, '#888888', '#666666', 5);
+        this.super.drawGlowText(context, 910, 420, "Select Question:", 24, '#888888', '#666666', 5);
 
         // Question display box
         context.save();
         context.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        context.fillRect(720 * rX, 450 * rY, 420 * rX, 50 * rY);
+        context.fillRect(970 * rX, 450 * rY, 420 * rX, 50 * rY);
         context.strokeStyle = '#00ffff';
         context.lineWidth = 2 * rY;
-        context.strokeRect(720 * rX, 450 * rY, 420 * rX, 50 * rY);
+        context.strokeRect(970 * rX, 450 * rY, 420 * rX, 50 * rY);
         context.restore();
 
         // Draw current question
         const currentQuestion = SECURITY_QUESTIONS[this.selectedQuestionIndex];
-        this.super.drawGlowText(context, 735, 488, currentQuestion, 22, '#ffaa00', '#ff8800', 5);
+        this.super.drawGlowText(context, 985, 488, currentQuestion, 22, '#ffaa00', '#ff8800', 5);
 
         // Navigation buttons - temporarily adjust y position for this mode
         const origPrevY = this.prevQuestionButton.y;
@@ -732,11 +846,60 @@ export class AccountMenu {
         this.nextQuestionButton.y = origNextY;
 
         // Answer field
-        this.super.drawGlowText(context, 660, 550, "Your Answer:", 24, '#888888', '#666666', 5);
-        this.drawInputField(context, rX, rY, 650, 560, 560, 'securityAnswer', this.securityAnswer, false);
+        this.super.drawGlowText(context, 910, 550, "Your Answer:", 24, '#888888', '#666666', 5);
+        this.drawInputField(context, rX, rY, 900, 560, 560, 'securityAnswer', this.securityAnswer, false);
 
         // Submit button (dim if no answer)
         if (this.securityAnswer.trim().length > 0) {
+            this.submitButton.draw(context);
+        } else {
+            context.save();
+            context.globalAlpha = 0.3;
+            this.submitButton.draw(context);
+            context.restore();
+        }
+        this.cancelButton.draw(context);
+    }
+
+    drawChangeSecurityQuestion(context, rX, rY) {
+        this.super.drawGlowText(context, 1030, 330, "CHANGE SECURITY QUESTION", 36, '#ffffff', '#00ffff', 12);
+
+        // Current password field
+        this.super.drawGlowText(context, 910, 390, "Current Password:", 24, '#888888', '#666666', 5);
+        this.drawInputField(context, rX, rY, 900, 400, 560, 'currentPassword', this.currentPassword, true);
+
+        // Security question selector
+        this.super.drawGlowText(context, 910, 480, "New Question:", 24, '#888888', '#666666', 5);
+
+        // Question display box
+        context.save();
+        context.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        context.fillRect(970 * rX, 500 * rY, 420 * rX, 50 * rY);
+        context.strokeStyle = '#00ffff';
+        context.lineWidth = 2 * rY;
+        context.strokeRect(970 * rX, 500 * rY, 420 * rX, 50 * rY);
+        context.restore();
+
+        // Draw current question
+        const currentQuestion = SECURITY_QUESTIONS[this.selectedQuestionIndex];
+        this.super.drawGlowText(context, 985, 538, currentQuestion, 22, '#ffaa00', '#ff8800', 5);
+
+        // Navigation buttons
+        const origPrevY = this.prevQuestionButton.y;
+        const origNextY = this.nextQuestionButton.y;
+        this.prevQuestionButton.y = 500;
+        this.nextQuestionButton.y = 500;
+        this.prevQuestionButton.draw(context);
+        this.nextQuestionButton.draw(context);
+        this.prevQuestionButton.y = origPrevY;
+        this.nextQuestionButton.y = origNextY;
+
+        // Answer field
+        this.super.drawGlowText(context, 910, 580, "New Answer:", 24, '#888888', '#666666', 5);
+        this.drawInputField(context, rX, rY, 900, 600, 560, 'securityAnswer', this.securityAnswer, false);
+
+        // Submit button (dim if missing fields)
+        if (this.currentPassword.length > 0 && this.securityAnswer.trim().length > 0) {
             this.submitButton.draw(context);
         } else {
             context.save();
